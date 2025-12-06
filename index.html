@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel Palace 5v5 - Open Tournament</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module">
+        import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js';
+        window.onload = createIcons;
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@300..700&family=Inter:wght@400;600;800&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #020617; }
+        h1, h2, h3, .brand-font { font-family: 'Teko', sans-serif; }
+        
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 92, 246, 0.15);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        .input-field {
+            background: rgba(2, 6, 23, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.4);
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            border-color: #c084fc;
+            background: rgba(2, 6, 23, 0.9);
+            box-shadow: 0 0 15px rgba(192, 132, 252, 0.2);
+            outline: none;
+        }
+
+        .neon-text { text-shadow: 0 0 20px rgba(167, 139, 250, 0.4); }
+        .accent-gradient { background: linear-gradient(to right, #c084fc, #6366f1); -webkit-background-clip: text; color: transparent; }
+    </style>
+</head>
+<body class="text-slate-300 min-h-screen selection:bg-purple-500/30">
+
+    <!-- CONFIGURATION AREA: IDs ARE NOW POPULATED FROM YOUR GOOGLE FORM -->
+    <script>
+        const FORM_ID = '1FAIpQLSdQbTqPJNaXGCLKuZIIRGKB-l_HkYxyiw9wJNle1yfPSpdVUA'; 
+        
+        // These IDs map the input fields in this HTML file to the corresponding fields in your Google Form.
+        const ENTRY_IDS = {
+            teamName: '1121574294',
+            teamRegion: '338680042',
+            logoLink: '948368869', 
+
+            // Player 1 (Captain)
+            p1Discord: '1839452526',
+            p1Steam: '1500448149',
+            p1Faceit: '1958103083',
+            p1Rank: '782122930',
+
+            // Player 2 - 5 (Starters)
+            p2Discord: '1270023061',
+            p2Steam: '1439517128',
+            p2Faceit: '99449309',
+            p2Rank: '1938535587',
+
+            p3Discord: '1897703312',
+            p3Steam: '1222592573',
+            p3Faceit: '1707574949',
+            p3Rank: '1157807462',
+
+            p4Discord: '147305209',
+            p4Steam: '1816980328',
+            p4Faceit: '1788520001',
+            p4Rank: '1055230278',
+
+            p5Discord: '1060565307',
+            p5Steam: '10072927',
+            p5Faceit: '663397778',
+            p5Rank: '878475649',
+            
+            // Player 6 (Substitute)
+            p6Discord: '1870684113', 
+            p6Steam: '1906603232',
+            p6Faceit: '1398830401',
+            p6Rank: '1874372316',
+
+            // Checkboxes
+            checkboxes: '2065705002' 
+        };
+    </script>
+
+    <!-- Background Graphics -->
+    <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/20 rounded-full blur-[150px]"></div>
+        <div class="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-blue-900/20 rounded-full blur-[150px]"></div>
+        <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="relative z-10 max-w-6xl mx-auto px-4 py-16">
+        
+        <!-- Hero Section -->
+        <div class="text-center mb-16 space-y-6">
+            <!-- Badge -->
+            <div class="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-slate-900/80 border border-slate-700/50 backdrop-blur-md">
+                <span class="flex h-3 w-3 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                </span>
+                <span class="text-sm font-bold text-slate-200 tracking-widest uppercase">Registration Open</span>
+            </div>
+            
+            <!-- Main Title -->
+            <h1 class="text-7xl md:text-9xl font-bold text-white tracking-tighter neon-text leading-none">
+                PIXEL <span class="accent-gradient">PALACE</span>
+            </h1>
+            
+            <p class="text-2xl md:text-3xl text-slate-400 font-light brand-font uppercase tracking-wide">
+                Season 2026 • 5v5 Open Tournament
+            </p>
+
+            <!-- Stats Grid -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto mt-8">
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">Prize Pool</p>
+                    <p class="text-2xl text-white font-bold brand-font text-yellow-400">$4,000</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">Slots</p>
+                    <p class="text-2xl text-white font-bold brand-font">20 OPEN / 12 INVITE</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">Format</p>
+                    <p class="text-2xl text-white font-bold brand-font">BO5 FINALS</p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-slate-500 uppercase tracking-widest mb-1">Entry Fee</p>
+                    <p class="text-2xl text-white font-bold brand-font text-green-400">FREE</p>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-center gap-4">
+                 <a href="https://discord.gg/JdXheQbvec" target="_blank" class="px-6 py-2 rounded-lg bg-[#5865F2]/20 border border-[#5865F2]/50 text-[#5865F2] hover:bg-[#5865F2]/30 transition-all font-bold text-sm uppercase flex items-center gap-2">
+                    <i data-lucide="message-circle" class="w-4 h-4"></i> Join Discord
+                </a>
+            </div>
+        </div>
+
+        <form id="registrationForm" class="space-y-8">
+            
+            <!-- TEAM IDENTITY -->
+            <div class="glass-panel p-8 rounded-2xl">
+                <div class="flex items-center gap-3 mb-6 border-b border-slate-700/50 pb-4">
+                    <i data-lucide="shield" class="text-purple-400 w-6 h-6"></i>
+                    <h2 class="text-3xl text-white font-bold uppercase tracking-wide">Team Identity & Assets</h2>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="text-xs uppercase tracking-widest text-slate-400 font-bold ml-1">Team Name</label>
+                        <input type="text" id="teamName" required placeholder="e.g. Navis Vincere" class="input-field w-full p-4 rounded-lg text-white placeholder-slate-600 font-bold text-lg">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-xs uppercase tracking-widest text-slate-400 font-bold ml-1">Region</label>
+                        <input type="text" id="teamRegion" required placeholder="e.g. EU / NA" class="input-field w-full p-4 rounded-lg text-white placeholder-slate-600">
+                    </div>
+                    <div class="space-y-2 col-span-full">
+                        <label class="text-xs uppercase tracking-widest text-slate-400 font-bold ml-1 flex items-center gap-2">
+                            <i data-lucide="image" class="w-4 h-4"></i> Team Logo Link (JPEG/PNG)
+                        </label>
+                        <input type="url" id="logoLink" placeholder="Link to logo on Imgur/Google Drive (Must be publicly accessible)" class="input-field w-full p-4 rounded-lg text-white placeholder-slate-600">
+                        <p class="text-xs text-slate-600 mt-1">
+                            *Please also submit your logo in the **#team-assets** Discord channel after registration.*
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROSTER - STARTER 5 -->
+            <div class="space-y-6">
+                <div class="px-2">
+                    <h3 class="text-3xl text-white font-bold uppercase tracking-wide flex items-center gap-3">
+                        <i data-lucide="crosshair" class="text-indigo-400"></i> Starting Lineup (5 Players)
+                    </h3>
+                </div>
+
+                <!-- PLAYER 1 (CAPTAIN) -->
+                <div class="glass-panel p-6 rounded-xl border-l-4 border-l-purple-500/80 hover:border-l-purple-400 transition-colors">
+                    <h4 class="text-xl text-white font-bold mb-4 flex items-center gap-2">
+                        <span class="text-purple-400">01</span> Team Captain
+                        <i data-lucide="crown" class="w-4 h-4 text-yellow-500 ml-auto"></i>
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <input type="text" id="p1Discord" required placeholder="Discord Username" class="input-field w-full p-3 rounded text-sm text-white">
+                        <input type="url" id="p1Steam" required placeholder="Steam URL" class="input-field w-full p-3 rounded text-sm text-white">
+                        <input type="url" id="p1Faceit" required placeholder="Faceit URL" class="input-field w-full p-3 rounded text-sm text-white">
+                        <input type="text" id="p1Rank" required placeholder="Current Level/Rank" class="input-field w-full p-3 rounded text-sm text-white">
+                    </div>
+                </div>
+
+                <!-- PLAYERS 2-5 Generation -->
+                <script>
+                    for(let i=2; i<=5; i++) {
+                        document.write(`
+                            <div class="glass-panel p-6 rounded-xl border-l-4 border-l-slate-700 hover:border-l-indigo-500 transition-colors">
+                                <h4 class="text-xl text-slate-200 font-bold mb-4 flex items-center gap-2">
+                                    <span class="text-slate-500">0${i}</span> Player
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                    <input type="text" id="p${i}Discord" required placeholder="Discord Username" class="input-field w-full p-3 rounded text-sm text-white">
+                                    <input type="url" id="p${i}Steam" required placeholder="Steam URL" class="input-field w-full p-3 rounded text-sm text-white">
+                                    <input type="url" id="p${i}Faceit" required placeholder="Faceit URL" class="input-field w-full p-3 rounded text-sm text-white">
+                                    <input type="text" id="p${i}Rank" required placeholder="Current Level/Rank" class="input-field w-full p-3 rounded text-sm text-white">
+                                </div>
+                            </div>
+                        `);
+                    }
+                </script>
+            </div>
+
+            <!-- ROSTER - SUBSTITUTE (NEW SECTION) -->
+            <div class="glass-panel p-8 rounded-2xl border-l-4 border-l-green-500/80 mt-10">
+                <div class="flex items-center gap-3 mb-6 border-b border-green-700/50 pb-4">
+                    <i data-lucide="plus-square" class="text-green-400 w-6 h-6"></i>
+                    <h3 class="text-3xl text-white font-bold uppercase tracking-wide">6th Player (Substitute)</h3>
+                    <span class="text-xs text-slate-500 ml-auto">(Required for stability)</span>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <input type="text" id="p6Discord" required placeholder="Discord Username" class="input-field w-full p-3 rounded text-sm text-white">
+                    <input type="url" id="p6Steam" required placeholder="Steam URL" class="input-field w-full p-3 rounded text-sm text-white">
+                    <input type="url" id="p6Faceit" required placeholder="Faceit URL" class="input-field w-full p-3 rounded text-sm text-white">
+                    <input type="text" id="p6Rank" required placeholder="Current Level/Rank" class="input-field w-full p-3 rounded text-sm text-white">
+                </div>
+            </div>
+
+            <!-- AGREEMENTS -->
+            <div class="glass-panel p-8 rounded-2xl border-t border-slate-700/50">
+                <div class="space-y-4 mb-8">
+                    <label class="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-slate-700">
+                        <input type="checkbox" id="akrosCheck" required class="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500/50">
+                        <div class="text-sm text-slate-400 group-hover:text-slate-300">
+                            <strong class="text-white block mb-1">MANDATORY ANTI-CHEAT</strong>
+                            Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.
+                        </div>
+                    </label>
+                    
+                    <label class="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-slate-700">
+                        <input type="checkbox" id="discordCheck" required class="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500/50">
+                        <div class="text-sm text-slate-400 group-hover:text-slate-300">
+                            <strong class="text-white block mb-1">COMMUNICATION</strong>
+                            All 6 players have joined the Pixel Palace Discord server.
+                        </div>
+                    </label>
+
+                    <label class="flex items-start gap-4 cursor-pointer group p-3 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-slate-700">
+                        <input type="checkbox" id="availCheck" required class="mt-1 w-5 h-5 rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500/50">
+                        <div class="text-sm text-slate-400 group-hover:text-slate-300">
+                            <strong class="text-white block mb-1">SCHEDULE</strong>
+                            We confirm availability for the January 2026 tournament dates.
+                        </div>
+                    </label>
+                </div>
+
+                <button type="submit" id="submitBtn" class="w-full py-6 rounded-xl font-bold text-2xl uppercase tracking-widest bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-500 hover:to-indigo-500 shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:shadow-[0_0_50px_rgba(168,85,247,0.5)] transition-all transform active:scale-[0.99]">
+                    Submit Team Registration (6 Players)
+                </button>
+                <p class="text-center text-slate-600 text-sm mt-4">20 Open Spots Available • First Come, First Served</p>
+            </div>
+        </form>
+
+        <!-- Success Message -->
+        <div id="successMessage" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+            <div class="bg-slate-900 border border-purple-500/30 p-10 rounded-3xl max-w-lg text-center shadow-2xl relative overflow-hidden">
+                <div class="absolute inset-0 bg-purple-500/10 blur-3xl"></div>
+                
+                <div class="relative z-10">
+                    <div class="w-24 h-24 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <i data-lucide="check" class="w-12 h-12 text-green-500"></i>
+                    </div>
+                    <h2 class="text-5xl font-bold text-white mb-2 tracking-tighter brand-font">REGISTRATION RECEIVED!</h2>
+                    <p class="text-slate-400 mb-8">
+                        Your team of 6 is now in the queue. You are team **[#XX]** of 20. 
+                        **Don't forget to post your team logo link in the #team-assets channel on Discord!**
+                    </p>
+                    <button onclick="window.location.reload()" class="bg-slate-800 hover:bg-slate-700 text-white py-3 px-8 rounded-lg font-bold transition-all border border-slate-700">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="mt-16 text-center text-slate-700 text-xs uppercase tracking-widest">
+            © 2025 Pixel Palace • 5v5 Tactical Warfare
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('registrationForm');
+        const submitBtn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Safety check for setup. Not needed here, but good practice.
+            if(FORM_ID === 'YOUR_FORM_ID_HERE') {
+                console.error("Setup Error: FORM_ID is not set.");
+                document.getElementById('submitBtn').innerText = 'SETUP ERROR (Check Console)';
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'PROCESSING...';
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+            const params = new URLSearchParams();
+            
+            const add = (idKey, elementId) => {
+                const val = document.getElementById(elementId).value;
+                // Encode the value to handle spaces and special characters
+                if(ENTRY_IDS[idKey]) params.append(`entry.${ENTRY_IDS[idKey]}`, encodeURIComponent(val));
+            };
+
+            // Team Identity and Logo
+            add('teamName', 'teamName');
+            add('teamRegion', 'teamRegion');
+            add('logoLink', 'logoLink'); 
+
+            // Add all 6 players (P1 through P6)
+            for(let i=1; i<=6; i++) {
+                add(`p${i}Discord`, `p${i}Discord`);
+                add(`p${i}Steam`, `p${i}Steam`);
+                add(`p${i}Faceit`, `p${i}Faceit`);
+                add(`p${i}Rank`, `p${i}Rank`);
+            }
+
+            // Checkboxes (The value must match the option text you created in the Google Form EXACTLY)
+            const checkboxEntryId = ENTRY_IDS.checkboxes;
+            // IMPORTANT: The values passed here MUST match the text of the checkbox options you set in the Google Form!
+            if(document.getElementById('akrosCheck').checked) {
+                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('MANDATORY ANTI-CHEAT (Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.)'));
+            }
+            if(document.getElementById('availCheck').checked) {
+                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('SCHEDULE (We confirm availability for the January 2026 tournament dates.)'));
+            }
+            if(document.getElementById('discordCheck').checked) {
+                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('COMMUNICATION (All 6 players have joined the Pixel Palace Discord server.)'));
+            }
+
+            // The submission URL (uses /formResponse endpoint for POSTing data)
+            const finalUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse?${params.toString()}`;
+
+            try {
+                // Post the data to Google Forms using 'no-cors' mode
+                const response = await fetch(finalUrl, { method: 'POST', mode: 'no-cors' });
+                // We show the success modal regardless of the response status in no-cors mode
+                document.getElementById('successMessage').classList.remove('hidden');
+                if(window.createIcons) window.createIcons(); 
+            } catch (err) {
+                console.error("Submission failed:", err);
+                // Simple feedback for the user if the network request itself fails
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'Submit Team Registration (6 Players)';
+                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                // Instead of alert, you'd show a custom failure message box here in a production app.
+                console.log("Submission failed. Check network connection.");
+            }
+        });
+    </script>
+</body>
+</html>
