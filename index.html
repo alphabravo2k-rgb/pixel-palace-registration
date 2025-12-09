@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pixel Palace 5v5 - Elite Registration Protocol</title>
+    
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
         import { createIcons } from 'https://cdn.jsdelivr.net/npm/lucide@latest/dist/esm/lucide.js';
@@ -22,11 +25,11 @@
             font-weight: 700;
         }
         
-        /* New Glass Panel Effect (More aggressive dark blur) */
+        /* Glass Panel Effect */
         .glass-panel {
-            background: rgba(18, 18, 20, 0.7); /* Zinc 900 with transparency */
+            background: rgba(18, 18, 20, 0.7); 
             backdrop-filter: blur(16px);
-            border: 1px solid rgba(139, 92, 246, 0.2); /* Purple border */
+            border: 1px solid rgba(139, 92, 246, 0.2); 
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
             transition: all 0.3s ease;
         }
@@ -34,22 +37,32 @@
         /* Input Field Styling */
         .input-field {
             background: rgba(0, 0, 0, 0.5); 
-            border: 1px solid #3f3f46; /* Zinc 700 */
+            border: 1px solid #3f3f46; 
             transition: all 0.2s ease;
         }
         .input-field:focus {
-            border-color: #a78bfa; /* Violet 400 */
-            background: #18181b; /* Zinc 900 */
+            border-color: #a78bfa; 
+            background: #18181b; 
             box-shadow: 0 0 10px rgba(167, 139, 250, 0.3);
             outline: none;
         }
 
-        /* Neon Text Effect for Title */
+        /* Neon Text Effect */
         .neon-text { 
             text-shadow: 0 0 10px #a78bfa, 0 0 40px rgba(167, 139, 250, 0.6); 
         }
 
-        /* Accent Gradient for key words */
+        /* Logo Glow Effect */
+        .logo-glow {
+            filter: drop-shadow(0 0 15px rgba(244, 114, 182, 0.6));
+            transition: transform 0.3s ease;
+        }
+        .logo-glow:hover {
+            transform: scale(1.05);
+            filter: drop-shadow(0 0 25px rgba(244, 114, 182, 0.8));
+        }
+
+        /* Accent Gradient */
         .accent-gradient { 
             background: linear-gradient(to right, #a78bfa, #f472b6); 
             -webkit-background-clip: text; 
@@ -82,8 +95,14 @@
             opacity: 0;
             z-index: -1;
         }
+        .submit-button:disabled {
+            background: #3f3f46;
+            color: #71717a;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
 
-        /* --- Map Pool Item Hover Effects --- */
+        /* Map Pool Item Hover Effects */
         .map-item {
             position: relative;
             padding-left: 0.5rem; 
@@ -92,9 +111,9 @@
             color: #d4d4d8;
         }
         .map-item:hover {
-            transform: translateX(8px); /* Pop out effect */
-            color: #fff; /* Make text brighter */
-            text-shadow: 0 0 5px rgba(6, 182, 212, 0.7); /* Cyan glowing effect */
+            transform: translateX(8px); 
+            color: #fff; 
+            text-shadow: 0 0 5px rgba(6, 182, 212, 0.7); 
         }
         .map-item .map-icon {
             transition: transform 0.3s ease;
@@ -107,31 +126,31 @@
             position: absolute;
             bottom: 0;
             left: 0;
-            width: 0%; /* Start hidden */
+            width: 0%; 
             height: 2px;
-            background: linear-gradient(to right, #06b6d4, #a78bfa); /* Cyan to Purple line */
+            background: linear-gradient(to right, #06b6d4, #a78bfa); 
             transition: width 0.3s ease-out;
             opacity: 0;
         }
         .map-item:hover::after {
-            width: 100%; /* Show line */
+            width: 100%; 
             opacity: 1;
         }
-        /* --- End Map Pool Item Hover Effects --- */
     </style>
 </head>
 <body class="min-h-screen selection:bg-fuchsia-500/30">
 
-    <!-- CONFIGURATION AREA: IDs ARE NOW POPULATED FROM YOUR GOOGLE FORM -->
     <script>
-        // Updated FORM ID from your link
         const FORM_ID = '1FAIpQLSdQbTqPJNaXGCLKuZIIRGKB-l_HkYxyiw9wJNle1yfPSpdVUA'; 
         
-        // Updated Entry IDs from your link
+        // YOUR NEW APPS SCRIPT URL (UPDATED)
+        const SLOT_API_URL = 'https://script.google.com/macros/s/AKfycbzSmGcU--OGu_QW1ffPZdcZeoBK2vJT6aNEE5RdRPjDqx4gYbjiu3xgCtJIkT7Esk_kuA/exec';
+
         const ENTRY_IDS = {
             teamName: '1121574294',
             teamRegion: '338680042',
             logoLink: '948368869', 
+            inviteCode: '408078650',
 
             p1Discord: '1839452526', p1Steam: '1500448149', p1Faceit: '1958103083', p1Rank: '782122930',
             p2Discord: '1270023061', p2Steam: '1439517128', p2Faceit: '99449309', p2Rank: '1938535587',
@@ -144,17 +163,19 @@
         };
     </script>
 
-    <!-- Background Grid and Subtle Glows -->
     <div class="fixed inset-0 z-0 overflow-hidden pointer-events-none">
         <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-color-violet-900)_10%,_transparent_60%)] opacity-30"></div>
         <div class="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/grid-cell.png')] opacity-10"></div>
     </div>
 
-    <!-- Main Content Container -->
     <div class="relative z-10 max-w-7xl mx-auto px-4 py-16">
         
-        <!-- Hero Section (Impactful Title & Stats) -->
-        <header class="text-center mb-16 space-y-6">
+        <header class="text-center mb-16 space-y-6 flex flex-col items-center">
+            
+            <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
+                 alt="Pixel Palace Logo" 
+                 class="w-48 h-48 md:w-64 md:h-64 object-contain logo-glow mb-4">
+
             <h1 class="text-7xl md:text-9xl font-extrabold text-white tracking-tighter neon-text leading-none">
                 PIXEL <span class="accent-gradient">PALACE</span>
             </h1>
@@ -162,15 +183,16 @@
                 SEASON 2026 • REGISTRATION PROTOCOL
             </p>
 
-            <!-- Key Stats Bar -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto mt-8 p-6 glass-panel rounded-3xl">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-5xl mx-auto mt-8 p-6 glass-panel rounded-3xl">
                 <div class="text-center">
                     <p class="text-xs text-zinc-500 uppercase tracking-widest mb-1">Prize Pool</p>
                     <p class="text-2xl text-yellow-400 font-bold brand-font">$4,000</p>
                 </div>
                 <div class="text-center border-x border-zinc-700/50">
-                    <p class="text-xs text-zinc-500 uppercase tracking-widest mb-1">Slots</p>
-                    <p class="text-2xl text-fuchsia-400 font-bold brand-font">20 OPEN</p>
+                    <p class="text-xs text-zinc-500 uppercase tracking-widest mb-1">Slots Left</p>
+                    <p id="slot-display" class="text-2xl text-fuchsia-400 font-bold brand-font flex justify-center items-center gap-2">
+                        <i data-lucide="loader-2" class="animate-spin w-5 h-5"></i>
+                    </p>
                 </div>
                 <div class="text-center border-r border-zinc-700/50">
                     <p class="text-xs text-zinc-500 uppercase tracking-widest mb-1">Format</p>
@@ -182,7 +204,6 @@
                 </div>
             </div>
             
-            <!-- Discord CTA -->
             <div class="mt-8 flex justify-center">
                    <a href="https://discord.gg/JdXheQbvec" target="_blank" class="px-8 py-3 rounded-xl bg-blue-600/30 border border-blue-500/50 text-blue-300 hover:bg-blue-600/50 transition-all font-bold text-lg uppercase flex items-center gap-2 shadow-lg shadow-blue-500/20">
                     <i data-lucide="message-circle" class="w-5 h-5"></i> Mandatory: Join Official Discord
@@ -190,29 +211,22 @@
             </div>
         </header>
         
-        <!-- MAIN REGISTRATION CONTENT GRID: Sidebar (Critical Info) and Form -->
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
             
-            <!-- Sidebar (Critical Info & Map Pool) - Col 1 -->
             <div class="lg:col-span-1 space-y-8">
-                
-                <!-- 1. TOURNAMENT SCHEDULE (UPDATED) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-cyan-500/80 shadow-2xl">
                     <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-cyan-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
                         <i data-lucide="clock" class="w-5 h-5"></i> TOURNAMENT SCHEDULE
                     </h3>
-                    
                     <div class="mb-4">
                         <p class="text-xs uppercase tracking-widest text-zinc-500 mb-1">Tournament Starts</p>
                         <p class="text-lg font-extrabold text-white">TBD</p>
                         <p class="text-sm text-zinc-400 italic">Final dates will be announced on Discord in late December.</p>
                     </div>
-
                     <p class="text-xs uppercase tracking-widest text-zinc-500 mb-1">Registration Deadline</p>
                     <p class="text-lg font-extrabold text-white mb-3">December 15, 2025 (23:59 CET)</p>
                 </div>
 
-                <!-- 2. COUNTDOWN TIMER (HIGH PRIORITY) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-fuchsia-500/80 shadow-2xl">
                     <div id="countdown-wrapper" class="p-4 rounded-xl bg-fuchsia-900/40 border border-fuchsia-700/50 shadow-inner">
                         <p class="text-sm uppercase tracking-widest text-fuchsia-300 mb-1 text-center">Time Left:</p>
@@ -222,41 +236,30 @@
                     </div>
                 </div>
 
-                <!-- 3. OFFICIAL RIGHTS & DISCLAIMER (MOVED FOR VISIBILITY) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-yellow-500/80 shadow-2xl">
                     <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-yellow-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
-                        <i data-lucide="scale" class="w-5 h-5"></i> OFFICIAL RIGHTS & DISCLAIMER
+                        <i data-lucide="scale" class="w-5 h-5"></i> OFFICIAL RIGHTS
                     </h3>
                     <p class="text-sm text-zinc-300 mb-4">
-                        By submitting this form, you agree that Pixel Palace reserves the right to <strong class="text-red-400">disqualify</strong> any team, <strong class="text-yellow-400">alter</strong> the tournament schedule, or <strong class="text-cyan-400">modify</strong> rules/data at any time to maintain fairness, competitive integrity, or safety. All decisions by the organizers are final.
-                    </p>
-                    <p class="text-xs text-zinc-500">
-                        This includes, but is not limited to, actions taken against cheating, toxicity, or breaches of the Akros Anti-Cheat agreement.
+                        Pixel Palace reserves the right to <strong class="text-red-400">disqualify</strong> any team or <strong class="text-cyan-400">modify</strong> rules to maintain fairness.
                     </p>
                 </div>
 
-                <!-- 4. ANTI-CHEAT POLICY CARD (CRITICAL PRIORITY) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-red-600/80 shadow-2xl">
                     <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-red-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
                             <i data-lucide="shield-alert" class="w-5 h-5"></i> ANTI-CHEAT MANDATORY
                     </h3>
                     <p class="text-sm text-gray-400 mb-4">
-                        Akros Anti-Cheat is <strong class="text-red-300">required for all 6 players</strong>. Failure to comply results in instant DQ.
+                        Akros Anti-Cheat is <strong class="text-red-300">required for all 6 players</strong>.
                     </p>
-                    <p class="text-xs uppercase tracking-widest text-zinc-500 mb-2">Requirements:</p>
-                    <ul class="text-sm text-gray-300 space-y-2 list-disc pl-5 mb-6">
-                        <li>Windows 10 (19041+) or Win 11</li>
-                        <li>Must be launched before the game client</li>
-                    </ul>
                     <a href="https://akros.ac/#downloadSteps" target="_blank" rel="noreferrer" class="block w-full text-center bg-red-900/40 hover:bg-red-900/60 text-red-300 text-lg py-3 rounded-lg border border-red-700/50 transition-colors font-bold uppercase tracking-widest shadow-xl">
                         <span class="flex items-center justify-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> Download Akros Client</span>
                     </a>
                 </div>
 
-                <!-- 5. Map Pool Info Card (Secondary Info - WITH VISUAL EFFECTS) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-cyan-500/80">
                     <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-cyan-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
-                        <i data-lucide="map" class="w-5 h-5"></i> ACTIVE DUTY MAP POOL
+                        <i data-lucide="map" class="w-5 h-5"></i> ACTIVE MAP POOL
                     </h3>
                     <ul class="space-y-3 text-sm text-zinc-300">
                         <li class="map-item flex items-center gap-3 font-semibold"><i data-lucide="bomb" class="map-icon w-4 h-4 text-red-500"></i> Inferno</li>
@@ -268,20 +271,28 @@
                         <li class="map-item flex items-center gap-3 font-semibold"><i data-lucide="skull" class="map-icon w-4 h-4 text-amber-500"></i> Anubis</li>
                     </ul>
                 </div>
-
             </div>
 
-            <!-- Form Content (Team Identity, Roster, Agreements) - Col 2/3 -->
             <div class="lg:col-span-2 space-y-10">
                 <form id="registrationForm" class="space-y-10">
                     
-                    <!-- 1. TEAM IDENTITY & ASSETS -->
                     <div class="glass-panel p-8 rounded-3xl">
                         <div class="flex items-center gap-4 mb-6 border-b border-fuchsia-700/50 pb-4">
                             <i data-lucide="group" class="text-fuchsia-400 w-7 h-7"></i>
                             <h2 class="text-4xl text-white brand-font uppercase tracking-wide">01. Team Identity</h2>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            
+                            <div class="space-y-2 col-span-full bg-fuchsia-900/20 p-4 rounded-xl border border-fuchsia-500/30">
+                                <label for="inviteCode" class="text-sm uppercase tracking-widest text-fuchsia-300 font-bold ml-1 flex items-center gap-2">
+                                    <i data-lucide="ticket" class="w-4 h-4"></i> VIP Access Code (Optional)
+                                </label>
+                                <input type="text" id="inviteCode" placeholder="Enter Invite Code (If applicable)" class="input-field w-full p-4 rounded-lg text-white placeholder-zinc-500 font-mono tracking-wider border-fuchsia-500/50 focus:bg-fuchsia-900/30">
+                                <p class="text-xs text-zinc-500 mt-1 italic">
+                                    *Invited Pro Teams: Enter your special access code here to bypass open slot limits.*
+                                </p>
+                            </div>
+
                             <div class="space-y-2 md:col-span-2">
                                 <label for="teamName" class="text-xs uppercase tracking-widest text-zinc-400 font-bold ml-1">Team Name</label>
                                 <input type="text" id="teamName" required placeholder="e.g. Faze Clan" class="input-field w-full p-4 rounded-lg text-white placeholder-zinc-600 font-bold text-lg">
@@ -292,24 +303,19 @@
                             </div>
                             <div class="space-y-2 col-span-full">
                                 <label for="logoLink" class="text-xs uppercase tracking-widest text-zinc-400 font-bold ml-1 flex items-center gap-2">
-                                    <i data-lucide="image" class="w-4 h-4"></i> Team Logo Link (PNG/JPEG - High Res)
+                                    <i data-lucide="image" class="w-4 h-4"></i> Team Logo Link (PNG/JPEG)
                                 </label>
                                 <input type="url" id="logoLink" placeholder="Public link to logo (Imgur/Cloud)" class="input-field w-full p-4 rounded-lg text-white placeholder-zinc-600">
-                                <p class="text-xs text-zinc-600 mt-1 italic">
-                                    *Must be public. Also post in Discord #team-assets after submitting.*
-                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 2. ROSTER FORM (6 Players) -->
                     <div class="glass-panel p-8 rounded-3xl">
                         <div class="flex items-center gap-4 mb-6 border-b border-indigo-700/50 pb-4">
                             <i data-lucide="user-square" class="text-indigo-400 w-7 h-7"></i>
                             <h3 class="text-4xl text-white brand-font uppercase tracking-wide">02. Roster (6 Players)</h3>
                         </div>
 
-                        <!-- Player Input Template -->
                         <script>
                             const playerInputs = (i, title, required) => `
                                 <div class="p-6 rounded-xl border-l-4 ${i === 1 ? 'border-l-yellow-500/80' : 'border-l-indigo-700/50'} ${i > 5 ? 'bg-zinc-800/50' : ''} hover:border-l-fuchsia-500 transition-colors">
@@ -325,7 +331,6 @@
                                     </div>
                                 </div>
                             `;
-                            
                             document.write(playerInputs(1, 'Team Captain', 'required'));
                             for(let i=2; i<=5; i++) {
                                 document.write(playerInputs(i, 'Starter Player', 'required'));
@@ -334,7 +339,6 @@
                         </script>
                     </div>
 
-                    <!-- 3. FINAL AGREEMENTS -->
                     <div class="glass-panel p-8 rounded-3xl border-t border-fuchsia-700/50">
                         <div class="flex items-center gap-4 mb-6 border-b border-fuchsia-700/50 pb-4">
                             <i data-lucide="check-square" class="text-green-400 w-7 h-7"></i>
@@ -342,7 +346,6 @@
                         </div>
 
                         <div class="space-y-4 mb-8">
-                            
                             <label class="flex items-start gap-4 cursor-pointer group p-4 rounded-xl hover:bg-zinc-800 transition-colors border border-transparent">
                                 <input type="checkbox" id="akrosCheck" required class="mt-1 w-6 h-6 rounded border-red-500 bg-zinc-800 text-red-500 focus:ring-red-500">
                                 <div class="text-base text-zinc-300 group-hover:text-white">
@@ -368,7 +371,6 @@
                             </label>
                         </div>
 
-                        <!-- SUBMIT BUTTON -->
                         <button type="submit" id="submitBtn" class="submit-button w-full py-6 rounded-xl font-extrabold text-3xl uppercase tracking-widest text-white shadow-[0_0_50px_rgba(244,114,182,0.4)] hover:shadow-[0_0_70px_rgba(244,114,182,0.6)] transition-all transform active:scale-[0.98]">
                             SECURE YOUR SPOT (SUBMIT ROSTER)
                         </button>
@@ -378,11 +380,9 @@
             </div>
         </div>
 
-        <!-- Success Message Modal -->
         <div id="successMessage" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4">
             <div class="bg-zinc-900 border border-fuchsia-500/50 p-10 rounded-3xl max-w-lg text-center shadow-2xl relative overflow-hidden">
                 <div class="absolute inset-0 bg-fuchsia-500/10 blur-[100px]"></div>
-                
                 <div class="relative z-10">
                     <div class="w-24 h-24 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                         <i data-lucide="rocket" class="w-12 h-12 text-green-400"></i>
@@ -400,22 +400,19 @@
         </div>
     </div>
     
-    <!-- Footer -->
     <footer class="mt-20 text-center text-zinc-700 text-xs uppercase tracking-widest pb-8">
         © 2025 Pixel Palace • Built with Precision by <a href="https://discordapp.com/users/bravo.gg" target="_blank" class="text-fuchsia-400 hover:text-fuchsia-300 transition-colors">bravo.gg</a>
     </footer>
 
     <script>
-        // --- 1. COUNTDOWN TIMER LOGIC ---
-        // Setting the deadline to Dec 15, 2025, 23:59:59 UTC/GMT (for CET compliance)
-        const deadlineDate = new Date('2025-12-15T22:59:59Z').getTime(); // 23:59 CET is 22:59 UTC
+        // --- 1. COUNTDOWN TIMER ---
+        const deadlineDate = new Date('2025-12-15T22:59:59Z').getTime();
         const timeLeftElement = document.getElementById('time-left');
         const countdownWrapper = document.getElementById('countdown-wrapper');
 
         function updateCountdown() {
             const now = new Date().getTime();
             const difference = deadlineDate - now;
-
             if (difference < 0) {
                 timeLeftElement.textContent = 'REGISTRATION CLOSED';
                 countdownWrapper.classList.remove('bg-fuchsia-900/40', 'border-fuchsia-700/50');
@@ -425,54 +422,80 @@
                 clearInterval(countdownInterval);
                 return;
             }
-
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
             const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-            const formatTime = (t) => String(t).padStart(2, '0');
-
-            timeLeftElement.textContent = 
-                `${days}D ${formatTime(hours)}H ${formatTime(minutes)}M ${formatTime(seconds)}S`;
+            timeLeftElement.textContent = `${days}D ${String(hours).padStart(2,'0')}H ${String(minutes).padStart(2,'0')}M ${String(seconds).padStart(2,'0')}S`;
         }
-
         updateCountdown();
         const countdownInterval = setInterval(updateCountdown, 1000);
 
-        // --- 2. GOOGLE FORM SUBMISSION LOGIC ---
+        // --- 2. SLOT CHECKING LOGIC ---
+        let arePublicSlotsFull = false;
+
+        async function checkSlots() {
+            try {
+                // FIXED: Added Cache Buster (timestamp) so browser gets fresh data
+                const response = await fetch(`${SLOT_API_URL}?t=${new Date().getTime()}`);
+                const data = await response.json();
+                
+                const slotDisplay = document.getElementById('slot-display');
+                
+                if (data.isFull) {
+                    arePublicSlotsFull = true;
+                    slotDisplay.innerHTML = '<span class="text-red-500">FULL (VIP ONLY)</span>';
+                    const btn = document.getElementById('submitBtn');
+                    btn.innerHTML = 'PUBLIC SLOTS FULL (VIP CODE REQUIRED)';
+                    btn.classList.add('grayscale');
+                } else {
+                    arePublicSlotsFull = false;
+                    slotDisplay.innerHTML = `${data.remaining} OPEN`;
+                }
+            } catch (error) {
+                console.error("Slot check failed:", error);
+                document.getElementById('slot-display').innerText = "20 OPEN"; // Fallback
+            }
+        }
+        
+        // Check slots on load
+        checkSlots();
+
+        // --- 3. SUBMISSION LOGIC ---
         const form = document.getElementById('registrationForm');
         const submitBtn = document.getElementById('submitBtn');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if(FORM_ID === 'YOUR_FORM_ID_HERE') {
-                console.error("Setup Error: FORM_ID is not set.");
-                submitBtn.innerText = 'SETUP ERROR (Check Console)';
-                return;
+            // --- VIP GATEKEEPER ---
+            const userCode = document.getElementById('inviteCode').value.trim();
+            
+            if (arePublicSlotsFull && userCode.length === 0) {
+                alert("⚠️ REGISTRATION ALERT\n\nPublic slots are currently FULL.\n\nYou must enter a valid VIP Access Code in the 'Team Identity' section to register.");
+                document.getElementById('inviteCode').focus();
+                document.getElementById('inviteCode').classList.add('border-red-500', 'animate-pulse');
+                return; // STOP HERE
             }
-
+            
+            // Proceed with submission
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span class="flex items-center justify-center gap-3"><i data-lucide="loader-circle" class="w-6 h-6 animate-spin"></i> TRANSMITTING DATA...</span>';
             submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
 
             const params = new URLSearchParams();
-            
             const add = (idKey, elementId) => {
                 const element = document.getElementById(elementId);
                 if (element && ENTRY_IDS[idKey]) {
-                    const val = element.value;
-                    params.append(`entry.${ENTRY_IDS[idKey]}`, val);
+                    params.append(`entry.${ENTRY_IDS[idKey]}`, element.value);
                 }
             };
 
-            // Team Identity and Logo
             add('teamName', 'teamName');
             add('teamRegion', 'teamRegion');
             add('logoLink', 'logoLink'); 
+            add('inviteCode', 'inviteCode'); 
 
-            // Add all 6 players (P1 through P6)
             for(let i=1; i<=6; i++) {
                 add(`p${i}Discord`, `p${i}Discord`);
                 add(`p${i}Steam`, `p${i}Steam`);
@@ -480,67 +503,48 @@
                 add(`p${i}Rank`, `p${i}Rank`);
             }
 
-            // Checkboxes
             const checkboxEntryId = ENTRY_IDS.checkboxes;
-            
-            // --- UPDATED CHECKBOX VALUES TO MATCH URL ---
-            // These strings must match exactly what you extracted from the pre-filled URL.
-            if(document.getElementById('akrosCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, 'MANDATORY ANTI-CHEAT (Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.)');
-            }
-            if(document.getElementById('availCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, 'SCHEDULE (We confirm availability for the January 2026 tournament dates.)');
-            }
-            if(document.getElementById('discordCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, 'COMMUNICATION (All 6 players have joined the Pixel Palace Discord server.)');
-            }
+            if(document.getElementById('akrosCheck').checked) params.append(`entry.${checkboxEntryId}`, 'MANDATORY ANTI-CHEAT (Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.)');
+            if(document.getElementById('availCheck').checked) params.append(`entry.${checkboxEntryId}`, 'SCHEDULE (We confirm availability for the January 2026 tournament dates.)');
+            if(document.getElementById('discordCheck').checked) params.append(`entry.${checkboxEntryId}`, 'COMMUNICATION (All 6 players have joined the Pixel Palace Discord server.)');
 
             const finalUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
 
-            // Implemented exponential backoff for fetch call
+            // Retry Logic
             const maxRetries = 5;
             let currentRetry = 0;
             let success = false;
 
             while (currentRetry < maxRetries && !success) {
                 try {
-                    // Use POST with URL encoded body and no-cors mode
                     await fetch(finalUrl, { 
                         method: 'POST', 
                         mode: 'no-cors',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded'
-                        },
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: params 
                     });
                     success = true;
-                    // We show the success modal after submission
                     document.getElementById('successMessage').classList.remove('hidden');
                     if(window.createIcons) window.createIcons();
                 } catch (err) {
                     currentRetry++;
-                    const delay = Math.pow(2, currentRetry) * 1000;
                     if (currentRetry < maxRetries) {
-                        // Wait for the calculated delay before retrying
-                        await new Promise(resolve => setTimeout(resolve, delay));
+                        await new Promise(resolve => setTimeout(resolve, Math.pow(2, currentRetry) * 1000));
                     } else {
-                        console.error("Submission failed after multiple retries:", err);
+                        console.error("Submission failed:", err);
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = 'SUBMISSION FAILED (Check Console)';
                         submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
                     }
                 }
             }
-
             if (!success) {
-                 // Reset button state if all retries failed
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = 'SUBMISSION FAILED (Check Console)';
-                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+                 submitBtn.disabled = false;
+                 submitBtn.innerHTML = 'SUBMISSION FAILED (Check Console)';
+                 submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
             }
         });
         
-        // Ensure Lucide icons are rendered on load
         if(window.createIcons) window.createIcons(); 
     </script>
 </body>
