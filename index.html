@@ -82,7 +82,7 @@
             opacity: 0;
             z-index: -1;
         }
-        
+
         /* --- Map Pool Item Hover Effects --- */
         .map-item {
             position: relative;
@@ -124,8 +124,10 @@
 
     <!-- CONFIGURATION AREA: IDs ARE NOW POPULATED FROM YOUR GOOGLE FORM -->
     <script>
+        // Updated FORM ID from your link
         const FORM_ID = '1FAIpQLSdQbTqPJNaXGCLKuZIIRGKB-l_HkYxyiw9wJNle1yfPSpdVUA'; 
         
+        // Updated Entry IDs from your link
         const ENTRY_IDS = {
             teamName: '1121574294',
             teamRegion: '338680042',
@@ -220,7 +222,38 @@
                     </div>
                 </div>
 
-                <!-- 3. Map Pool Info Card (Secondary Info - WITH VISUAL EFFECTS) -->
+                <!-- 3. OFFICIAL RIGHTS & DISCLAIMER (MOVED FOR VISIBILITY) -->
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-yellow-500/80 shadow-2xl">
+                    <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-yellow-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
+                        <i data-lucide="scale" class="w-5 h-5"></i> OFFICIAL RIGHTS & DISCLAIMER
+                    </h3>
+                    <p class="text-sm text-zinc-300 mb-4">
+                        By submitting this form, you agree that Pixel Palace reserves the right to <strong class="text-red-400">disqualify</strong> any team, <strong class="text-yellow-400">alter</strong> the tournament schedule, or <strong class="text-cyan-400">modify</strong> rules/data at any time to maintain fairness, competitive integrity, or safety. All decisions by the organizers are final.
+                    </p>
+                    <p class="text-xs text-zinc-500">
+                        This includes, but is not limited to, actions taken against cheating, toxicity, or breaches of the Akros Anti-Cheat agreement.
+                    </p>
+                </div>
+
+                <!-- 4. ANTI-CHEAT POLICY CARD (CRITICAL PRIORITY) -->
+                <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-red-600/80 shadow-2xl">
+                    <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-red-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
+                            <i data-lucide="shield-alert" class="w-5 h-5"></i> ANTI-CHEAT MANDATORY
+                    </h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        Akros Anti-Cheat is <strong class="text-red-300">required for all 6 players</strong>. Failure to comply results in instant DQ.
+                    </p>
+                    <p class="text-xs uppercase tracking-widest text-zinc-500 mb-2">Requirements:</p>
+                    <ul class="text-sm text-gray-300 space-y-2 list-disc pl-5 mb-6">
+                        <li>Windows 10 (19041+) or Win 11</li>
+                        <li>Must be launched before the game client</li>
+                    </ul>
+                    <a href="https://akros.ac/#downloadSteps" target="_blank" rel="noreferrer" class="block w-full text-center bg-red-900/40 hover:bg-red-900/60 text-red-300 text-lg py-3 rounded-lg border border-red-700/50 transition-colors font-bold uppercase tracking-widest shadow-xl">
+                        <span class="flex items-center justify-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> Download Akros Client</span>
+                    </a>
+                </div>
+
+                <!-- 5. Map Pool Info Card (Secondary Info - WITH VISUAL EFFECTS) -->
                 <div class="glass-panel p-6 rounded-2xl border-l-4 border-l-cyan-500/80">
                     <h3 class="font-bold text-xl mb-4 flex items-center gap-3 text-cyan-400 brand-font tracking-wider border-b border-zinc-700/50 pb-2">
                         <i data-lucide="map" class="w-5 h-5"></i> ACTIVE DUTY MAP POOL
@@ -235,6 +268,7 @@
                         <li class="map-item flex items-center gap-3 font-semibold"><i data-lucide="skull" class="map-icon w-4 h-4 text-amber-500"></i> Anubis</li>
                     </ul>
                 </div>
+
             </div>
 
             <!-- Form Content (Team Identity, Roster, Agreements) - Col 2/3 -->
@@ -299,26 +333,12 @@
                             document.write(playerInputs(6, 'Substitute Player', 'required'));
                         </script>
                     </div>
-                    
-                    <!-- 3. OFFICIAL RIGHTS & DISCLAIMER (NEW SECTION) -->
-                    <div class="glass-panel p-8 rounded-3xl border-l-4 border-l-red-600/80">
-                        <div class="flex items-center gap-4 mb-4 pb-2">
-                            <i data-lucide="alert-triangle" class="text-red-400 w-6 h-6"></i>
-                            <h3 class="text-3xl text-white brand-font uppercase tracking-wide">OFFICIAL RIGHTS & DISCLAIMER</h3>
-                        </div>
-                        <p class="text-sm text-zinc-400 mb-4">
-                            By submitting this form, you agree that Pixel Palace reserves the right to <strong class="text-red-300">disqualify</strong> any team, <strong class="text-red-300">alter</strong> the tournament schedule, or <strong class="text-red-300">modify</strong> rules/data at any time to maintain fairness, competitive integrity, or safety. All decisions by the organizers are final.
-                        </p>
-                        <p class="text-xs text-zinc-500 italic">
-                            This includes, but is not limited to, actions taken against cheating, toxicity, or breaches of the Akros Anti-Cheat agreement.
-                        </p>
-                    </div>
 
-                    <!-- 4. FINAL AGREEMENTS -->
+                    <!-- 3. FINAL AGREEMENTS -->
                     <div class="glass-panel p-8 rounded-3xl border-t border-fuchsia-700/50">
                         <div class="flex items-center gap-4 mb-6 border-b border-fuchsia-700/50 pb-4">
                             <i data-lucide="check-square" class="text-green-400 w-7 h-7"></i>
-                            <h3 class="text-4xl text-white brand-font uppercase tracking-wide">04. Final Authorization</h3>
+                            <h3 class="text-4xl text-white brand-font uppercase tracking-wide">03. Final Authorization</h3>
                         </div>
 
                         <div class="space-y-4 mb-8">
@@ -443,7 +463,7 @@
                 const element = document.getElementById(elementId);
                 if (element && ENTRY_IDS[idKey]) {
                     const val = element.value;
-                    params.append(`entry.${ENTRY_IDS[idKey]}`, encodeURIComponent(val));
+                    params.append(`entry.${ENTRY_IDS[idKey]}`, val);
                 }
             };
 
@@ -463,18 +483,19 @@
             // Checkboxes
             const checkboxEntryId = ENTRY_IDS.checkboxes;
             
-            // Note: The checkboxes send data to the same entry ID, treating them as multiple selections for one question.
+            // --- UPDATED CHECKBOX VALUES TO MATCH URL ---
+            // These strings must match exactly what you extracted from the pre-filled URL.
             if(document.getElementById('akrosCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('ANTI-CHEAT (Agrees to Akros mandatory requirements.)'));
+                params.append(`entry.${checkboxEntryId}`, 'MANDATORY ANTI-CHEAT (Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.)');
             }
             if(document.getElementById('availCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('AVAILABILITY (Confirms availability for January 2026.)'));
+                params.append(`entry.${checkboxEntryId}`, 'SCHEDULE (We confirm availability for the January 2026 tournament dates.)');
             }
             if(document.getElementById('discordCheck').checked) {
-                params.append(`entry.${checkboxEntryId}`, encodeURIComponent('COMMUNICATION (All 6 players joined Discord.)'));
+                params.append(`entry.${checkboxEntryId}`, 'COMMUNICATION (All 6 players have joined the Pixel Palace Discord server.)');
             }
 
-            const finalUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse?${params.toString()}`;
+            const finalUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
 
             // Implemented exponential backoff for fetch call
             const maxRetries = 5;
@@ -483,8 +504,15 @@
 
             while (currentRetry < maxRetries && !success) {
                 try {
-                    // Using 'no-cors' mode as the Google Forms endpoint doesn't allow cross-origin
-                    await fetch(finalUrl, { method: 'POST', mode: 'no-cors' }); 
+                    // Use POST with URL encoded body and no-cors mode
+                    await fetch(finalUrl, { 
+                        method: 'POST', 
+                        mode: 'no-cors',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: params 
+                    });
                     success = true;
                     // We show the success modal after submission
                     document.getElementById('successMessage').classList.remove('hidden');
