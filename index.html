@@ -33,7 +33,7 @@
                 repeating-linear-gradient(0deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px),
                 url('https://www.transparenttextures.com/patterns/cubes.png');
             background-size: cover;
-            background-attachment: fixed; /* Keeps bg steady on scroll */
+            background-attachment: fixed; 
         }
 
         /* --- GLASS HUD PANELS --- */
@@ -42,11 +42,9 @@
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
-            /* Adaptive Clip Path: Less aggressive on mobile */
             clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
             transition: all 0.3s ease;
         }
-        /* Only clip corner on larger screens */
         @media (min-width: 768px) {
             .hud-panel {
                 clip-path: polygon(0 0, 100% 0, 100% 95%, 95% 100%, 0 100%);
@@ -108,13 +106,13 @@
             overflow: hidden;
             background-size: cover;
             background-position: center;
-            height: 80px; /* Smaller on mobile */
+            height: 80px; 
             display: flex;
             align-items: center;
             justify-content: center;
         }
         @media (min-width: 768px) {
-            .map-card { height: 100px; } /* Larger on Desktop */
+            .map-card { height: 100px; } 
         }
         
         .map-card::before {
@@ -144,6 +142,8 @@
         .glow-gray:hover { box-shadow: 0 4px 20px rgba(156, 163, 175, 0.3); border-color: #9ca3af; }
         .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
         .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3); border-color: #f97316; }
+        .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.3); border-color: #facc15; }
+        .glow-zinc:hover { box-shadow: 0 4px 20px rgba(212, 212, 216, 0.3); border-color: #e4e4e7; }
 
         /* --- LOGO ANIMATION --- */
         @keyframes breathe {
@@ -300,6 +300,18 @@
                         <i data-lucide="map" class="w-5 h-5 text-zinc-400"></i> ACTIVE DUTY POOL
                     </h3>
                     <div class="grid grid-cols-2 gap-2">
+                        <div class="map-card glow-green rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="leaf" class="w-6 md:w-8 h-6 md:h-8 text-green-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Ancient</span>
+                            </div>
+                        </div>
+                        <div class="map-card glow-yellow rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="sun" class="w-6 md:w-8 h-6 md:h-8 text-yellow-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Dust 2</span>
+                            </div>
+                        </div>
                         <div class="map-card glow-red rounded p-3 cursor-default">
                             <div class="map-card-content flex flex-col items-center justify-center gap-1">
                                 <i data-lucide="flame" class="w-6 md:w-8 h-6 md:h-8 text-red-500"></i>
@@ -314,26 +326,20 @@
                         </div>
                         <div class="map-card glow-sky rounded p-3 cursor-default">
                             <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="train-front" class="w-6 md:w-8 h-6 md:h-8 text-sky-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Overpass</span>
+                                <i data-lucide="radiation" class="w-6 md:w-8 h-6 md:h-8 text-sky-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Nuke</span>
                             </div>
                         </div>
                         <div class="map-card glow-gray rounded p-3 cursor-default">
                             <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="arrow-up-circle" class="w-6 md:w-8 h-6 md:h-8 text-zinc-300"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Vertigo</span>
+                                <i data-lucide="bridge" class="w-6 md:w-8 h-6 md:h-8 text-gray-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Overpass</span>
                             </div>
                         </div>
-                        <div class="map-card glow-green rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="leaf" class="w-6 md:w-8 h-6 md:h-8 text-green-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Ancient</span>
-                            </div>
-                        </div>
-                        <div class="map-card glow-orange rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="skull" class="w-6 md:w-8 h-6 md:h-8 text-orange-500"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Anubis</span>
+                        <div class="map-card glow-zinc rounded p-3 cursor-default col-span-2">
+                            <div class="map-card-content flex flex-row items-center justify-center gap-3">
+                                <i data-lucide="train-front" class="w-6 md:w-8 h-6 md:h-8 text-zinc-300"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Train</span>
                             </div>
                         </div>
                     </div>
@@ -422,7 +428,7 @@
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-yellow-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="availCheck" required class="w-5 h-5 accent-yellow-500 flex-shrink-0">
-                                <span class="text-sm text-zinc-300">We are available for deployment on <strong>Jan 09, 2026</strong>.</span>
+                                <span class="text-sm text-zinc-300">We confirm our availability to play on <strong>Jan 09, 2026</strong>.</span>
                             </label>
                         </div>
 
