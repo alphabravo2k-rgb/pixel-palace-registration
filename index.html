@@ -92,13 +92,10 @@
             filter: brightness(1.2);
             box-shadow: 0 0 20px rgba(219, 39, 119, 0.6);
         }
-        /* Disabled State */
         .btn-skew:disabled {
-            background: #3f3f46;
+            background: #333;
             cursor: not-allowed;
-            filter: grayscale(100%);
-            box-shadow: none;
-            opacity: 0.7;
+            filter: grayscale(1);
         }
 
         /* --- MAP CARDS --- */
@@ -449,7 +446,14 @@
                     <i data-lucide="check" class="w-10 h-10 text-green-400"></i>
                 </div>
                 <h2 class="text-4xl md:text-5xl font-bold text-white mb-2 brand-font uppercase">Roster Locked</h2>
-                <p class="text-zinc-400 mb-8">Data transmission complete. Check your email for confirmation.<br><br><strong class="text-white">Next Step:</strong> Submit logo in Discord #team-assets.</p>
+                <p class="text-zinc-400 mb-8">
+                    Your registration has been successfully transmitted.<br><br>
+                    Please check our <strong>Discord</strong> regularly for tournament updates and bracket announcements.
+                </p>
+                <div class="text-sm bg-zinc-800 p-4 rounded border border-zinc-700 mb-6">
+                    <strong class="text-white block mb-1">CRITICAL NEXT STEP:</strong>
+                    <span class="text-zinc-400">Upload your team logo in the <span class="text-blue-400">#team-assets</span> channel on Discord.</span>
+                </div>
                 <button onclick="window.location.reload()" class="btn-skew px-8 py-3 text-white font-bold uppercase">
                     <span>Return to Base</span>
                 </button>
@@ -469,23 +473,14 @@
         function updateCountdown() {
             const now = new Date().getTime();
             const difference = deadlineDate - now;
-            
             if (difference < 0) {
                 timeLeftElement.textContent = 'REGISTRATION OFFLINE';
                 countdownWrapper.classList.remove('bg-fuchsia-900/40');
                 countdownWrapper.classList.add('bg-red-900/40', 'border-red-600');
                 timeLeftElement.classList.add('text-red-500');
-                
-                // HARD DISABLE - BUTTON AND FORM
-                const btn = document.getElementById('submitBtn');
-                btn.disabled = true;
-                btn.innerHTML = '<span>REGISTRATION CLOSED</span>';
-                btn.classList.add('grayscale', 'opacity-50');
-                
                 clearInterval(countdownInterval);
                 return;
             }
-            
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
@@ -523,14 +518,6 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            
-            // DOUBLE CHECK DEADLINE ON SUBMIT
-            if (new Date().getTime() > deadlineDate) {
-                alert("⛔ REGISTRATION IS CLOSED.");
-                window.location.reload();
-                return;
-            }
-
             const userCode = document.getElementById('inviteCode').value.trim();
             if (arePublicSlotsFull && userCode.length === 0) {
                 alert("⚠️ PUBLIC SLOTS FULL.\n\nA VIP Access Code is required to bypass the lock.");
