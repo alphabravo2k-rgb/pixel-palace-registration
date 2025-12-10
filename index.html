@@ -92,10 +92,13 @@
             filter: brightness(1.2);
             box-shadow: 0 0 20px rgba(219, 39, 119, 0.6);
         }
+        /* Disabled State */
         .btn-skew:disabled {
-            background: #333;
+            background: #3f3f46;
             cursor: not-allowed;
-            filter: grayscale(1);
+            filter: grayscale(100%);
+            box-shadow: none;
+            opacity: 0.7;
         }
 
         /* --- MAP CARDS --- */
@@ -466,14 +469,23 @@
         function updateCountdown() {
             const now = new Date().getTime();
             const difference = deadlineDate - now;
+            
             if (difference < 0) {
                 timeLeftElement.textContent = 'REGISTRATION OFFLINE';
                 countdownWrapper.classList.remove('bg-fuchsia-900/40');
                 countdownWrapper.classList.add('bg-red-900/40', 'border-red-600');
                 timeLeftElement.classList.add('text-red-500');
+                
+                // HARD DISABLE - BUTTON AND FORM
+                const btn = document.getElementById('submitBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span>REGISTRATION CLOSED</span>';
+                btn.classList.add('grayscale', 'opacity-50');
+                
                 clearInterval(countdownInterval);
                 return;
             }
+            
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
@@ -511,6 +523,14 @@
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // DOUBLE CHECK DEADLINE ON SUBMIT
+            if (new Date().getTime() > deadlineDate) {
+                alert("⛔ REGISTRATION IS CLOSED.");
+                window.location.reload();
+                return;
+            }
+
             const userCode = document.getElementById('inviteCode').value.trim();
             if (arePublicSlotsFull && userCode.length === 0) {
                 alert("⚠️ PUBLIC SLOTS FULL.\n\nA VIP Access Code is required to bypass the lock.");
