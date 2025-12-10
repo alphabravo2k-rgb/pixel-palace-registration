@@ -110,14 +110,31 @@
         .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
         .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3); border-color: #f97316; }
 
-        /* --- LOGO GLOW --- */
-        .logo-super-glow {
-            filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.5));
-            animation: pulse-glow 3s infinite alternate;
+        /* --- LOGO ANIMATION (FIXED) --- */
+        @keyframes breathe {
+            0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(236, 72, 153, 0.7)); }
+            100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5)); }
         }
-        @keyframes pulse-glow {
-            from { filter: drop-shadow(0 0 20px rgba(168, 85, 247, 0.4)); }
-            to { filter: drop-shadow(0 0 35px rgba(236, 72, 153, 0.7)); }
+
+        .logo-super-glow {
+            /* Default: Breathing Animation */
+            animation: breathe 4s ease-in-out infinite; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+        }
+
+        .logo-super-glow:hover {
+            /* On Hover: Stop breathing, Enlarge, Glow Hard */
+            animation: none; 
+            transform: scale(1.15) rotate(1deg); /* Enlarge significantly */
+            filter: drop-shadow(0 0 40px rgba(219, 39, 119, 0.9)); /* Bright Pink Glow */
+        }
+
+        .logo-super-glow:active {
+            /* On Click: Shrink slightly for feedback */
+            transform: scale(0.95);
+            filter: drop-shadow(0 0 10px rgba(219, 39, 119, 1));
         }
     </style>
 </head>
@@ -144,7 +161,7 @@
         <header class="text-center mb-16 flex flex-col items-center relative">
             <div class="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-fuchsia-600/10 blur-[100px] rounded-full -z-10 pointer-events-none"></div>
 
-            <a href="https://discord.gg/JdXheQbvec" target="_blank" class="cursor-pointer transition-transform active:scale-95">
+            <a href="https://discord.gg/JdXheQbvec" target="_blank" class="transition-transform">
                 <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
                      alt="Pixel Palace Logo" 
                      class="w-56 h-56 md:w-72 md:h-72 object-contain logo-super-glow mb-4">
