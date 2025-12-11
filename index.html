@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Pixel Palace Community Cup - Elite Registration</title>
-    
+
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -14,7 +14,7 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Teko:wght@300..700&family=Rajdhani:wght@500;700&display=swap');
-        
+
         body { 
             font-family: 'Rajdhani', sans-serif; 
             background-color: #050505; 
@@ -25,8 +25,8 @@
             font-family: 'Teko', sans-serif; 
             font-weight: 700;
         }
-        
-        /* --- BACKGROUND --- */
+
+        /* --- ESPORTS BACKGROUND --- */
         .bg-cyber {
             background-image: 
                 linear-gradient(rgba(18, 18, 18, 0.85), rgba(0, 0, 0, 0.98)),
@@ -36,7 +36,7 @@
             background-attachment: fixed; 
         }
 
-        /* --- GLASS PANELS --- */
+        /* --- GLASS HUD PANELS --- */
         .hud-panel {
             background: rgba(20, 20, 25, 0.7);
             backdrop-filter: blur(20px);
@@ -46,19 +46,24 @@
             transition: all 0.3s ease;
         }
         @media (min-width: 768px) {
-            .hud-panel { clip-path: polygon(0 0, 100% 0, 100% 95%, 95% 100%, 0 100%); }
+            .hud-panel {
+                clip-path: polygon(0 0, 100% 0, 100% 95%, 95% 100%, 0 100%);
+            }
         }
 
         .hud-panel::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
-            background: linear-gradient(to bottom, #c026d3, #7c3aed); opacity: 0.8;
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+            background: linear-gradient(to bottom, #c026d3, #7c3aed);
+            opacity: 0.8;
         }
         .hud-panel:hover {
             border-color: rgba(192, 38, 211, 0.4);
             box-shadow: 0 0 30px rgba(124, 58, 237, 0.15);
         }
 
-        /* --- INPUTS --- */
+        /* --- INPUT FIELDS --- */
         .input-tech {
             background: rgba(0, 0, 0, 0.6);
             border: 1px solid #333;
@@ -73,48 +78,101 @@
             box-shadow: 0 0 15px rgba(217, 70, 239, 0.2);
         }
 
-        /* --- BUTTONS --- */
+        /* --- SKEWED BUTTON --- */
         .btn-skew {
             transform: skew(-10deg);
             background: linear-gradient(90deg, #9333ea, #db2777);
             transition: all 0.3s ease;
         }
-        .btn-skew > span { transform: skew(10deg); display: block; }
-        .btn-skew:hover { filter: brightness(1.2); box-shadow: 0 0 20px rgba(219, 39, 119, 0.6); }
-        .btn-skew:disabled { background: #333; cursor: not-allowed; filter: grayscale(1); }
+        .btn-skew > span {
+            transform: skew(10deg);
+            display: block;
+        }
+        .btn-skew:hover {
+            filter: brightness(1.2);
+            box-shadow: 0 0 20px rgba(219, 39, 119, 0.6);
+        }
+        /* Disabled State */
+        .btn-skew:disabled {
+            background: #3f3f46;
+            background: #333;
+            cursor: not-allowed;
+            filter: grayscale(100%);
+            box-shadow: none;
+            opacity: 0.7;
+            filter: grayscale(1);
+        }
 
         /* --- MAP CARDS --- */
         .map-card {
-            border: 1px solid #333; transition: all 0.3s ease; position: relative; overflow: hidden;
-            background-size: cover; background-position: center; height: 100px; 
-            display: flex; align-items: center; justify-content: center; border-radius: 4px;
+            border: 1px solid #333;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background-size: cover;
+            background-position: center;
+            height: 80px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-        .map-card::before {
-            content: ''; position: absolute; inset: 0;
-            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.2)); 
-            transition: all 0.3s ease; z-index: 1;
+        @media (min-width: 768px) {
+            .map-card { height: 100px; } 
         }
-        .map-card:hover::before { background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0)); }
-        .map-card-content { position: relative; z-index: 2; text-align: center; width: 100%; }
-        .map-card:hover { transform: translateY(-3px) scale(1.02); border-color: #d946ef; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .glow-active:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4); border-color: #22c55e; }
 
-        /* --- ANIMATIONS --- */
+        .map-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+        .map-card:hover::before {
+            background: rgba(0, 0, 0, 0.4);
+        }
+        .map-card-content {
+            position: relative;
+            z-index: 2;
+            text-align: center;
+        }
+        .map-card:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: #fff;
+        }
+
+        .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3); border-color: #ef4444; }
+        .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3); border-color: #f59e0b; }
+        .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3); border-color: #0ea5e9; }
+        .glow-gray:hover { box-shadow: 0 4px 20px rgba(156, 163, 175, 0.3); border-color: #9ca3af; }
+        .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
+        .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3); border-color: #f97316; }
+        .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.3); border-color: #facc15; }
+        .glow-zinc:hover { box-shadow: 0 4px 20px rgba(212, 212, 216, 0.3); border-color: #e4e4e7; }
+
+        /* --- LOGO ANIMATION --- */
         @keyframes breathe {
             0% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5)); }
             50% { transform: scale(1.03); filter: drop-shadow(0 0 25px rgba(236, 72, 153, 0.7)); }
             100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.5)); }
         }
+
         .logo-super-glow {
             animation: breathe 4s ease-in-out infinite; 
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
         }
-        .logo-super-glow:hover { animation: none; transform: scale(1.15) rotate(1deg); filter: drop-shadow(0 0 40px rgba(219, 39, 119, 0.9)); }
-        .logo-super-glow:active { transform: scale(0.95); filter: drop-shadow(0 0 10px rgba(219, 39, 119, 1)); }
 
-        /* --- TOGGLE SWITCH --- */
-        .toggle-checkbox:checked { right: 0; border-color: #22c55e; }
-        .toggle-checkbox:checked + .toggle-label { background-color: #22c55e; }
+        .logo-super-glow:hover {
+            animation: none; 
+            transform: scale(1.15) rotate(1deg); 
+            filter: drop-shadow(0 0 40px rgba(219, 39, 119, 0.9)); 
+        }
+
+        .logo-super-glow:active {
+            transform: scale(0.95);
+            filter: drop-shadow(0 0 10px rgba(219, 39, 119, 1));
+        }
     </style>
 </head>
 <body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40">
@@ -136,7 +194,7 @@
     </script>
 
     <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
-        
+
         <header class="text-center mb-12 md:mb-16 flex flex-col items-center relative">
             <div class="hidden sm:block absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] bg-fuchsia-600/10 blur-[100px] rounded-full -z-10 pointer-events-none"></div>
 
@@ -149,7 +207,7 @@
             <h1 class="text-5xl sm:text-7xl md:text-9xl font-black text-white italic tracking-tighter brand-font leading-none drop-shadow-[0_0_15px_rgba(192,38,211,0.5)] py-2 relative z-10">
                 COMMUNITY <span class="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-500 to-purple-600 inline-block pr-2">CUP</span>
             </h1>
-            
+
             <div class="flex items-center gap-2 md:gap-4 mt-2 mb-8">
                 <div class="h-[1px] w-8 md:w-12 bg-zinc-600"></div>
                 <p class="text-lg md:text-3xl text-zinc-300 brand-font tracking-[0.2em] md:tracking-[0.3em] uppercase">January 09 • 2026</p>
@@ -185,7 +243,7 @@
                     </div>
                 </div>
             </div>
-            
+
             <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto">
                 <a href="https://discord.gg/JdXheQbvec" target="_blank" class="btn-skew px-8 py-3 text-white font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2">
                     <span class="flex items-center gap-2"><i data-lucide="message-circle" class="w-5 h-5"></i> Join Discord</span>
@@ -195,18 +253,10 @@
                 </a>
             </div>
         </header>
-        
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            
-            <div class="lg:col-span-1 space-y-6">
-                
-                <div class="hud-panel p-5 md:p-6 !border-l-4 !border-l-fuchsia-500">
-                    <p class="text-center text-xs uppercase tracking-widest text-fuchsia-400 mb-1">Time Remaining</p>
-                    <div id="countdown-wrapper" class="bg-black/40 rounded p-3 text-center border border-fuchsia-500/20">
-                        <p id="time-left" class="text-3xl md:text-4xl brand-font text-white drop-shadow-[0_0_10px_rgba(232,121,249,0.5)]">LOADING...</p>
-                    </div>
-                </div>
 
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+
+            <div class="lg:col-span-1 space-y-6">
                 <div class="hud-panel p-5 md:p-6">
                     <h3 class="text-xl md:text-2xl text-cyan-400 brand-font mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
                         <i data-lucide="calendar-clock" class="w-5 md:w-6 h-5 md:h-6"></i> TOURNAMENT INTEL
@@ -224,6 +274,13 @@
                     </div>
                 </div>
 
+                <div class="hud-panel p-5 md:p-6 !border-l-4 !border-l-fuchsia-500">
+                    <p class="text-center text-xs uppercase tracking-widest text-fuchsia-400 mb-1">Time Remaining</p>
+                    <div id="countdown-wrapper" class="bg-black/40 rounded p-3 text-center border border-fuchsia-500/20">
+                        <p id="time-left" class="text-3xl md:text-4xl brand-font text-white drop-shadow-[0_0_10px_rgba(232,121,249,0.5)]">LOADING...</p>
+                    </div>
+                </div>
+
                 <div class="hud-panel p-5 md:p-6">
                     <h3 class="text-lg md:text-xl text-red-400 brand-font mb-3 flex items-center gap-2">
                         <i data-lucide="shield-check" class="w-5 h-5"></i> MANDATORY PROTOCOLS
@@ -235,10 +292,10 @@
                         </li>
                         <li class="flex gap-2">
                             <i data-lucide="alert-triangle" class="w-4 h-4 text-yellow-500 mt-0.5 min-w-[16px]"></i>
-                            <span>Admins reserve the right to DQ teams.</span>
+                            <span>Admins reserve the right to DQ teams for toxicity or rule violations.</span>
                         </li>
                     </ul>
-                    <a href="https://akros.ac/#download" target="_blank" class="mt-4 block w-full py-2 bg-red-900/30 border border-red-500/30 hover:bg-red-500/20 text-center text-red-300 text-sm font-bold uppercase tracking-wider transition-colors">
+                    <a href="https://akros.ac/#downloadSteps" target="_blank" class="mt-4 block w-full py-2 bg-red-900/30 border border-red-500/30 hover:bg-red-500/20 text-center text-red-300 text-sm font-bold uppercase tracking-wider transition-colors">
                         Get Akros Client
                     </a>
                 </div>
@@ -248,26 +305,47 @@
                         <i data-lucide="map" class="w-5 h-5 text-zinc-400"></i> ACTIVE DUTY POOL
                     </h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_ancient.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Ancient</span></div>
+                        <div class="map-card glow-green rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="leaf" class="w-6 md:w-8 h-6 md:h-8 text-green-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Ancient</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_dust2.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Dust 2</span></div>
+                        <div class="map-card glow-yellow rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="sun" class="w-6 md:w-8 h-6 md:h-8 text-yellow-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Dust 2</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_inferno.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Inferno</span></div>
+                        <div class="map-card glow-red rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="flame" class="w-6 md:w-8 h-6 md:h-8 text-red-500"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Inferno</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_mirage.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Mirage</span></div>
+                        <div class="map-card glow-amber rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="building-2" class="w-6 md:w-8 h-6 md:h-8 text-amber-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Mirage</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_nuke.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Nuke</span></div>
+                        <div class="map-card glow-sky rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="radiation" class="w-6 md:w-8 h-6 md:h-8 text-sky-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Nuke</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_overpass.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Overpass</span></div>
+                        <div class="map-card glow-gray rounded p-3 cursor-default">
+                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
+                                <i data-lucide="bridge" class="w-6 md:w-8 h-6 md:h-8 text-gray-400"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Overpass</span>
+                            </div>
                         </div>
-                        <div class="map-card glow-active col-span-2" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_train.png');">
-                            <div class="map-card-content"><span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Train</span></div>
+                        <div class="map-card glow-zinc rounded p-3 cursor-default col-span-2">
+                            <div class="map-card-content flex flex-row items-center justify-center gap-3">
+                                <i data-lucide="train-front" class="w-6 md:w-8 h-6 md:h-8 text-zinc-300"></i>
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Train</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -275,25 +353,32 @@
 
             <div class="lg:col-span-2">
                 <form id="registrationForm" class="space-y-6 md:space-y-8">
-                    
+
                     <div class="hud-panel p-5 md:p-8">
                         <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
                             <div class="w-8 h-8 bg-fuchsia-600 flex items-center justify-center font-bold text-black skew-x-[-10deg]">01</div>
                             <h2 class="text-2xl md:text-3xl text-white brand-font uppercase tracking-wide">Team Identity</h2>
                         </div>
+
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <div class="col-span-full bg-fuchsia-900/10 p-4 border border-fuchsia-500/30 rounded">
-                                <label for="inviteCode" class="text-xs font-bold uppercase tracking-widest text-fuchsia-400 mb-2 block">VIP Access Code (Optional)</label>
-                                <input type="text" id="inviteCode" placeholder="Enter Code" class="input-tech w-full p-3 text-white placeholder-zinc-600 focus:bg-fuchsia-900/20">
+                                <label for="inviteCode" class="text-xs font-bold uppercase tracking-widest text-fuchsia-400 mb-2 block">VIP Access Code (Pro Teams)</label>
+                                <input type="text" id="inviteCode" placeholder="Enter Invite Code to bypass slot limit" class="input-tech w-full p-3 text-white placeholder-zinc-600 focus:bg-fuchsia-900/20">
                             </div>
+
                             <div class="md:col-span-2">
                                 <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1 block">Team Name</label>
                                 <input type="text" id="teamName" required placeholder="e.g. Faze Clan" class="input-tech w-full p-3 md:p-4 text-lg text-white font-bold">
                             </div>
+
                             <div>
                                 <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1 block">Region</label>
                                 <input type="text" id="teamRegion" required placeholder="IND / PAK / ME" class="input-tech w-full p-3 md:p-4 text-white">
+                                <p class="text-[10px] text-red-400 mt-1 uppercase font-bold tracking-wider flex items-center gap-1">
+                                    <i data-lucide="lock" class="w-3 h-3"></i> Region Locked
+                                </p>
                             </div>
+
                             <div>
                                 <label class="text-xs font-bold uppercase tracking-widest text-zinc-500 mb-1 block">Logo Link</label>
                                 <input type="url" id="logoLink" placeholder="imgur.com/..." class="input-tech w-full p-3 md:p-4 text-white">
@@ -302,37 +387,32 @@
                     </div>
 
                     <div class="hud-panel p-5 md:p-8">
-                        <div class="flex items-center justify-between gap-3 mb-6 border-b border-white/10 pb-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 bg-indigo-600 flex items-center justify-center font-bold text-white skew-x-[-10deg]">02</div>
-                                <h3 class="text-2xl md:text-3xl text-white brand-font uppercase tracking-wide">Roster</h3>
-                            </div>
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <span class="text-xs font-bold text-zinc-500 uppercase tracking-wide mr-2">ADD SUBSTITUTE</span>
-                                <div class="relative">
-                                    <input type="checkbox" id="subToggle" class="sr-only peer">
-                                    <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                                </div>
-                            </label>
+                        <div class="flex items-center gap-3 mb-6 border-b border-white/10 pb-4">
+                            <div class="w-8 h-8 bg-indigo-600 flex items-center justify-center font-bold text-white skew-x-[-10deg]">02</div>
+                            <h3 class="text-2xl md:text-3xl text-white brand-font uppercase tracking-wide">Roster Manifest</h3>
                         </div>
 
                         <div class="space-y-4">
-                            <div id="mainRoster"></div>
-
-                            <div id="subContainer" class="hidden border-t border-dashed border-zinc-700 pt-4 mt-4">
-                                <div class="bg-black/30 p-4 border-l-2 border-green-500">
-                                    <div class="flex justify-between items-center mb-3">
-                                        <span class="text-sm font-bold uppercase text-zinc-400">Player 06 // <span class="text-white">Tactical Sub</span></span>
-                                        <span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded">OPTIONAL</span>
+                            <script>
+                                const playerInputs = (i, title) => `
+                                    <div class="bg-black/30 p-4 border-l-2 ${i===1 ? 'border-yellow-500' : (i===6 ? 'border-green-500' : 'border-indigo-500')}">
+                                        <div class="flex justify-between items-center mb-3">
+                                            <span class="text-sm font-bold uppercase text-zinc-400">Operator 0${i} // <span class="text-white">${title}</span></span>
+                                            ${i===1 ? '<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i>' : ''}
+                                            ${i===6 ? '<span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded">SUB</span>' : ''}
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                            <input type="text" id="p${i}Discord" required placeholder="Discord" class="input-tech w-full p-2 text-sm text-white">
+                                            <input type="url" id="p${i}Steam" required placeholder="Steam URL" class="input-tech w-full p-2 text-sm text-white">
+                                            <input type="url" id="p${i}Faceit" required placeholder="Faceit URL" class="input-tech w-full p-2 text-sm text-white">
+                                            <input type="text" id="p${i}Rank" required placeholder="Rank/Lvl" class="input-tech w-full p-2 text-sm text-white">
+                                        </div>
                                     </div>
-                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                        <input type="text" id="p6Discord" placeholder="Discord" class="input-tech w-full p-2 text-sm text-white">
-                                        <input type="url" id="p6Steam" placeholder="Steam URL" class="input-tech w-full p-2 text-sm text-white">
-                                        <input type="url" id="p6Faceit" placeholder="Faceit URL" class="input-tech w-full p-2 text-sm text-white">
-                                        <input type="text" id="p6Rank" placeholder="Rank/Lvl" class="input-tech w-full p-2 text-sm text-white">
-                                    </div>
-                                </div>
-                            </div>
+                                `;
+                                document.write(playerInputs(1, 'Captain'));
+                                for(let i=2; i<=5; i++) document.write(playerInputs(i, 'Starter'));
+                                document.write(playerInputs(6, 'Tactical Sub'));
+                            </script>
                         </div>
                     </div>
 
@@ -345,15 +425,15 @@
                         <div class="space-y-4 mb-8">
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-green-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="akrosCheck" required class="w-5 h-5 accent-green-500 flex-shrink-0">
-                                <span class="text-sm text-zinc-300">We confirm <strong>Akros Anti-Cheat</strong> is installed.</span>
+                                <span class="text-sm text-zinc-300">We confirm <strong>Akros Anti-Cheat</strong> is installed on all systems.</span>
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-blue-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="discordCheck" required class="w-5 h-5 accent-blue-500 flex-shrink-0">
-                                <span class="text-sm text-zinc-300">All players have joined the <strong>Discord HQ</strong>.</span>
+                                <span class="text-sm text-zinc-300">All 6 operators have joined the <strong>Discord HQ</strong>.</span>
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-yellow-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="availCheck" required class="w-5 h-5 accent-yellow-500 flex-shrink-0">
-                                <span class="text-sm text-zinc-300">We confirm availability for <strong>Jan 09, 2026</strong>.</span>
+                                <span class="text-sm text-zinc-300">We confirm our availability to play on <strong>Jan 09, 2026</strong>.</span>
                             </label>
                         </div>
 
@@ -371,60 +451,27 @@
                     <i data-lucide="check" class="w-10 h-10 text-green-400"></i>
                 </div>
                 <h2 class="text-4xl md:text-5xl font-bold text-white mb-2 brand-font uppercase">Roster Locked</h2>
-                <p class="text-zinc-400 mb-8">Registration Complete.<br>Check Discord for updates.</p>
+                <p class="text-zinc-400 mb-8">Data transmission complete. Check your email for confirmation.<br><br><strong class="text-white">Next Step:</strong> Submit logo in Discord #team-assets.</p>
+                <p class="text-zinc-400 mb-8">
+                    Your registration has been successfully transmitted.<br><br>
+                    Please check our <strong>Discord</strong> regularly for tournament updates and bracket announcements.
+                </p>
+                <div class="text-sm bg-zinc-800 p-4 rounded border border-zinc-700 mb-6">
+                    <strong class="text-white block mb-1">CRITICAL NEXT STEP:</strong>
+                    <span class="text-zinc-400">Upload your team logo in the <span class="text-blue-400">#team-assets</span> channel on Discord.</span>
+                </div>
                 <button onclick="window.location.reload()" class="btn-skew px-8 py-3 text-white font-bold uppercase">
                     <span>Return to Base</span>
                 </button>
             </div>
         </div>
     </div>
-    
+
     <footer class="mt-12 text-center pb-8 opacity-50">
-        <p class="text-xs uppercase tracking-[0.3em]">
-            © 2026 Pixel Palace • Dev by <a href="https://discord.com/users/bravo.gg" target="_blank" class="text-fuchsia-500 hover:text-fuchsia-400 hover:underline transition-colors">Bravo.gg</a>
-        </p>
+        <p class="text-xs uppercase tracking-[0.3em]">© 2026 Pixel Palace • Dev by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:underline">Bravo</a></p>
     </footer>
 
     <script>
-        // --- RENDER MAIN ROSTER ---
-        const mainRoster = document.getElementById('mainRoster');
-        const createPlayerBlock = (i, title) => `
-            <div class="bg-black/30 p-4 border-l-2 ${i===1 ? 'border-yellow-500' : 'border-indigo-500'}">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-sm font-bold uppercase text-zinc-400">Player 0${i} // <span class="text-white">${title}</span></span>
-                    ${i===1 ? '<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i>' : ''}
-                </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    <input type="text" id="p${i}Discord" required placeholder="Discord" class="input-tech w-full p-2 text-sm text-white">
-                    <input type="url" id="p${i}Steam" required placeholder="Steam URL" class="input-tech w-full p-2 text-sm text-white">
-                    <input type="url" id="p${i}Faceit" required placeholder="Faceit URL" class="input-tech w-full p-2 text-sm text-white">
-                    <input type="text" id="p${i}Rank" required placeholder="Rank/Lvl" class="input-tech w-full p-2 text-sm text-white">
-                </div>
-            </div>`;
-        
-        let html = createPlayerBlock(1, 'Captain');
-        for(let i=2; i<=5; i++) html += createPlayerBlock(i, 'Starter');
-        mainRoster.innerHTML = html;
-
-        // --- SUB TOGGLE LOGIC ---
-        const subToggle = document.getElementById('subToggle');
-        const subContainer = document.getElementById('subContainer');
-        const subInputs = subContainer.querySelectorAll('input');
-
-        subToggle.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                subContainer.classList.remove('hidden');
-                subInputs.forEach(input => input.required = true); // Make required if visible
-            } else {
-                subContainer.classList.add('hidden');
-                subInputs.forEach(input => {
-                    input.required = false;
-                    input.value = ''; // Clear value on hide
-                });
-            }
-        });
-
-        // --- COUNTDOWN & SLOTS ---
         const deadlineDate = new Date('2025-12-31T22:59:59Z').getTime();
         const timeLeftElement = document.getElementById('time-left');
         const countdownWrapper = document.getElementById('countdown-wrapper');
@@ -432,14 +479,23 @@
         function updateCountdown() {
             const now = new Date().getTime();
             const difference = deadlineDate - now;
+            
             if (difference < 0) {
                 timeLeftElement.textContent = 'REGISTRATION OFFLINE';
                 countdownWrapper.classList.remove('bg-fuchsia-900/40');
                 countdownWrapper.classList.add('bg-red-900/40', 'border-red-600');
                 timeLeftElement.classList.add('text-red-500');
+                
+                // HARD DISABLE - BUTTON AND FORM
+                const btn = document.getElementById('submitBtn');
+                btn.disabled = true;
+                btn.innerHTML = '<span>REGISTRATION CLOSED</span>';
+                btn.classList.add('grayscale', 'opacity-50');
+                
                 clearInterval(countdownInterval);
                 return;
             }
+            
             const days = Math.floor(difference / (1000 * 60 * 60 * 24));
             const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
@@ -472,12 +528,19 @@
         }
         checkSlots();
 
-        // --- SUBMIT ---
         const form = document.getElementById('registrationForm');
         const submitBtn = document.getElementById('submitBtn');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // DOUBLE CHECK DEADLINE ON SUBMIT
+            if (new Date().getTime() > deadlineDate) {
+                alert("⛔ REGISTRATION IS CLOSED.");
+                window.location.reload();
+                return;
+            }
+
             const userCode = document.getElementById('inviteCode').value.trim();
             if (arePublicSlotsFull && userCode.length === 0) {
                 alert("⚠️ PUBLIC SLOTS FULL.\n\nA VIP Access Code is required to bypass the lock.");
@@ -486,24 +549,19 @@
             }
             submitBtn.disabled = true;
             submitBtn.innerHTML = '<span>TRANSMITTING DATA...</span>';
-            
+
             const params = new URLSearchParams();
             const add = (idKey, elementId) => {
                 const element = document.getElementById(elementId);
                 if (element && ENTRY_IDS[idKey]) params.append(`entry.${ENTRY_IDS[idKey]}`, element.value);
             };
             add('teamName', 'teamName'); add('teamRegion', 'teamRegion'); add('logoLink', 'logoLink'); add('inviteCode', 'inviteCode'); 
-            for(let i=1; i<=5; i++) { add(`p${i}Discord`, `p${i}Discord`); add(`p${i}Steam`, `p${i}Steam`); add(`p${i}Faceit`, `p${i}Faceit`); add(`p${i}Rank`, `p${i}Rank`); }
-            
-            // Add P6 only if checked
-            if(subToggle.checked) {
-                add('p6Discord', 'p6Discord'); add('p6Steam', 'p6Steam'); add('p6Faceit', 'p6Faceit'); add('p6Rank', 'p6Rank');
-            }
+            for(let i=1; i<=6; i++) { add(`p${i}Discord`, `p${i}Discord`); add(`p${i}Steam`, `p${i}Steam`); add(`p${i}Faceit`, `p${i}Faceit`); add(`p${i}Rank`, `p${i}Rank`); }
 
             const checkboxEntryId = ENTRY_IDS.checkboxes;
-            if(document.getElementById('akrosCheck').checked) params.append(`entry.${checkboxEntryId}`, 'ANTI-CHEAT ACKNOWLEDGED');
-            if(document.getElementById('availCheck').checked) params.append(`entry.${checkboxEntryId}`, 'SCHEDULE CONFIRMED');
-            if(document.getElementById('discordCheck').checked) params.append(`entry.${checkboxEntryId}`, 'DISCORD JOINED');
+            if(document.getElementById('akrosCheck').checked) params.append(`entry.${checkboxEntryId}`, 'MANDATORY ANTI-CHEAT (Our team acknowledges that Akros Anti-Cheat must be installed by all 6 players.)');
+            if(document.getElementById('availCheck').checked) params.append(`entry.${checkboxEntryId}`, 'SCHEDULE (We confirm availability for the January 2026 tournament dates.)');
+            if(document.getElementById('discordCheck').checked) params.append(`entry.${checkboxEntryId}`, 'COMMUNICATION (All 6 players have joined the Pixel Palace Discord server.)');
 
             const finalUrl = `https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`;
             let currentRetry = 0; let success = false;
@@ -512,6 +570,7 @@
                     await fetch(finalUrl, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: params });
                     success = true;
                     document.getElementById('successMessage').classList.remove('hidden');
+                    if(window.createIcons) window.createIcons();
                 } catch (err) {
                     currentRetry++;
                     await new Promise(resolve => setTimeout(resolve, Math.pow(2, currentRetry) * 1000));
@@ -522,6 +581,7 @@
                  submitBtn.innerHTML = '<span>TRANSMISSION FAILED</span>';
             }
         });
+        if(window.createIcons) window.createIcons(); 
     </script>
 </body>
 </html>
