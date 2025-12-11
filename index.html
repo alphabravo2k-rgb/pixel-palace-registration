@@ -98,7 +98,7 @@
             filter: grayscale(1);
         }
 
-        /* --- MAP CARDS --- */
+        /* --- MAP CARDS (UPDATED WITH IMAGES) --- */
         .map-card {
             border: 1px solid #333;
             transition: all 0.3s ease;
@@ -106,44 +106,38 @@
             overflow: hidden;
             background-size: cover;
             background-position: center;
-            height: 80px; 
+            height: 100px; 
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        @media (min-width: 768px) {
-            .map-card { height: 100px; } 
+            border-radius: 4px;
         }
         
         .map-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: linear-gradient(to top, rgba(0,0,0,0.9), rgba(0,0,0,0.3)); /* Darker overlay for text */
             transition: all 0.3s ease;
             z-index: 1;
         }
         .map-card:hover::before {
-            background: rgba(0, 0, 0, 0.4);
+            background: linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0.1));
         }
+        
         .map-card-content {
             position: relative;
             z-index: 2;
             text-align: center;
+            width: 100%;
         }
         .map-card:hover {
             transform: translateY(-3px) scale(1.02);
             border-color: #fff;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
         }
         
-        .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3); border-color: #ef4444; }
-        .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3); border-color: #f59e0b; }
-        .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3); border-color: #0ea5e9; }
-        .glow-gray:hover { box-shadow: 0 4px 20px rgba(156, 163, 175, 0.3); border-color: #9ca3af; }
-        .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
-        .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3); border-color: #f97316; }
-        .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.3); border-color: #facc15; }
-        .glow-zinc:hover { box-shadow: 0 4px 20px rgba(212, 212, 216, 0.3); border-color: #e4e4e7; }
+        .glow-active:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.4); border-color: #22c55e; }
 
         /* --- LOGO ANIMATION --- */
         @keyframes breathe {
@@ -290,7 +284,7 @@
                             <span>Admins reserve the right to DQ teams for toxicity or rule violations.</span>
                         </li>
                     </ul>
-                    <a href="https://akros.ac/#downloadSteps" target="_blank" class="mt-4 block w-full py-2 bg-red-900/30 border border-red-500/30 hover:bg-red-500/20 text-center text-red-300 text-sm font-bold uppercase tracking-wider transition-colors">
+                    <a href="https://akros.ac/#download" target="_blank" class="mt-4 block w-full py-2 bg-red-900/30 border border-red-500/30 hover:bg-red-500/20 text-center text-red-300 text-sm font-bold uppercase tracking-wider transition-colors">
                         Get Akros Client
                     </a>
                 </div>
@@ -300,46 +294,39 @@
                         <i data-lucide="map" class="w-5 h-5 text-zinc-400"></i> ACTIVE DUTY POOL
                     </h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="map-card glow-green rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="leaf" class="w-6 md:w-8 h-6 md:h-8 text-green-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Ancient</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_ancient.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Ancient</span>
                             </div>
                         </div>
-                        <div class="map-card glow-yellow rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="sun" class="w-6 md:w-8 h-6 md:h-8 text-yellow-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Dust 2</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_dust2.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Dust 2</span>
                             </div>
                         </div>
-                        <div class="map-card glow-red rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="flame" class="w-6 md:w-8 h-6 md:h-8 text-red-500"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Inferno</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_inferno.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Inferno</span>
                             </div>
                         </div>
-                        <div class="map-card glow-amber rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="building-2" class="w-6 md:w-8 h-6 md:h-8 text-amber-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Mirage</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_mirage.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Mirage</span>
                             </div>
                         </div>
-                        <div class="map-card glow-sky rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="radiation" class="w-6 md:w-8 h-6 md:h-8 text-sky-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Nuke</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_nuke.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Nuke</span>
                             </div>
                         </div>
-                        <div class="map-card glow-gray rounded p-3 cursor-default">
-                            <div class="map-card-content flex flex-col items-center justify-center gap-1">
-                                <i data-lucide="bridge" class="w-6 md:w-8 h-6 md:h-8 text-gray-400"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Overpass</span>
+                        <div class="map-card glow-active" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_overpass.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Overpass</span>
                             </div>
                         </div>
-                        <div class="map-card glow-zinc rounded p-3 cursor-default col-span-2">
-                            <div class="map-card-content flex flex-row items-center justify-center gap-3">
-                                <i data-lucide="train-front" class="w-6 md:w-8 h-6 md:h-8 text-zinc-300"></i>
-                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white">Train</span>
+                        <div class="map-card glow-active col-span-2" style="background-image: url('https://raw.githubusercontent.com/sivert-io/cs2-server-manager/master/map_thumbnails/de_train.png');">
+                            <div class="map-card-content">
+                                <span class="text-sm md:text-lg font-bold uppercase tracking-wider brand-font text-white drop-shadow-md">Train</span>
                             </div>
                         </div>
                     </div>
@@ -392,7 +379,7 @@
                                 const playerInputs = (i, title) => `
                                     <div class="bg-black/30 p-4 border-l-2 ${i===1 ? 'border-yellow-500' : (i===6 ? 'border-green-500' : 'border-indigo-500')}">
                                         <div class="flex justify-between items-center mb-3">
-                                            <span class="text-sm font-bold uppercase text-zinc-400">Operator 0${i} // <span class="text-white">${title}</span></span>
+                                            <span class="text-sm font-bold uppercase text-zinc-400">Player 0${i} // <span class="text-white">${title}</span></span>
                                             ${i===1 ? '<i data-lucide="crown" class="w-4 h-4 text-yellow-500"></i>' : ''}
                                             ${i===6 ? '<span class="text-[10px] bg-green-900 text-green-300 px-2 py-0.5 rounded">SUB</span>' : ''}
                                         </div>
@@ -424,7 +411,7 @@
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-blue-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="discordCheck" required class="w-5 h-5 accent-blue-500 flex-shrink-0">
-                                <span class="text-sm text-zinc-300">All 6 operators have joined the <strong>Discord HQ</strong>.</span>
+                                <span class="text-sm text-zinc-300">All 6 players have joined the <strong>Discord HQ</strong>.</span>
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 hover:border-yellow-500/50 transition-colors cursor-pointer">
                                 <input type="checkbox" id="availCheck" required class="w-5 h-5 accent-yellow-500 flex-shrink-0">
