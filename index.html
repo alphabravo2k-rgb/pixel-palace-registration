@@ -15,44 +15,25 @@
         body { font-family: 'Rajdhani', sans-serif; background-color: #050505; color: #e4e4e7; overflow-x: hidden; }
         h1, h2, h3, .brand-font { font-family: 'Teko', sans-serif; font-weight: 700; }
         
-        .bg-cyber {
-            background-image: linear-gradient(rgba(18, 18, 18, 0.85), rgba(0, 0, 0, 0.98)),
-                repeating-linear-gradient(0deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px);
-            background-size: cover; background-attachment: fixed; 
-        }
-        .hud-panel {
-            background: rgba(20, 20, 25, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08);
-            position: relative; clip-path: polygon(0 0, 100% 0, 100% 95%, 95% 100%, 0 100%);
-        }
-        .hud-panel::before {
-            content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%;
-            background: linear-gradient(to bottom, #c026d3, #7c3aed); opacity: 0.8;
-        }
+        .bg-cyber { background-image: linear-gradient(rgba(18, 18, 18, 0.85), rgba(0, 0, 0, 0.98)), repeating-linear-gradient(0deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px); background-size: cover; background-attachment: fixed; }
+        .hud-panel { background: rgba(20, 20, 25, 0.7); backdrop-filter: blur(20px); border: 1px solid rgba(255, 255, 255, 0.08); position: relative; clip-path: polygon(0 0, 100% 0, 100% 95%, 95% 100%, 0 100%); }
+        .hud-panel::before { content: ''; position: absolute; top: 0; left: 0; width: 3px; height: 100%; background: linear-gradient(to bottom, #c026d3, #7c3aed); opacity: 0.8; }
         
-        .input-tech {
-            background: rgba(0, 0, 0, 0.6); border: 1px solid #333; font-family: 'Rajdhani', sans-serif;
-            letter-spacing: 1px; transition: all 0.3s ease;
-        }
+        .input-tech { background: rgba(0, 0, 0, 0.6); border: 1px solid #333; font-family: 'Rajdhani', sans-serif; letter-spacing: 1px; transition: all 0.3s ease; }
         .input-tech:focus { border-color: #d946ef; background: rgba(20, 0, 20, 0.6); outline: none; }
         .btn-skew { transform: skew(-10deg); background: linear-gradient(90deg, #9333ea, #db2777); transition: all 0.3s ease; }
         .btn-skew > span { transform: skew(10deg); display: block; }
         .btn-skew:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 20px rgba(219, 39, 119, 0.6); }
         .btn-skew:disabled { background: #333; cursor: not-allowed; filter: grayscale(1); opacity: 0.7; }
 
-        .map-card {
-            border: 1px solid #333; transition: all 0.3s ease; position: relative; overflow: hidden;
-            background-size: cover; background-position: center; height: 80px; 
-            display: flex; align-items: center; justify-content: center;
-        }
+        .map-card { border: 1px solid #333; transition: all 0.3s ease; position: relative; overflow: hidden; background-size: cover; background-position: center; height: 80px; display: flex; align-items: center; justify-content: center; }
         @media (min-width: 768px) { .map-card { height: 100px; } }
-        .map-card::before {
-            content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7); transition: all 0.3s ease; z-index: 1;
-        }
+        .map-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); transition: all 0.3s ease; z-index: 1; }
         .map-card:hover::before { background: rgba(0, 0, 0, 0.4); } 
         .map-card-content { position: relative; z-index: 2; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .map-card:hover { transform: translateY(-3px) scale(1.02); border-color: #fff; }
 
+        /* Map Glow Effects */
         .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); border-color: #ef4444; }
         .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5); border-color: #f59e0b; }
         .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); border-color: #0ea5e9; }
@@ -60,16 +41,20 @@
         .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.5); border-color: #22c55e; }
         .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.5); border-color: #f97316; }
         .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.5); border-color: #facc15; }
+
+        /* Navigation Tabs */
+        .nav-tab { opacity: 0.5; transition: all 0.3s ease; cursor: pointer; border-bottom: 2px solid transparent; }
+        .nav-tab.active { opacity: 1; border-color: #d946ef; text-shadow: 0 0 10px rgba(217, 70, 239, 0.5); }
     </style>
 </head>
 <body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40">
 
     <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
         
-        <header class="text-center mb-12 flex flex-col items-center relative">
+        <header class="text-center mb-8 flex flex-col items-center relative">
             <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" alt="Pixel Palace Logo" class="w-32 h-32 md:w-48 md:h-48 object-contain mb-6 drop-shadow-[0_0_15px_rgba(192,38,211,0.5)]">
             <h1 class="text-5xl sm:text-7xl md:text-9xl font-black text-white italic tracking-tighter brand-font leading-none drop-shadow-[0_0_15px_rgba(192,38,211,0.5)]">
-                PIXEL PALACE <span class="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-500 to-purple-600">CUP 2</span>
+                PIXEL PALACE <br> <span class="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 via-pink-500 to-purple-600">COMMUNITY CUP 2</span>
             </h1>
             
             <div class="w-full max-w-5xl mx-auto mt-8 p-[1px] bg-gradient-to-r from-transparent via-zinc-700 to-transparent">
@@ -92,8 +77,8 @@
                     </div>
                 </div>
             </div>
-            
-            <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto">
+
+            <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto mb-8">
                 <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="btn-skew px-8 py-3 text-white font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2">
                     <span class="flex items-center gap-2"><i data-lucide="message-circle" class="w-5 h-5"></i> Join Discord</span>
                 </a>
@@ -101,11 +86,16 @@
                     <i data-lucide="tv" class="w-5 h-5"></i> Twitch Stream
                 </a>
             </div>
+
+            <div class="flex justify-center gap-8 border-b border-zinc-800 w-full max-w-2xl">
+                <button id="tab-register" class="nav-tab active pb-4 text-2xl brand-font uppercase tracking-widest text-white">Register Team</button>
+                <button id="tab-tracker" class="nav-tab pb-4 text-2xl brand-font uppercase tracking-widest text-white flex items-center gap-2">Live Roster Tracker <span class="bg-fuchsia-600 text-black text-xs px-2 py-0.5 rounded font-bold">BETA</span></button>
+            </div>
         </header>
 
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-            
+        <div id="view-register" class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             <div class="lg:col-span-1 space-y-6">
+                
                 <div class="hud-panel p-5 md:p-6">
                     <h3 class="text-xl md:text-2xl text-cyan-400 brand-font mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
                         <i data-lucide="calendar-clock" class="w-5 h-5"></i> TOURNAMENT INTEL
@@ -256,6 +246,20 @@
             </div>
         </div>
 
+        <div id="view-tracker" class="hidden max-w-4xl mx-auto">
+            <div class="hud-panel p-6 md:p-8">
+                <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                    <h2 class="text-2xl text-white brand-font uppercase tracking-wide">Live Roster Status</h2>
+                    <button onclick="fetchTrackerData()" class="text-zinc-400 hover:text-white flex items-center gap-2 text-sm"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh</button>
+                </div>
+                
+                <div id="tracker-loading" class="text-center py-12 text-zinc-500 animate-pulse font-bold tracking-widest uppercase">Fetching Database...</div>
+                
+                <div id="tracker-grid" class="grid grid-cols-1 gap-4 hidden">
+                    </div>
+            </div>
+        </div>
+
         <footer class="mt-12 text-center pb-8 opacity-50">
             <p class="text-xs uppercase tracking-[0.3em]">© 2026 Pixel Palace • Dev by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:underline">Bravo.gg</a></p>
         </footer>
@@ -265,6 +269,17 @@
     <script>
         const deadlineDate = new Date('2026-03-31T23:59:59Z').getTime(); 
         const API_URL = 'https://script.google.com/macros/s/AKfycbz8hFm1acnZIAEXvFf_nw3k4THr7tzsmvDszAN-ALhtU08zMOVOaiiCHRcr4ZiiBFP3eg/exec';
+
+        // Tab Switching Logic
+        document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
+        document.getElementById('tab-tracker').addEventListener('click', () => { switchTab('tracker'); fetchTrackerData(); });
+
+        function switchTab(tab) {
+            document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+            document.getElementById('tab-tracker').classList.toggle('active', tab === 'tracker');
+            document.getElementById('view-register').classList.toggle('hidden', tab !== 'register');
+            document.getElementById('view-tracker').classList.toggle('hidden', tab !== 'tracker');
+        }
 
         // Build Roster UI
         const container = document.getElementById('roster-container');
@@ -285,17 +300,63 @@
             </div>`;
         }
 
-        // Live Slot Polling (Updated: Polls every 15 seconds)
+        // Fetch Tracker Data
+        async function fetchTrackerData() {
+            document.getElementById('tracker-loading').classList.remove('hidden');
+            document.getElementById('tracker-grid').classList.add('hidden');
+            
+            try {
+                const res = await fetch(`${API_URL}?action=getTeams&t=${new Date().getTime()}`);
+                const data = await res.json();
+                
+                const grid = document.getElementById('tracker-grid');
+                grid.innerHTML = '';
+
+                if (data.teams && data.teams.length > 0) {
+                    data.teams.forEach(team => {
+                        const isApproved = team.status.toLowerCase() === 'approved';
+                        const statusColor = isApproved ? 'text-green-400 border-green-500/30 bg-green-900/10' : 'text-yellow-400 border-yellow-500/30 bg-yellow-900/10';
+                        const icon = isApproved ? 'check-circle' : 'clock';
+                        
+                        grid.innerHTML += `
+                        <div class="bg-black/50 border border-zinc-800 p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+                            <div class="flex items-center gap-4 w-full md:w-auto overflow-hidden">
+                                <img src="${team.logo || 'https://via.placeholder.com/50/000000/FFFFFF?text=' + team.tag}" onerror="this.src='https://via.placeholder.com/50/000000/FFFFFF?text=FAIL'" class="w-12 h-12 rounded object-cover border border-zinc-700 flex-shrink-0">
+                                <div class="min-w-0">
+                                    <h4 class="text-xl brand-font text-white uppercase truncate">${team.name} <span class="text-zinc-500 text-sm ml-2">[${team.tag}]</span></h4>
+                                    <p class="text-xs text-zinc-400 mt-1 truncate">${isApproved ? 'All checks complete.' : `Awaiting: ${team.missing}`}</p>
+                                </div>
+                            </div>
+                            <div class="w-full md:w-auto text-center md:text-right border ${statusColor} px-4 py-2 rounded flex-shrink-0">
+                                <span class="text-xs font-bold uppercase tracking-widest flex items-center justify-center md:justify-end gap-2">
+                                    <i data-lucide="${icon}" class="w-4 h-4"></i> ${team.status}
+                                </span>
+                            </div>
+                        </div>`;
+                    });
+                    if(window.createIcons) window.createIcons();
+                } else {
+                    grid.innerHTML = '<div class="text-center py-8 text-zinc-500">No teams registered yet.</div>';
+                }
+                
+                document.getElementById('tracker-loading').classList.add('hidden');
+                grid.classList.remove('hidden');
+
+            } catch (err) {
+                document.getElementById('tracker-loading').innerHTML = '<span class="text-red-500">Failed to load tracker database.</span>';
+            }
+        }
+
+        // Live Slot Polling
         async function fetchSlots() {
             try {
-                // Prevent browser caching the API response
                 const res = await fetch(`${API_URL}?t=${new Date().getTime()}`); 
                 const data = await res.json();
                 document.getElementById('slot-display').innerHTML = data.isFull ? '<span class="text-red-500">FULL</span>' : `${data.confirmed} / 32`;
             } catch(e) {}
         }
         fetchSlots();
-        setInterval(fetchSlots, 15000); // Polling patch
+        setInterval(fetchSlots, 15000); 
 
         // VIP Pre-validation (Visual Only)
         document.getElementById('inviteCode').addEventListener('blur', async (e) => {
@@ -325,7 +386,7 @@
             tLeft.textContent = `${d}D ${h}H ${m}M ${s}S`;
         }, 1000);
 
-        // Submit Payload (Updated: Timeout Logic)
+        // Submit Payload
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -350,7 +411,6 @@
             }
 
             try {
-                // Timeout Controller (30 seconds)
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000);
 
@@ -370,7 +430,7 @@
                 document.getElementById('registrationForm').classList.add('hidden');
                 document.getElementById('countdown-wrapper').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
-                fetchSlots(); // Force immediate update on success
+                fetchSlots(); 
 
             } catch (err) {
                 btn.disabled = false;
