@@ -51,9 +51,9 @@
         .num-block > span { transform: skew(10deg); font-family: 'Teko', sans-serif; font-size: 1.5rem; font-weight: 700; line-height: 1; padding-top: 4px; }
     </style>
 </head>
-<body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40">
+<body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40 flex flex-col">
 
-    <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16">
+    <div class="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 md:py-16 flex-grow">
         
         <header class="text-center mb-8 flex flex-col items-center relative">
             <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" alt="Pixel Palace Logo" class="w-32 h-32 md:w-48 md:h-48 object-contain mb-6 drop-shadow-[0_0_15px_rgba(192,38,211,0.5)]">
@@ -280,24 +280,47 @@
                 
                 <div id="tracker-loading" class="text-center py-12 text-zinc-500 animate-pulse font-bold tracking-widest uppercase">Fetching Database...</div>
                 
-                <div id="tracker-grid" class="grid grid-cols-1 gap-4 hidden">
-                    </div>
+                <div id="tracker-grid" class="grid grid-cols-1 gap-4 hidden"></div>
             </div>
         </div>
 
-        <footer class="mt-16 pb-8 flex flex-col items-center justify-center gap-4 opacity-50 hover:opacity-100 transition-opacity">
+    </div>
+
+    <footer class="w-full bg-black/60 border-t border-white/5 backdrop-blur-md mt-12 py-8 relative z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-8 md:gap-4">
+            
             <div class="flex items-center gap-4">
-                <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" class="w-16 h-16 object-contain filter grayscale opacity-70">
-                <div class="text-left border-l border-zinc-700 pl-4 py-1">
-                    <h4 class="brand-font text-2xl text-white leading-none tracking-widest uppercase">Pixel Palace</h4>
-                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mt-1">
-                        © 2026 Sovereign Systems <br> Engineered by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:text-fuchsia-400 transition-colors">Bravo.gg</a>
+                <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" class="w-12 h-12 object-contain filter grayscale opacity-60 hover:opacity-100 transition-opacity">
+                <div class="h-10 w-px bg-zinc-700"></div>
+                <div class="text-left flex flex-col justify-center">
+                    <h4 class="brand-font text-2xl text-zinc-200 leading-none tracking-widest uppercase">Pixel Palace</h4>
+                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mt-1 font-bold">
+                        © 2026 Sovereign Systems
                     </p>
                 </div>
             </div>
-        </footer>
 
-    </div>
+            <div class="flex flex-col items-center justify-center text-center">
+                <span class="text-[9px] uppercase tracking-[0.3em] text-zinc-600 font-bold mb-1">Engineered By</span>
+                <a href="https://discordapp.com/users/bravo.gg" class="text-sm font-bold tracking-[0.15em] uppercase text-fuchsia-500 hover:text-fuchsia-400 hover:drop-shadow-[0_0_8px_rgba(217,70,239,0.5)] transition-all">
+                    BRAVO.GG
+                </a>
+            </div>
+
+            <div class="flex items-center">
+                <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="group flex items-center gap-3 px-5 py-2 rounded border border-white/5 hover:border-fuchsia-500/30 bg-black hover:bg-fuchsia-900/10 transition-all">
+                    <div class="bg-zinc-900 group-hover:bg-fuchsia-500/20 p-2 rounded transition-colors">
+                        <i data-lucide="headphones" class="w-4 h-4 text-zinc-400 group-hover:text-fuchsia-400 transition-colors"></i>
+                    </div>
+                    <div class="flex flex-col text-left">
+                        <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-500 leading-none">Need Backup?</span>
+                        <span class="text-xs font-bold uppercase tracking-wider text-zinc-300 group-hover:text-white mt-1 leading-none transition-colors">Support Desk</span>
+                    </div>
+                </a>
+            </div>
+
+        </div>
+    </footer>
 
     <script>
         const deadlineDate = new Date('2026-03-31T23:59:59Z').getTime(); 
@@ -474,19 +497,11 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000);
-
-                const res = await fetch(API_URL, {
-                    method: 'POST',
-                    body: JSON.stringify(payload),
-                    signal: controller.signal
-                });
-                
+                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload), signal: controller.signal });
                 clearTimeout(timeoutId);
                 const responseData = await res.json();
 
-                if (responseData.error) {
-                    throw new Error(responseData.error);
-                }
+                if (responseData.error) throw new Error(responseData.error);
 
                 document.getElementById('registrationForm').classList.add('hidden');
                 document.getElementById('countdown-wrapper').classList.add('hidden');
@@ -496,11 +511,7 @@
             } catch (err) {
                 btn.disabled = false;
                 btn.innerHTML = '<span>TRANSMISSION FAILED. RETRY.</span>';
-                if (err.name === 'AbortError') {
-                    errorBox.textContent = "Network request timed out. Please try again.";
-                } else {
-                    errorBox.textContent = err.message;
-                }
+                errorBox.textContent = err.name === 'AbortError' ? "Network request timed out. Please try again." : err.message;
                 errorBox.classList.remove('hidden');
             }
         });
