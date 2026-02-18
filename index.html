@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Palace | Sovereign Operations</title>
+    <title>Pixel Palace | Tournament Registration</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
@@ -81,7 +81,7 @@
             outline: none; border-bottom-color: var(--neon-cyan); background: rgba(0, 240, 255, 0.05);
             box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 10px 20px -10px rgba(0, 240, 255, 0.3);
         }
-        .input-ghost::placeholder { color: rgba(255,255,255,0.2); font-family: 'Rajdhani'; text-transform: uppercase; letter-spacing: 2px; font-size: 0.8rem; }
+        .input-ghost::placeholder { color: rgba(255,255,255,0.2); font-family: 'Space Grotesk'; font-size: 0.85rem; }
 
         select.input-ghost { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; cursor: pointer; }
         select.input-ghost option { background: #111; color: #fff; font-family: 'Rajdhani'; }
@@ -204,18 +204,18 @@
             <div class="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto">
                 <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="elite-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[var(--neon-purple)]/20">
                     <i data-lucide="message-circle" class="w-5 h-5 text-[var(--neon-cyan)] group-hover:text-white transition-colors"></i> 
-                    <span class="font-bold text-lg uppercase tracking-widest text-white data-font">Join Vanguard Server</span>
+                    <span class="font-bold text-lg uppercase tracking-widest text-white data-font">Join Discord Server</span>
                 </a>
                 <a href="https://www.twitch.tv/pXpLgg" target="_blank" class="elite-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20">
                     <i data-lucide="tv" class="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors"></i> 
-                    <span class="font-bold text-lg uppercase tracking-widest text-white data-font">Live Broadcast</span>
+                    <span class="font-bold text-lg uppercase tracking-widest text-white data-font">Watch Twitch Stream</span>
                 </a>
             </div>
 
             <div class="flex justify-center gap-12 w-full max-w-2xl mt-16 relative">
                 <div class="absolute bottom-0 w-full h-px bg-white/10"></div>
-                <button id="tab-register" class="cyber-tab active">Initialize Roster</button>
-                <button id="tab-tracker" class="cyber-tab flex items-center gap-3">Operations Board <span class="bg-[var(--neon-pink)] text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span></button>
+                <button id="tab-register" class="cyber-tab active">Register Team</button>
+                <button id="tab-tracker" class="cyber-tab flex items-center gap-3">Live Roster Tracker <span class="bg-[var(--neon-pink)] text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span></button>
             </div>
         </header>
 
@@ -226,23 +226,50 @@
                 <div class="elite-panel p-6">
                     <div class="hud-crosshair tl"></div><div class="hud-crosshair br"></div>
                     <h3 class="text-3xl text-white brand-font mb-4 flex items-center gap-3 border-b border-white/10 pb-3">
-                        <i data-lucide="target" class="w-6 h-6 text-[var(--neon-cyan)]"></i> Mission Intel
+                        <i data-lucide="target" class="w-6 h-6 text-[var(--neon-cyan)]"></i> Tournament Info
                     </h3>
                     <div class="space-y-5 data-font">
                         <div>
-                            <p class="text-[10px] text-zinc-500 font-bold tracking-[0.2em]">01 // DEPLOYMENT DATE</p>
+                            <p class="text-[10px] text-zinc-500 font-bold tracking-[0.2em]">01 // TOURNAMENT DATE</p>
                             <p class="text-xl font-bold text-[var(--neon-cyan)] mt-1">APRIL 03, 2026</p>
                         </div>
                         <div>
-                            <p class="text-[10px] text-zinc-500 font-bold tracking-[0.2em]">02 // REGISTRATION LOCK</p>
+                            <p class="text-[10px] text-zinc-500 font-bold tracking-[0.2em]">02 // REGISTRATION DEADLINE</p>
                             <p class="text-xl font-bold text-white mt-1">MARCH 31, 2026 <span class="text-sm text-zinc-600">UTC</span></p>
                         </div>
                     </div>
+                    
+                    <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="w-full flex items-center justify-between p-4 mt-6 border border-zinc-700 hover:border-[var(--neon-pink)] bg-black/40 group transition-all rounded">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="book-open" class="w-5 h-5 text-zinc-400 group-hover:text-[var(--neon-pink)] transition-colors"></i>
+                            <span class="font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white data-font text-sm">Official Rulebook</span>
+                        </div>
+                        <i data-lucide="external-link" class="w-4 h-4 text-zinc-500 group-hover:text-[var(--neon-pink)]"></i>
+                    </a>
                 </div>
 
                 <div class="elite-panel p-6 border-l-4 border-l-[var(--neon-pink)]" id="countdown-wrapper">
-                    <p class="text-[10px] uppercase tracking-[0.3em] text-[var(--neon-pink)] mb-2 font-bold data-font">System Lock In</p>
+                    <p class="text-[10px] uppercase tracking-[0.3em] text-[var(--neon-pink)] mb-2 font-bold data-font">Registration Closes In</p>
                     <p id="time-left" class="text-5xl brand-font text-white tracking-widest text-shadow-[0_0_15px_rgba(240,0,255,0.5)]">--:--:--</p>
+                </div>
+
+                <div class="elite-panel p-6">
+                    <h3 class="text-2xl text-white brand-font mb-4 flex items-center gap-2">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-red-500"></i> Mandatory Protocols
+                    </h3>
+                    <ul class="text-sm space-y-3 text-zinc-300 data-font mb-5">
+                        <li class="flex gap-3 items-start">
+                            <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0"></i>
+                            <span class="leading-tight"><strong>Akros Anti-Cheat</strong> is 100% required for all matches.</span>
+                        </li>
+                        <li class="flex gap-3 items-start">
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500 flex-shrink-0"></i>
+                            <span class="leading-tight">Admins reserve the right to disqualify teams without notice for rule violations.</span>
+                        </li>
+                    </ul>
+                    <a href="https://akros.ac/#downloadSteps" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-black/50 border border-[var(--neon-cyan)] text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)]/20 hover:text-white text-sm font-bold uppercase tracking-widest transition-all data-font rounded shadow-[0_0_10px_rgba(0,240,255,0.1)]">
+                        <i data-lucide="download" class="w-4 h-4"></i> Download Akros Client
+                    </a>
                 </div>
 
                 <div class="elite-panel p-6">
@@ -274,28 +301,28 @@
                             <div class="col-span-full relative">
                                 <div class="absolute -left-4 top-0 w-1 h-full bg-[var(--neon-pink)] shadow-[0_0_10px_rgba(240,0,255,0.5)]"></div>
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--neon-pink)] data-font">Priority Override Code</label>
+                                    <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--neon-pink)] data-font">Priority Override Code (VIP)</label>
                                     <span id="vipStatus" class="text-[10px] font-bold uppercase data-font text-zinc-500">AWAITING INPUT...</span>
                                 </div>
-                                <input type="text" id="inviteCode" placeholder="Enter VIP Code (If Issued)" class="input-ghost">
+                                <input type="text" id="inviteCode" placeholder="e.g. PP-VIP-2026 (Leave blank if you don't have one)" class="input-ghost">
                             </div>
                             <div class="md:col-span-2">
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Registered Team Name</label>
-                                <input type="text" id="teamName" required class="input-ghost text-xl">
+                                <input type="text" id="teamName" required placeholder="e.g. Natus Vincere" class="input-ghost text-xl">
                             </div>
                             <div>
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">In-Game Tag</label>
                                 <input type="text" id="teamTag" required pattern="[A-Za-z0-9]+" title="Letters/numbers only" placeholder="e.g. NAVI" class="input-ghost">
                             </div>
                             <div>
-                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Routing Region</label>
+                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Server Region</label>
                                 <select id="teamRegion" required class="input-ghost">
                                     <option value="" disabled selected>Select Region...</option><option value="IND">India (IND)</option><option value="PAK">Pakistan (PAK)</option><option value="ME">Middle East (ME)</option><option value="Other">Other</option>
                                 </select>
                             </div>
                             <div class="col-span-full">
-                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Insignia URL (Imgur/Discord)</label>
-                                <input type="url" id="logoLink" required placeholder="https://..." class="input-ghost">
+                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Logo URL</label>
+                                <input type="url" id="logoLink" required placeholder="e.g. https://imgur.com/yourlogo.png" class="input-ghost">
                             </div>
                         </div>
                     </div>
@@ -304,10 +331,10 @@
                         <div class="flex justify-between items-end mb-8 border-b border-white/10 pb-4">
                             <div class="flex items-end gap-3">
                                 <span class="text-5xl brand-font text-white opacity-20 leading-none">02</span>
-                                <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Combat Roster</h2>
+                                <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Team Roster</h2>
                             </div>
                             <div class="flex items-center gap-3 mb-1">
-                                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">Enable 6th Man</span>
+                                <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">Enable 6th Player</span>
                                 <button type="button" id="subToggle" class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none">
                                     <span class="sr-only">Use setting</span>
                                     <span aria-hidden="true" class="pointer-events-none absolute h-full w-full rounded-full bg-zinc-800 transition-colors duration-200 ease-in-out border border-white/10"></span>
@@ -323,7 +350,7 @@
                     <div class="elite-panel p-8">
                         <div class="flex items-end mb-8 border-b border-white/10 pb-4 gap-3">
                             <span class="text-5xl brand-font text-white opacity-20 leading-none">03</span>
-                            <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Clearance Check</h2>
+                            <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Final Verification</h2>
                         </div>
                         <div class="space-y-4 mb-10 data-font">
                             <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group">
@@ -332,18 +359,18 @@
                             </label>
                             <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">All listed operators have joined the <strong class="text-white">Discord Vanguard</strong>.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">All listed players will join the <strong class="text-white">Pixel Palace Discord Server</strong>.</span>
                             </label>
                             <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">We consent to Data Processing (GDPR) for bracket formulation.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">We consent to Data Processing for tournament bracket organization.</span>
                             </label>
                         </div>
 
                         <div id="errorBox" class="hidden mb-8 bg-red-950/80 border border-red-500 p-4 text-red-400 text-sm font-bold uppercase tracking-widest text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] data-font flex items-center justify-center gap-3"></div>
                         
                         <button type="submit" id="submitBtn" class="btn-ignite w-full">
-                            <span>TRANSMIT DEPLOYMENT DATA</span>
+                            <span>SUBMIT REGISTRATION</span>
                         </button>
                     </div>
                 </form>
@@ -354,7 +381,7 @@
                         <i data-lucide="check-circle-2" class="w-24 h-24 text-[var(--neon-cyan)] relative z-10"></i>
                     </div>
                     <h2 class="text-6xl font-black text-white mb-4 brand-font text-shadow-[0_0_20px_rgba(0,240,255,0.4)]">ROSTER SECURED</h2>
-                    <p class="text-zinc-400 text-xl data-font uppercase tracking-widest">Uplink confirmed. Monitoring Operations Board.</p>
+                    <p class="text-zinc-400 text-xl data-font uppercase tracking-widest">Registration confirmed. Check the Live Roster Tracker.</p>
                 </div>
             </div>
         </div>
@@ -363,13 +390,13 @@
             <div class="elite-panel p-8 min-h-[600px]">
                 <div class="hud-crosshair tl"></div><div class="hud-crosshair tr"></div>
                 <div class="flex justify-between items-center mb-8 border-b border-white/10 pb-6">
-                    <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Live Deployments</h2>
-                    <button onclick="fetchTrackerData()" class="text-zinc-400 hover:text-[var(--neon-cyan)] flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-[var(--neon-cyan)]/50 data-font"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Force Sync</button>
+                    <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Registered Teams</h2>
+                    <button onclick="fetchTrackerData()" class="text-zinc-400 hover:text-[var(--neon-cyan)] flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-[var(--neon-cyan)]/50 data-font"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Refresh Tracker</button>
                 </div>
                 
                 <div id="tracker-loading" class="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
                     <i data-lucide="loader-2" class="w-12 h-12 animate-spin mb-6 text-[var(--neon-pink)] drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]"></i>
-                    <span class="font-bold tracking-[0.3em] uppercase text-sm data-font">Establishing Database Uplink...</span>
+                    <span class="font-bold tracking-[0.3em] uppercase text-sm data-font">Loading Teams Database...</span>
                 </div>
                 
                 <div id="tracker-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6 hidden"></div>
@@ -406,7 +433,7 @@
                     </div>
                     <div class="flex flex-col text-left data-font">
                         <span class="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-600 leading-none">Need Backup?</span>
-                        <span class="text-sm font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white mt-1.5 leading-none transition-colors">Support Desk</span>
+                        <span class="text-sm font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white mt-1.5 leading-none transition-colors">Contact Support</span>
                     </div>
                 </a>
             </div>
@@ -432,8 +459,9 @@
         const subContainer = document.getElementById('sub-container');
         const ranks = '<option value="" disabled selected>Select Rank...</option><option value="Level 1-3">Level 1-3</option><option value="Level 4-7">Level 4-7</option><option value="Level 8-9">Level 8-9</option><option value="Level 10">Level 10</option>';
         
+        // Loop updated to include globally understood placeholders
         for(let i=1; i<=6; i++) {
-            let title = i === 1 ? 'IGL / CAPTAIN' : (i === 6 ? 'SUBSTITUTE' : 'STARTER');
+            let title = i === 1 ? 'CAPTAIN' : (i === 6 ? 'SUBSTITUTE' : 'STARTER');
             let req = i === 6 ? '' : 'required';
             let colorClass = i === 1 ? 'text-yellow-400' : (i === 6 ? 'text-zinc-500' : 'text-white');
             let borderClass = i === 1 ? 'bg-yellow-500' : (i === 6 ? 'bg-zinc-600' : 'bg-white');
@@ -442,14 +470,14 @@
             <div class="bg-black/30 p-5 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
                 <div class="absolute top-0 left-0 w-1 h-full ${borderClass} opacity-50 group-hover:opacity-100 transition-opacity"></div>
                 <div class="flex justify-between items-center mb-4">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">OP_0${i}</span>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">Player 0${i}</span>
                     <span class="text-xs font-bold uppercase tracking-widest ${colorClass} data-font">${title}</span>
                 </div>
                 <div class="space-y-4">
-                    <input type="text" id="p${i}Discord" ${req} pattern="^\\d{17,19}$" title="17-19 digit Discord ID" placeholder="Discord ID (Numbers Only)" class="input-ghost">
+                    <input type="text" id="p${i}Discord" ${req} pattern="^\\d{17,19}$" title="17-19 digit Discord ID" placeholder="Discord ID (e.g. 704251234567890123)" class="input-ghost">
                     <div class="grid grid-cols-2 gap-4">
-                        <input type="url" id="p${i}Steam" ${req} placeholder="Steam URL" class="input-ghost">
-                        <input type="url" id="p${i}Faceit" ${req} placeholder="FACEIT URL" class="input-ghost">
+                        <input type="url" id="p${i}Steam" ${req} placeholder="Steam URL (e.g. steamcommunity.com/id/name)" class="input-ghost">
+                        <input type="url" id="p${i}Faceit" ${req} placeholder="FACEIT URL (e.g. faceit.com/en/players/name)" class="input-ghost">
                     </div>
                     <select id="p${i}Rank" ${req} class="input-ghost">${ranks}</select>
                 </div>
@@ -516,7 +544,7 @@
                     });
                     if(window.createIcons) window.createIcons();
                 } else {
-                    grid.innerHTML = '<div class="col-span-full text-center py-16 text-zinc-600 text-[10px] uppercase tracking-[0.4em] font-bold border border-dashed border-white/10 bg-black/20">0 Deployments Detected</div>';
+                    grid.innerHTML = '<div class="col-span-full text-center py-16 text-zinc-600 text-[10px] uppercase tracking-[0.4em] font-bold border border-dashed border-white/10 bg-black/20">0 Teams Registered</div>';
                 }
                 document.getElementById('tracker-loading').classList.add('hidden');
                 grid.classList.remove('hidden');
@@ -578,6 +606,7 @@
             errorBox.classList.add('hidden');
 
             const payload = {
+                subIncluded: subActive,
                 inviteCode: document.getElementById('inviteCode').value,
                 teamName: document.getElementById('teamName').value,
                 teamTag: document.getElementById('teamTag').value,
