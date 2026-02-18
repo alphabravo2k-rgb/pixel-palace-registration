@@ -50,20 +50,20 @@
         @media (min-width: 768px) { .map-card { height: 100px; } }
         .map-card::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.6); transition: all 0.3s ease; z-index: 1;
+            background: rgba(0, 0, 0, 0.7); transition: all 0.3s ease; z-index: 1; /* Dark overlay to make text pop */
         }
-        .map-card:hover::before { background: rgba(0, 0, 0, 0.4); }
-        .map-card-content { position: relative; z-index: 2; text-align: center; }
+        .map-card:hover::before { background: rgba(0, 0, 0, 0.4); } /* Lightens on hover */
+        .map-card-content { position: relative; z-index: 2; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .map-card:hover { transform: translateY(-3px) scale(1.02); border-color: #fff; }
 
         /* Map Glow Effects */
-        .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.3); border-color: #ef4444; }
-        .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.3); border-color: #f59e0b; }
-        .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.3); border-color: #0ea5e9; }
-        .glow-gray:hover { box-shadow: 0 4px 20px rgba(156, 163, 175, 0.3); border-color: #9ca3af; }
-        .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3); border-color: #22c55e; }
-        .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.3); border-color: #f97316; }
-        .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.3); border-color: #facc15; }
+        .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); border-color: #ef4444; }
+        .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5); border-color: #f59e0b; }
+        .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); border-color: #0ea5e9; }
+        .glow-gray:hover { box-shadow: 0 4px 20px rgba(156, 163, 175, 0.5); border-color: #9ca3af; }
+        .glow-green:hover { box-shadow: 0 4px 20px rgba(34, 197, 94, 0.5); border-color: #22c55e; }
+        .glow-orange:hover { box-shadow: 0 4px 20px rgba(249, 115, 22, 0.5); border-color: #f97316; }
+        .glow-yellow:hover { box-shadow: 0 4px 20px rgba(250, 204, 21, 0.5); border-color: #facc15; }
     </style>
 </head>
 <body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40">
@@ -100,6 +100,9 @@
             <div class="mt-8 flex flex-col sm:flex-row justify-center gap-4 w-full sm:w-auto">
                 <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="btn-skew px-8 py-3 text-white font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2">
                     <span class="flex items-center gap-2"><i data-lucide="message-circle" class="w-5 h-5"></i> Join Discord</span>
+                </a>
+                <a href="https://www.twitch.tv/pXpLgg" target="_blank" class="px-8 py-3 border border-purple-500/50 text-purple-300 hover:bg-purple-500/10 font-bold text-lg uppercase tracking-wider flex items-center justify-center gap-2 transition-all">
+                    <i data-lucide="tv" class="w-5 h-5"></i> Twitch Stream
                 </a>
             </div>
         </header>
@@ -156,13 +159,27 @@
                         <i data-lucide="map" class="w-5 h-5 text-zinc-400"></i> ACTIVE DUTY POOL
                     </h3>
                     <div class="grid grid-cols-2 gap-2">
-                        <div class="map-card glow-green rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="leaf" class="w-6 h-6 text-green-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Ancient</span></div></div>
-                        <div class="map-card glow-orange rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="eye" class="w-6 h-6 text-orange-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Anubis</span></div></div>
-                        <div class="map-card glow-yellow rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="sun" class="w-6 h-6 text-yellow-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Dust 2</span></div></div>
-                        <div class="map-card glow-red rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="flame" class="w-6 h-6 text-red-500"></i><span class="text-sm font-bold uppercase brand-font text-white">Inferno</span></div></div>
-                        <div class="map-card glow-amber rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="building-2" class="w-6 h-6 text-amber-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Mirage</span></div></div>
-                        <div class="map-card glow-sky rounded p-3"><div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="radiation" class="w-6 h-6 text-sky-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Nuke</span></div></div>
-                        <div class="map-card glow-gray rounded p-3 col-span-2"><div class="map-card-content flex flex-row items-center justify-center gap-3"><i data-lucide="bridge" class="w-6 h-6 text-gray-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Overpass</span></div></div>
+                        <div class="map-card glow-green rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="leaf" class="w-6 h-6 text-green-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Ancient</span></div>
+                        </div>
+                        <div class="map-card glow-orange rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="eye" class="w-6 h-6 text-orange-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Anubis</span></div>
+                        </div>
+                        <div class="map-card glow-yellow rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="sun" class="w-6 h-6 text-yellow-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Dust 2</span></div>
+                        </div>
+                        <div class="map-card glow-red rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="flame" class="w-6 h-6 text-red-500"></i><span class="text-sm font-bold uppercase brand-font text-white">Inferno</span></div>
+                        </div>
+                        <div class="map-card glow-amber rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="building-2" class="w-6 h-6 text-amber-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Mirage</span></div>
+                        </div>
+                        <div class="map-card glow-sky rounded p-3" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png');">
+                            <div class="map-card-content flex flex-col items-center gap-1"><i data-lucide="radiation" class="w-6 h-6 text-sky-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Nuke</span></div>
+                        </div>
+                        <div class="map-card glow-gray rounded p-3 col-span-2" style="background-image: url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png');">
+                            <div class="map-card-content flex flex-row items-center justify-center gap-3"><i data-lucide="bridge" class="w-6 h-6 text-gray-400"></i><span class="text-sm font-bold uppercase brand-font text-white">Overpass</span></div>
+                        </div>
                     </div>
                 </div>
 
@@ -221,6 +238,10 @@
                             </label>
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 cursor-pointer hover:border-red-500 transition-colors">
                                 <input type="checkbox" required class="w-5 h-5 accent-fuchsia-500 flex-shrink-0">
+                                <span class="text-sm text-zinc-300">We confirm availability for the <strong>April 03, 2026</strong> tournament date.</span>
+                            </label>
+                            <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 cursor-pointer hover:border-red-500 transition-colors">
+                                <input type="checkbox" required class="w-5 h-5 accent-fuchsia-500 flex-shrink-0">
                                 <span class="text-sm text-zinc-300">We consent to the collection of player IDs for tournament bracket operations (GDPR/Privacy).</span>
                             </label>
                         </div>
@@ -238,8 +259,12 @@
                     <p class="text-zinc-400">Data transmission confirmed and verified by the database.</p>
                 </div>
             </div>
-            
         </div>
+
+        <footer class="mt-12 text-center pb-8 opacity-50">
+            <p class="text-xs uppercase tracking-[0.3em]">© 2026 Pixel Palace • Dev by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:underline">Bravo.gg</a></p>
+        </footer>
+
     </div>
 
     <script>
