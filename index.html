@@ -15,7 +15,6 @@
         body { font-family: 'Rajdhani', sans-serif; background-color: #050505; color: #e4e4e7; overflow-x: hidden; }
         h1, h2, h3, .brand-font { font-family: 'Teko', sans-serif; font-weight: 700; }
         
-        /* --- BACKGROUND & PANELS --- */
         .bg-cyber {
             background-image: linear-gradient(rgba(18, 18, 18, 0.85), rgba(0, 0, 0, 0.98)),
                 repeating-linear-gradient(0deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px);
@@ -30,7 +29,6 @@
             background: linear-gradient(to bottom, #c026d3, #7c3aed); opacity: 0.8;
         }
         
-        /* --- FORM ELEMENTS --- */
         .input-tech {
             background: rgba(0, 0, 0, 0.6); border: 1px solid #333; font-family: 'Rajdhani', sans-serif;
             letter-spacing: 1px; transition: all 0.3s ease;
@@ -41,7 +39,6 @@
         .btn-skew:hover:not(:disabled) { filter: brightness(1.2); box-shadow: 0 0 20px rgba(219, 39, 119, 0.6); }
         .btn-skew:disabled { background: #333; cursor: not-allowed; filter: grayscale(1); opacity: 0.7; }
 
-        /* --- MAP CARDS --- */
         .map-card {
             border: 1px solid #333; transition: all 0.3s ease; position: relative; overflow: hidden;
             background-size: cover; background-position: center; height: 80px; 
@@ -50,13 +47,12 @@
         @media (min-width: 768px) { .map-card { height: 100px; } }
         .map-card::before {
             content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.7); transition: all 0.3s ease; z-index: 1; /* Dark overlay to make text pop */
+            background: rgba(0, 0, 0, 0.7); transition: all 0.3s ease; z-index: 1;
         }
-        .map-card:hover::before { background: rgba(0, 0, 0, 0.4); } /* Lightens on hover */
+        .map-card:hover::before { background: rgba(0, 0, 0, 0.4); } 
         .map-card-content { position: relative; z-index: 2; text-align: center; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
         .map-card:hover { transform: translateY(-3px) scale(1.02); border-color: #fff; }
 
-        /* Map Glow Effects */
         .glow-red:hover { box-shadow: 0 4px 20px rgba(239, 68, 68, 0.5); border-color: #ef4444; }
         .glow-amber:hover { box-shadow: 0 4px 20px rgba(245, 158, 11, 0.5); border-color: #f59e0b; }
         .glow-sky:hover { box-shadow: 0 4px 20px rgba(14, 165, 233, 0.5); border-color: #0ea5e9; }
@@ -110,7 +106,6 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
             
             <div class="lg:col-span-1 space-y-6">
-                
                 <div class="hud-panel p-5 md:p-6">
                     <h3 class="text-xl md:text-2xl text-cyan-400 brand-font mb-4 flex items-center gap-2 border-b border-white/10 pb-2">
                         <i data-lucide="calendar-clock" class="w-5 h-5"></i> TOURNAMENT INTEL
@@ -290,15 +285,17 @@
             </div>`;
         }
 
-        // Live Slot Polling
+        // Live Slot Polling (Updated: Polls every 15 seconds)
         async function fetchSlots() {
             try {
-                const res = await fetch(API_URL);
+                // Prevent browser caching the API response
+                const res = await fetch(`${API_URL}?t=${new Date().getTime()}`); 
                 const data = await res.json();
                 document.getElementById('slot-display').innerHTML = data.isFull ? '<span class="text-red-500">FULL</span>' : `${data.confirmed} / 32`;
             } catch(e) {}
         }
         fetchSlots();
+        setInterval(fetchSlots, 15000); // Polling patch
 
         // VIP Pre-validation (Visual Only)
         document.getElementById('inviteCode').addEventListener('blur', async (e) => {
@@ -328,7 +325,7 @@
             tLeft.textContent = `${d}D ${h}H ${m}M ${s}S`;
         }, 1000);
 
-        // Submit Payload
+        // Submit Payload (Updated: Timeout Logic)
         document.getElementById('registrationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -353,11 +350,17 @@
             }
 
             try {
+                // Timeout Controller (30 seconds)
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000);
+
                 const res = await fetch(API_URL, {
                     method: 'POST',
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify(payload),
+                    signal: controller.signal
                 });
                 
+                clearTimeout(timeoutId);
                 const responseData = await res.json();
 
                 if (responseData.error) {
@@ -367,11 +370,16 @@
                 document.getElementById('registrationForm').classList.add('hidden');
                 document.getElementById('countdown-wrapper').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
+                fetchSlots(); // Force immediate update on success
 
             } catch (err) {
                 btn.disabled = false;
                 btn.innerHTML = '<span>TRANSMISSION FAILED. RETRY.</span>';
-                errorBox.textContent = err.message;
+                if (err.name === 'AbortError') {
+                    errorBox.textContent = "Network request timed out. Please try again.";
+                } else {
+                    errorBox.textContent = err.message;
+                }
                 errorBox.classList.remove('hidden');
             }
         });
