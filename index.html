@@ -45,6 +45,10 @@
         /* Navigation Tabs */
         .nav-tab { opacity: 0.5; transition: all 0.3s ease; cursor: pointer; border-bottom: 2px solid transparent; }
         .nav-tab.active { opacity: 1; border-color: #d946ef; text-shadow: 0 0 10px rgba(217, 70, 239, 0.5); }
+        
+        /* Number Block */
+        .num-block { transform: skew(-10deg); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 32px; margin-right: 12px; }
+        .num-block > span { transform: skew(10deg); font-family: 'Teko', sans-serif; font-size: 1.5rem; font-weight: 700; line-height: 1; padding-top: 4px; }
     </style>
 </head>
 <body class="min-h-screen bg-cyber selection:bg-fuchsia-500/40">
@@ -174,7 +178,10 @@
                 <form id="registrationForm" class="space-y-6 md:space-y-8">
                     
                     <div class="hud-panel p-6 md:p-8">
-                        <h2 class="text-2xl text-white brand-font uppercase tracking-wide mb-6 border-b border-white/10 pb-4">01 // Team Identity</h2>
+                        <div class="flex items-center mb-6 border-b border-white/10 pb-4">
+                            <div class="bg-fuchsia-600 text-black num-block"><span>01</span></div>
+                            <h2 class="text-2xl text-white brand-font uppercase tracking-wide">Team Identity</h2>
+                        </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div class="col-span-full bg-fuchsia-900/10 p-4 border border-fuchsia-500/30 mb-4">
                                 <div class="flex justify-between">
@@ -206,12 +213,30 @@
                     </div>
 
                     <div class="hud-panel p-6 md:p-8">
-                        <h2 class="text-2xl text-white brand-font uppercase mb-6 border-b border-white/10 pb-4">02 // Roster Manifest</h2>
+                        <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                            <div class="flex items-center">
+                                <div class="bg-indigo-600 text-white num-block"><span>02</span></div>
+                                <h2 class="text-2xl text-white brand-font uppercase tracking-wide">Roster Manifest</h2>
+                            </div>
+                            
+                            <div class="flex items-center gap-3">
+                                <span class="text-xs font-bold uppercase tracking-widest text-zinc-400">Add Substitute</span>
+                                <button type="button" id="subToggle" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-zinc-700 transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-fuchsia-500 focus:ring-offset-2 focus:ring-offset-black">
+                                    <span class="translate-x-0 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div id="roster-container" class="space-y-4"></div>
+                        
+                        <div id="sub-container" class="space-y-4 mt-4 hidden opacity-0 transition-opacity duration-300"></div>
                     </div>
 
                     <div class="hud-panel p-6 md:p-8">
-                        <h2 class="text-2xl text-white brand-font uppercase mb-6 border-b border-white/10 pb-4">03 // Final Auth</h2>
+                        <div class="flex items-center mb-6 border-b border-white/10 pb-4">
+                            <div class="bg-green-600 text-black num-block"><span>03</span></div>
+                            <h2 class="text-2xl text-white brand-font uppercase tracking-wide">Final Auth</h2>
+                        </div>
                         <div class="space-y-4 mb-8">
                             <label class="flex items-center gap-4 p-4 bg-white/5 border border-white/5 cursor-pointer hover:border-red-500 transition-colors">
                                 <input type="checkbox" required class="w-5 h-5 accent-fuchsia-500 flex-shrink-0">
@@ -260,8 +285,16 @@
             </div>
         </div>
 
-        <footer class="mt-12 text-center pb-8 opacity-50">
-            <p class="text-xs uppercase tracking-[0.3em]">© 2026 Pixel Palace • Dev by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:underline">Bravo.gg</a></p>
+        <footer class="mt-16 pb-8 flex flex-col items-center justify-center gap-4 opacity-50 hover:opacity-100 transition-opacity">
+            <div class="flex items-center gap-4">
+                <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" class="w-16 h-16 object-contain filter grayscale opacity-70">
+                <div class="text-left border-l border-zinc-700 pl-4 py-1">
+                    <h4 class="brand-font text-2xl text-white leading-none tracking-widest uppercase">Pixel Palace</h4>
+                    <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 mt-1">
+                        © 2026 Sovereign Systems <br> Engineered by <a href="https://discordapp.com/users/bravo.gg" class="text-fuchsia-500 hover:text-fuchsia-400 transition-colors">Bravo.gg</a>
+                    </p>
+                </div>
+            </div>
         </footer>
 
     </div>
@@ -281,14 +314,17 @@
             document.getElementById('view-tracker').classList.toggle('hidden', tab !== 'tracker');
         }
 
-        // Build Roster UI
+        // Build Roster UI with Toggle Support
         const container = document.getElementById('roster-container');
+        const subContainer = document.getElementById('sub-container');
         const ranks = '<option value="">Rank</option><option value="Level 1-3">Level 1-3</option><option value="Level 4-7">Level 4-7</option><option value="Level 8-9">Level 8-9</option><option value="Level 10">Level 10</option>';
+        
         for(let i=1; i<=6; i++) {
             let title = i === 1 ? 'CAPTAIN' : (i === 6 ? 'SUBSTITUTE (OPTIONAL)' : 'STARTER');
             let req = i === 6 ? '' : 'required';
             let bColor = i === 1 ? 'border-yellow-500' : (i === 6 ? 'border-zinc-500' : 'border-indigo-500');
-            container.innerHTML += `
+            
+            let html = `
             <div class="bg-black/30 p-4 border-l-2 ${bColor}">
                 <span class="text-sm font-bold uppercase text-zinc-400 mb-3 block">Operator 0${i} // <span class="text-white">${title}</span></span>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -298,7 +334,34 @@
                     <select id="p${i}Rank" ${req} class="input-tech w-full p-2 text-sm text-white">${ranks}</select>
                 </div>
             </div>`;
+            
+            if (i <= 5) container.innerHTML += html;
+            else subContainer.innerHTML += html;
         }
+
+        // Toggle Switch Logic
+        let subActive = false;
+        document.getElementById('subToggle').addEventListener('click', function() {
+            subActive = !subActive;
+            const span = this.querySelector('span');
+            if (subActive) {
+                this.classList.replace('bg-zinc-700', 'bg-fuchsia-600');
+                span.classList.replace('translate-x-0', 'translate-x-5');
+                subContainer.classList.remove('hidden');
+                setTimeout(() => subContainer.classList.remove('opacity-0'), 10);
+            } else {
+                this.classList.replace('bg-fuchsia-600', 'bg-zinc-700');
+                span.classList.replace('translate-x-5', 'translate-x-0');
+                subContainer.classList.add('opacity-0');
+                setTimeout(() => subContainer.classList.add('hidden'), 300);
+                
+                // Clear the hidden inputs so backend doesn't receive partial garbage
+                document.getElementById('p6Discord').value = '';
+                document.getElementById('p6Steam').value = '';
+                document.getElementById('p6Faceit').value = '';
+                document.getElementById('p6Rank').value = '';
+            }
+        });
 
         // Fetch Tracker Data
         async function fetchTrackerData() {
@@ -376,11 +439,9 @@
             const diff = deadlineDate - new Date().getTime();
             const tLeft = document.getElementById('time-left');
             if(diff < 0) { 
-                tLeft.textContent = 'OFFLINE'; 
-                tLeft.classList.add('text-red-500'); 
+                tLeft.textContent = 'OFFLINE'; tLeft.classList.add('text-red-500'); 
                 document.getElementById('submitBtn').disabled = true; 
-                clearInterval(timerInterval); 
-                return; 
+                clearInterval(timerInterval); return; 
             }
             const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
             tLeft.textContent = `${d}D ${h}H ${m}M ${s}S`;
