@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Palace | Sovereign Operations</title>
+    <title>Pixel Palace | Tournament Registration</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module">
@@ -163,13 +163,6 @@
         .logo-supreme { filter: drop-shadow(0 0 20px rgba(240, 0, 255, 0.4)); transition: all 0.5s ease; cursor: crosshair; }
         .logo-supreme:hover { filter: drop-shadow(0 0 50px rgba(0, 240, 255, 0.8)); transform: scale(1.05); }
 
-        /* Highlight Pulse for 6th Player Toggle */
-        @keyframes subtle-pulse {
-            0% { box-shadow: 0 0 5px rgba(138,43,226,0.2); }
-            50% { box-shadow: 0 0 15px rgba(138,43,226,0.6); }
-            100% { box-shadow: 0 0 5px rgba(138,43,226,0.2); }
-        }
-        .highlight-toggle { animation: subtle-pulse 3s infinite; }
     </style>
 </head>
 <body>
@@ -334,17 +327,17 @@
                             <div class="col-span-full relative mb-2">
                                 <div class="absolute -left-4 top-0 w-1 h-full bg-[var(--neon-pink)] shadow-[0_0_10px_rgba(240,0,255,0.5)]"></div>
                                 <div class="flex justify-between items-center mb-2">
-                                    <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--neon-pink)] data-font">Priority Override Code (VIP)</label>
+                                    <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--neon-pink)] data-font">VIP Access Code (Optional)</label>
                                     <span id="vipStatus" class="text-[10px] font-bold uppercase data-font text-zinc-500">AWAITING INPUT...</span>
                                 </div>
                                 <div class="input-group">
                                     <i data-lucide="key" class="w-4 h-4"></i>
-                                    <input type="text" id="inviteCode" placeholder="e.g. PP-VIP-2026 (Leave blank if none)" class="input-ghost">
+                                    <input type="text" id="inviteCode" placeholder="Leave blank if none" class="input-ghost">
                                 </div>
                             </div>
                             
                             <div class="md:col-span-2">
-                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Registered Team Name</label>
+                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Name</label>
                                 <div class="input-group">
                                     <i data-lucide="users" class="w-4 h-4"></i>
                                     <input type="text" id="teamName" required placeholder="e.g. Natus Vincere" class="input-ghost text-lg">
@@ -352,7 +345,7 @@
                             </div>
                             
                             <div>
-                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">In-Game Tag</label>
+                                <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Tag</label>
                                 <div class="input-group">
                                     <i data-lucide="tag" class="w-4 h-4"></i>
                                     <input type="text" id="teamTag" required pattern="[A-Za-z0-9]+" title="Letters/numbers only" placeholder="e.g. NAVI" class="input-ghost">
@@ -383,18 +376,16 @@
                     </div>
 
                     <div class="elite-panel p-0 overflow-hidden">
-                        <div class="flex items-stretch justify-between bg-black/50 border-b border-white/10 pr-6">
+                         <div class="flex items-stretch justify-between bg-black/50 border-b border-white/10 pr-6">
                              <div class="flex items-stretch">
                                  <div class="bg-[var(--neon-cyan)] px-5 flex items-center justify-center font-bold brand-font text-3xl text-black italic">02</div>
                                  <h2 class="text-3xl text-white brand-font tracking-wider pl-6 py-4 italic">TEAM ROSTER</h2>
                              </div>
                              
-                             <div id="subToggleWrapper" class="flex items-center gap-4 cursor-pointer group py-3 px-4 my-auto bg-[var(--neon-purple)]/10 hover:bg-[var(--neon-purple)]/30 border border-[var(--neon-purple)]/50 rounded transition-all highlight-toggle">
-                                 <i data-lucide="user-plus" class="w-4 h-4 text-[var(--neon-pink)]"></i>
-                                 <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-white data-font drop-shadow-md">Enable 6th Player</span>
-                                 
-                                 <div class="relative w-12 h-6 rounded-full bg-black border border-white/20 transition-colors duration-300" id="toggleTrack">
-                                     <div class="absolute left-1 top-1 w-4 h-4 bg-zinc-500 rounded-full transition-transform duration-300 shadow-sm" id="toggleDot"></div>
+                             <div id="subToggleWrapper" class="flex items-center gap-4 cursor-pointer group py-4">
+                                 <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-white transition-colors data-font">Add Substitute</span>
+                                 <div class="relative w-14 h-7 rounded-full bg-[#27272a] transition-colors duration-300" id="toggleTrack">
+                                     <div class="absolute left-1 top-1 w-5 h-5 bg-white rounded-full transition-transform duration-300 shadow-sm" id="toggleDot"></div>
                                  </div>
                              </div>
                         </div>
@@ -438,7 +429,7 @@
                             <div id="errorBox" class="hidden mb-8 bg-red-950/80 border border-red-500 p-4 text-red-400 text-sm font-bold uppercase tracking-widest text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] data-font flex items-center justify-center gap-3"></div>
                             
                             <button type="submit" id="submitBtn" class="btn-ignite w-full">
-                                <span>TRANSMIT DEPLOYMENT DATA</span>
+                                <span>SUBMIT REGISTRATION</span>
                             </button>
                         </div>
                     </div>
@@ -475,14 +466,24 @@
     </div>
 
     <footer class="w-full bg-black/90 border-t border-white/10 mt-20 py-12 relative z-10 box-shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col md:flex-row items-center justify-between gap-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
             
             <div class="flex items-center gap-5 justify-center md:justify-start group cursor-pointer">
                 <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" class="w-16 h-16 object-contain filter grayscale opacity-40 group-hover:opacity-100 group-hover:grayscale-0 group-hover:drop-shadow-[0_0_15px_rgba(240,0,255,0.5)] transition-all duration-500">
                 <div class="h-12 w-[2px] bg-white/10 group-hover:bg-[var(--neon-pink)] transition-colors"></div>
                 <div class="text-left flex flex-col justify-center">
                     <h4 class="brand-font text-3xl text-zinc-300 group-hover:text-white leading-none tracking-[0.15em] transition-colors">PIXEL PALACE</h4>
+                    <p class="text-[9px] uppercase tracking-[0.3em] text-zinc-600 mt-1 font-bold data-font">
+                        © 2026 Sovereign Systems
+                    </p>
                 </div>
+            </div>
+
+            <div class="flex flex-col items-center justify-center text-center">
+                <span class="text-[8px] uppercase tracking-[0.5em] text-zinc-700 font-bold mb-2 data-font">Engineered By</span>
+                <a href="https://discordapp.com/users/bravo.gg" class="text-lg font-black tracking-[0.3em] uppercase text-zinc-400 hover:text-white hover:text-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-all duration-300 brand-font">
+                    BRAVO<span class="text-[var(--neon-pink)]">.</span>GG
+                </a>
             </div>
 
             <div class="flex items-center justify-center md:justify-end">
@@ -514,7 +515,6 @@
             document.getElementById('view-tracker').classList.toggle('hidden', tab !== 'tracker');
         }
 
-        // DYNAMIC ROSTER GRID GENERATION
         const gridContainer = document.getElementById('roster-grid');
         const ranks = '<option value="" disabled selected>Select Rank...</option><option value="Level 1-3">Level 1-3</option><option value="Level 4-7">Level 4-7</option><option value="Level 8-9">Level 8-9</option><option value="Level 10">Level 10</option>';
         
@@ -526,7 +526,6 @@
             let bgClass = i === 1 ? 'bg-yellow-500' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-white');
             let dotClass = i === 1 ? 'bg-yellow-400' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-[var(--neon-cyan)]');
             
-            // Player 6 is initially hidden
             let visibilityClass = i === 6 ? 'hidden opacity-0' : 'opacity-100';
             
             gridHtml += `
@@ -563,31 +562,24 @@
         }
         gridContainer.innerHTML = gridHtml;
 
-        // NEW SLEEK TOGGLE LOGIC
         let subActive = false;
         document.getElementById('subToggleWrapper').addEventListener('click', function() {
             subActive = !subActive;
-            const wrapper = this;
             const bgSpan = document.getElementById('toggleTrack');
             const dotSpan = document.getElementById('toggleDot');
             const p6Card = document.getElementById('player-card-6');
             
             if (subActive) {
-                wrapper.classList.add('border-[var(--neon-pink)]', 'shadow-[0_0_15px_rgba(240,0,255,0.4)]', 'bg-[var(--neon-pink)]/20');
-                bgSpan.classList.replace('bg-black', 'bg-[var(--neon-pink)]');
-                dotSpan.classList.add('translate-x-[24px]');
-                dotSpan.classList.replace('bg-zinc-500', 'bg-white');
+                bgSpan.style.backgroundColor = 'var(--neon-cyan)';
+                dotSpan.style.transform = 'translateX(28px)';
                 p6Card.classList.remove('hidden');
                 setTimeout(() => p6Card.classList.remove('opacity-0'), 10);
             } else {
-                wrapper.classList.remove('border-[var(--neon-pink)]', 'shadow-[0_0_15px_rgba(240,0,255,0.4)]', 'bg-[var(--neon-pink)]/20');
-                bgSpan.classList.replace('bg-[var(--neon-pink)]', 'bg-black');
-                dotSpan.classList.remove('translate-x-[24px]');
-                dotSpan.classList.replace('bg-white', 'bg-zinc-500');
+                bgSpan.style.backgroundColor = '#27272a';
+                dotSpan.style.transform = 'translateX(0)';
                 p6Card.classList.add('opacity-0');
                 setTimeout(() => p6Card.classList.add('hidden'), 300);
                 
-                // Clear fields if disabled
                 document.getElementById('p6Discord').value = '';
                 document.getElementById('p6Steam').value = '';
                 document.getElementById('p6Faceit').value = '';
@@ -633,7 +625,7 @@
                 document.getElementById('tracker-loading').classList.add('hidden');
                 grid.classList.remove('hidden');
             } catch (err) {
-                document.getElementById('tracker-loading').innerHTML = '<span class="text-red-500 font-bold uppercase tracking-widest text-xs data-font"><i data-lucide="wifi-off" class="w-6 h-6 mx-auto mb-2"></i>Uplink Failed</span>';
+                document.getElementById('tracker-loading').innerHTML = '<span class="text-red-500 font-bold uppercase tracking-widest text-xs data-font"><i data-lucide="wifi-off" class="w-6 h-6 mx-auto mb-2"></i>Connection Failed</span>';
                 if(window.createIcons) window.createIcons();
             }
         }
@@ -721,12 +713,12 @@
 
             } catch (err) {
                 btn.disabled = false;
-                btn.innerHTML = '<span>TRANSMISSION FAILED. RETRY.</span>';
-                errorBox.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i> <span>${err.name === 'AbortError' ? "Uplink Timeout. Retry." : err.message}</span>`;
+                btn.innerHTML = '<span>SUBMIT REGISTRATION</span>';
+                errorBox.innerHTML = `<i data-lucide="alert-triangle" class="w-5 h-5 text-red-500"></i> <span>${err.name === 'AbortError' ? "Connection Timeout. Retry." : err.message}</span>`;
                 errorBox.classList.remove('hidden');
                 if(window.createIcons) window.createIcons();
             }
         });
     </script>
 </body>
-</html>s
+</html>
