@@ -70,22 +70,30 @@
         .elite-panel:hover { border-color: rgba(240, 0, 255, 0.3); transform: translateY(-2px); }
         .elite-panel:hover::after { opacity: 1; }
 
-        /* --- INPUTS --- */
+        /* --- HUD INPUTS (AAA Style) --- */
+        .input-group {
+            display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); 
+            border-bottom: 2px solid rgba(255,255,255,0.1); border-top-left-radius: 4px; border-top-right-radius: 4px;
+            transition: all 0.3s ease; position: relative;
+        }
+        .input-group:focus-within {
+            background: rgba(0, 240, 255, 0.05); border-bottom-color: var(--neon-cyan);
+            box-shadow: 0 10px 20px -10px rgba(0, 240, 255, 0.2);
+        }
+        .input-group i { color: rgba(255,255,255,0.3); transition: color 0.3s; padding-left: 12px; }
+        .input-group:focus-within i { color: var(--neon-cyan); }
+        
         .input-ghost {
-            width: 100%; background: rgba(0, 0, 0, 0.3); border: none; border-bottom: 2px solid rgba(255,255,255,0.1);
-            color: #fff; font-family: 'Space Grotesk', sans-serif; font-size: 1rem; padding: 12px 16px;
-            transition: all 0.3s ease; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            width: 100%; background: transparent; border: none; color: #fff; 
+            font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; padding: 12px;
         }
-        .input-ghost:focus {
-            outline: none; border-bottom-color: var(--neon-cyan); background: rgba(0, 240, 255, 0.05);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5), 0 10px 20px -10px rgba(0, 240, 255, 0.3);
-        }
-        .input-ghost::placeholder { color: rgba(255,255,255,0.25); font-family: 'Space Grotesk'; font-size: 0.85rem; }
+        .input-ghost:focus { outline: none; }
+        .input-ghost::placeholder { color: rgba(255,255,255,0.2); font-family: 'Space Grotesk'; font-size: 0.8rem; }
 
         select.input-ghost { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; cursor: pointer; }
         select.input-ghost option { background: #111; color: #fff; font-family: 'Rajdhani'; }
 
-        /* --- IGNITE BUTTON --- */
+        /* --- THE IGNITE BUTTON --- */
         .btn-ignite {
             background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
             color: white; font-family: 'Teko', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 4px;
@@ -133,6 +141,16 @@
         }
         .cyber-tab.active::after { width: 100%; }
 
+        /* --- ROSTER DOSSIER CARDS --- */
+        .dossier-card {
+            background: linear-gradient(180deg, rgba(20,20,25,0.8) 0%, rgba(10,10,15,0.9) 100%);
+            border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
+            position: relative; overflow: hidden; transition: all 0.3s ease;
+        }
+        .dossier-card:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(-2px); }
+        .dossier-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; transition: opacity 0.3s; opacity: 0.7; }
+        .dossier-card:hover .dossier-line { opacity: 1; box-shadow: 0 0 15px currentColor; }
+
         /* --- HUD --- */
         .hud-crosshair { position: absolute; width: 10px; height: 10px; border: 1px solid rgba(255,255,255,0.2); z-index: 5; pointer-events: none; }
         .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; } .tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
@@ -144,19 +162,6 @@
 
         .logo-supreme { filter: drop-shadow(0 0 20px rgba(240, 0, 255, 0.4)); transition: all 0.5s ease; cursor: crosshair; }
         .logo-supreme:hover { filter: drop-shadow(0 0 50px rgba(0, 240, 255, 0.8)); transform: scale(1.05); }
-
-        /* --- SUB TOGGLE BUTTON WRAPPER --- */
-        .sub-toggle-wrapper {
-            transition: all 0.3s ease;
-        }
-        .sub-toggle-wrapper:hover {
-            box-shadow: 0 0 15px rgba(255,255,255,0.1);
-        }
-        .sub-toggle-wrapper.active {
-            border-color: var(--neon-pink);
-            box-shadow: 0 0 20px rgba(240, 0, 255, 0.2);
-            background: rgba(240, 0, 255, 0.05);
-        }
     </style>
 </head>
 <body>
@@ -237,6 +242,14 @@
                             <p class="text-xl font-bold text-white mt-1">MARCH 31, 2026 <span class="text-sm text-zinc-600">UTC</span></p>
                         </div>
                     </div>
+                    
+                    <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="w-full flex items-center justify-between p-4 mt-6 border border-zinc-700 hover:border-[var(--neon-pink)] bg-black/40 group transition-all rounded">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="book-open" class="w-5 h-5 text-zinc-400 group-hover:text-[var(--neon-pink)] transition-colors"></i>
+                            <span class="font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white data-font text-sm">Official Rulebook</span>
+                        </div>
+                        <i data-lucide="external-link" class="w-4 h-4 text-zinc-500 group-hover:text-[var(--neon-pink)]"></i>
+                    </a>
                 </div>
 
                 <div class="elite-panel p-6 border-l-4 border-l-[var(--neon-pink)]" id="countdown-wrapper">
@@ -245,29 +258,19 @@
                 </div>
 
                 <div class="elite-panel p-6">
-                    <h3 class="text-3xl text-white brand-font mb-4 flex items-center gap-2 border-b border-white/10 pb-3">
-                        <i data-lucide="shield-alert" class="w-6 h-6 text-red-500"></i> Rules & Protocols
+                    <h3 class="text-2xl text-white brand-font mb-4 flex items-center gap-2">
+                        <i data-lucide="shield-alert" class="w-5 h-5 text-red-500"></i> Mandatory Protocols
                     </h3>
-                    
-                    <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="w-full flex items-center justify-between p-4 mb-5 border border-zinc-700 hover:border-zinc-400 bg-black/40 group transition-all rounded">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="book-open" class="w-5 h-5 text-zinc-400 group-hover:text-white transition-colors"></i>
-                            <span class="font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white data-font text-sm">Official Rulebook</span>
-                        </div>
-                        <i data-lucide="external-link" class="w-4 h-4 text-zinc-500 group-hover:text-white"></i>
-                    </a>
-
-                    <ul class="text-sm space-y-3 text-zinc-300 data-font mb-6">
+                    <ul class="text-sm space-y-3 text-zinc-300 data-font mb-5">
                         <li class="flex gap-3 items-start">
-                            <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0"></i>
-                            <span class="leading-tight"><strong>Akros Anti-Cheat</strong> is strictly required for all matches.</span>
+                            <i data-lucide="check" class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="leading-tight"><strong>Akros Anti-Cheat</strong> is 100% required for all matches.</span>
                         </li>
                         <li class="flex gap-3 items-start">
-                            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500 flex-shrink-0"></i>
-                            <span class="leading-tight">Admins reserve the right to disqualify teams for rule violations.</span>
+                            <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5"></i>
+                            <span class="leading-tight">Admins reserve the right to disqualify teams without notice for rule violations.</span>
                         </li>
                     </ul>
-                    
                     <a href="https://akros.ac/#downloadSteps" target="_blank" class="flex items-center justify-center gap-2 w-full py-3 bg-[var(--neon-cyan)]/10 border border-[var(--neon-cyan)] text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)] hover:text-black text-sm font-bold uppercase tracking-widest transition-all data-font rounded shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                         <i data-lucide="download" class="w-4 h-4"></i> Download Akros Client
                     </a>
@@ -298,35 +301,54 @@
                             <span class="text-5xl brand-font text-white opacity-20 leading-none">01</span>
                             <h2 class="text-4xl text-[var(--neon-cyan)] brand-font tracking-wider leading-none">Team Identity</h2>
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="col-span-full relative">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="col-span-full relative mb-2">
                                 <div class="absolute -left-4 top-0 w-1 h-full bg-[var(--neon-pink)] shadow-[0_0_10px_rgba(240,0,255,0.5)]"></div>
                                 <div class="flex justify-between items-center mb-2">
                                     <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--neon-pink)] data-font">Priority Override Code (VIP)</label>
                                     <span id="vipStatus" class="text-[10px] font-bold uppercase data-font text-zinc-500">AWAITING INPUT...</span>
                                 </div>
-                                <input type="text" id="inviteCode" placeholder="e.g. PP-VIP-2026 (Leave blank if none)" class="input-ghost">
+                                <div class="input-group">
+                                    <i data-lucide="key" class="w-4 h-4"></i>
+                                    <input type="text" id="inviteCode" placeholder="e.g. PP-VIP-2026 (Leave blank if none)" class="input-ghost">
+                                </div>
                             </div>
+                            
                             <div class="md:col-span-2">
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Registered Team Name</label>
-                                <input type="text" id="teamName" required placeholder="e.g. Natus Vincere" class="input-ghost text-xl">
+                                <div class="input-group">
+                                    <i data-lucide="users" class="w-4 h-4"></i>
+                                    <input type="text" id="teamName" required placeholder="e.g. Natus Vincere" class="input-ghost text-lg">
+                                </div>
                             </div>
+                            
                             <div>
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">In-Game Tag</label>
-                                <input type="text" id="teamTag" required pattern="[A-Za-z0-9]+" title="Letters/numbers only" placeholder="e.g. NAVI" class="input-ghost">
+                                <div class="input-group">
+                                    <i data-lucide="tag" class="w-4 h-4"></i>
+                                    <input type="text" id="teamTag" required pattern="[A-Za-z0-9]+" title="Letters/numbers only" placeholder="e.g. NAVI" class="input-ghost">
+                                </div>
                             </div>
+                            
                             <div>
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Server Region</label>
-                                <select id="teamRegion" required class="input-ghost">
-                                    <option value="" disabled selected>Select Region...</option>
-                                    <option value="IND">India (IND)</option>
-                                    <option value="PAK">Pakistan (PAK)</option>
-                                    <option value="ME">Middle East (ME)</option>
-                                </select>
+                                <div class="input-group">
+                                    <i data-lucide="globe" class="w-4 h-4"></i>
+                                    <select id="teamRegion" required class="input-ghost">
+                                        <option value="" disabled selected>Select Region...</option>
+                                        <option value="IND">India (IND)</option>
+                                        <option value="PAK">Pakistan (PAK)</option>
+                                        <option value="ME">Middle East (ME)</option>
+                                    </select>
+                                </div>
                             </div>
+                            
                             <div class="col-span-full">
                                 <label class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Logo URL</label>
-                                <input type="url" id="logoLink" required placeholder="e.g. https://imgur.com/yourlogo.png" class="input-ghost">
+                                <div class="input-group">
+                                    <i data-lucide="image" class="w-4 h-4"></i>
+                                    <input type="url" id="logoLink" required placeholder="e.g. https://imgur.com/yourlogo.png" class="input-ghost">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -338,22 +360,22 @@
                                 <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Team Roster</h2>
                             </div>
                             
-                            <div class="sub-toggle-wrapper flex items-center gap-3 bg-zinc-900/80 px-4 py-2 rounded border border-zinc-700 cursor-pointer group" id="subToggleWrapper">
+                            <div id="subToggleWrapper" class="flex items-center gap-3 bg-black/50 px-4 py-2.5 rounded border border-white/10 cursor-pointer group transition-all hover:border-[var(--neon-pink)]">
                                 <span class="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400 group-hover:text-white transition-colors data-font">Add Substitute</span>
-                                <button type="button" id="subToggle" class="relative inline-flex h-6 w-12 flex-shrink-0 items-center rounded-full focus:outline-none transition-all">
+                                <button type="button" id="subToggle" class="relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer items-center justify-center rounded-full focus:outline-none transition-all">
                                     <span class="sr-only">Use setting</span>
                                     <span aria-hidden="true" class="pointer-events-none absolute h-full w-full rounded-full bg-zinc-800 border border-white/10 transition-colors duration-300"></span>
-                                    <span aria-hidden="true" class="translate-x-[-12px] pointer-events-none absolute h-4 w-4 transform rounded-full bg-zinc-500 shadow-md transition-transform duration-300"></span>
+                                    <span aria-hidden="true" class="translate-x-[-12px] pointer-events-none absolute h-3 w-3 transform rounded-full bg-zinc-400 shadow-md transition-transform duration-300"></span>
                                 </button>
                             </div>
                         </div>
                         
-                        <div id="roster-container" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
-                        <div id="sub-container" class="mt-6 hidden opacity-0 transition-opacity duration-300"></div>
+                        <div id="roster-grid" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            </div>
                     </div>
 
                     <div class="elite-panel p-8">
-                        <div class="flex items-end mb-8 border-b border-white/10 pb-4 gap-3">
+                        <div class="flex items-end mb-6 border-b border-white/10 pb-4 gap-3">
                             <span class="text-5xl brand-font text-white opacity-20 leading-none">03</span>
                             <h2 class="text-4xl text-white brand-font tracking-wider leading-none">Final Verification</h2>
                         </div>
@@ -363,21 +385,21 @@
                         </div>
 
                         <div class="space-y-4 mb-10 data-font">
-                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded">
+                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors"><strong>Akros Anti-Cheat</strong> will be installed and active throughout all matches.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed"><strong>Akros Anti-Cheat</strong> will be installed and active throughout all matches.</span>
                             </label>
-                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded">
+                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">All registered players are members of the <strong>Pixel Palace Discord Server</strong>.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">All registered players are members of the <strong>Pixel Palace Discord Server</strong>.</span>
                             </label>
-                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded">
+                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">Our team will be present in the designated <strong>Pixel Voice Channels</strong> during all official matches.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">Our team will be present in the designated <strong>Pixel Voice Channels</strong> during all of our official matches.</span>
                             </label>
-                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded">
+                            <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                 <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors">We consent to the processing of data for tournament bracket organization.</span>
+                                <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">We consent to the processing of data for tournament bracket organization.</span>
                             </label>
                         </div>
 
@@ -469,59 +491,79 @@
             document.getElementById('view-tracker').classList.toggle('hidden', tab !== 'tracker');
         }
 
-        const container = document.getElementById('roster-container');
-        const subContainer = document.getElementById('sub-container');
+        // DYNAMIC ROSTER GRID GENERATION (Cards inside the same 2-column grid)
+        const gridContainer = document.getElementById('roster-grid');
         const ranks = '<option value="" disabled selected>Select Rank...</option><option value="Level 1-3">Level 1-3</option><option value="Level 4-7">Level 4-7</option><option value="Level 8-9">Level 8-9</option><option value="Level 10">Level 10</option>';
         
+        let gridHtml = '';
         for(let i=1; i<=6; i++) {
             let title = i === 1 ? 'CAPTAIN' : (i === 6 ? 'SUBSTITUTE' : 'STARTER');
             let req = i === 6 ? '' : 'required';
             let colorClass = i === 1 ? 'text-yellow-400' : (i === 6 ? 'text-[var(--neon-pink)]' : 'text-white');
-            let borderClass = i === 1 ? 'bg-yellow-500' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-white');
+            let bgClass = i === 1 ? 'bg-yellow-500' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-white');
+            let dotClass = i === 1 ? 'bg-yellow-400' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-[var(--neon-cyan)]');
             
-            let html = `
-            <div class="bg-black/30 p-5 border border-white/5 relative overflow-hidden group hover:border-white/20 transition-all shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-                <div class="absolute top-0 left-0 w-1 h-full ${borderClass} opacity-50 group-hover:opacity-100 transition-opacity"></div>
-                <div class="flex justify-between items-center mb-4">
-                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">Player 0${i}</span>
-                    <span class="text-xs font-bold uppercase tracking-widest ${colorClass} data-font">${title}</span>
+            // Player 6 is initially hidden but exists inside the grid structure
+            let visibilityClass = i === 6 ? 'hidden opacity-0' : 'opacity-100';
+            
+            gridHtml += `
+            <div id="player-card-${i}" class="dossier-card p-6 ${visibilityClass} transition-opacity duration-300">
+                <div class="dossier-line ${bgClass}"></div>
+                <div class="flex justify-between items-center mb-5 border-b border-white/10 pb-3">
+                    <span class="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 data-font">Player 0${i}</span>
+                    <div class="flex items-center gap-2">
+                        <div class="w-1.5 h-1.5 rounded-full ${dotClass} animate-pulse"></div>
+                        <span class="text-xs font-bold uppercase tracking-widest ${colorClass} data-font">${title}</span>
+                    </div>
                 </div>
                 <div class="space-y-4">
-                    <input type="text" id="p${i}Discord" ${req} placeholder="Discord Username (e.g. s1mple)" class="input-ghost">
-                    <div class="grid grid-cols-2 gap-4">
-                        <input type="url" id="p${i}Steam" ${req} placeholder="Steam URL (e.g. steamcommunity.com/id/name)" class="input-ghost">
-                        <input type="url" id="p${i}Faceit" ${req} placeholder="FACEIT URL (e.g. faceit.com/en/players/name)" class="input-ghost">
+                    <div class="input-group">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <input type="text" id="p${i}Discord" ${req} placeholder="Discord Username (e.g. s1mple)" class="input-ghost">
                     </div>
-                    <select id="p${i}Rank" ${req} class="input-ghost">${ranks}</select>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="input-group">
+                            <i data-lucide="gamepad-2" class="w-4 h-4"></i>
+                            <input type="text" id="p${i}Steam" ${req} placeholder="Steam URL" class="input-ghost">
+                        </div>
+                        <div class="input-group">
+                            <i data-lucide="crosshair" class="w-4 h-4"></i>
+                            <input type="text" id="p${i}Faceit" ${req} placeholder="FACEIT URL" class="input-ghost">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <i data-lucide="award" class="w-4 h-4"></i>
+                        <select id="p${i}Rank" ${req} class="input-ghost w-full">${ranks}</select>
+                    </div>
                 </div>
             </div>`;
-            
-            if (i <= 5) container.innerHTML += html;
-            else subContainer.innerHTML += html;
         }
+        gridContainer.innerHTML = gridHtml;
 
-        // IMPROVED TOGGLE LOGIC
+        // NEW SLEEK TOGGLE LOGIC
         let subActive = false;
         document.getElementById('subToggleWrapper').addEventListener('click', function() {
             subActive = !subActive;
             const wrapper = this;
-            const bgSpan = this.querySelector('span:nth-child(2)');
-            const dotSpan = this.querySelector('span:nth-child(3)');
+            const bgSpan = document.querySelector('#subToggle span:nth-child(2)');
+            const dotSpan = document.querySelector('#subToggle span:nth-child(3)');
+            const p6Card = document.getElementById('player-card-6');
             
             if (subActive) {
-                wrapper.classList.add('active');
+                wrapper.classList.add('border-[var(--neon-pink)]', 'shadow-[0_0_15px_rgba(240,0,255,0.2)]');
                 bgSpan.classList.replace('bg-zinc-800', 'bg-[var(--neon-pink)]');
                 dotSpan.classList.replace('translate-x-[-12px]', 'translate-x-[12px]');
-                subContainer.classList.remove('hidden');
-                setTimeout(() => subContainer.classList.remove('opacity-0'), 10);
+                dotSpan.classList.replace('bg-zinc-400', 'bg-white');
+                p6Card.classList.remove('hidden');
+                setTimeout(() => p6Card.classList.remove('opacity-0'), 10);
             } else {
-                wrapper.classList.remove('active');
+                wrapper.classList.remove('border-[var(--neon-pink)]', 'shadow-[0_0_15px_rgba(240,0,255,0.2)]');
                 bgSpan.classList.replace('bg-[var(--neon-pink)]', 'bg-zinc-800');
                 dotSpan.classList.replace('translate-x-[12px]', 'translate-x-[-12px]');
-                subContainer.classList.add('opacity-0');
-                setTimeout(() => subContainer.classList.add('hidden'), 300);
+                dotSpan.classList.replace('bg-white', 'bg-zinc-400');
+                p6Card.classList.add('opacity-0');
+                setTimeout(() => p6Card.classList.add('hidden'), 300);
                 
-                // Clear fields if disabled
                 document.getElementById('p6Discord').value = '';
                 document.getElementById('p6Steam').value = '';
                 document.getElementById('p6Faceit').value = '';
@@ -546,15 +588,15 @@
                         const icon = isApproved ? 'shield-check' : 'activity';
                         
                         grid.innerHTML += `
-                        <div class="bg-black/40 border border-white/5 p-5 flex items-center justify-between gap-4 hover:border-white/20 transition-all hover:bg-black/60 group">
+                        <div class="bg-black/40 border border-white/5 p-5 flex items-center justify-between gap-4 hover:border-white/20 transition-all hover:bg-black/60 group rounded-lg">
                             <div class="flex items-center gap-5 w-full min-w-0">
-                                <img src="${team.logo || 'https://via.placeholder.com/60'}" onerror="this.src='https://via.placeholder.com/60'" class="w-14 h-14 object-cover border border-white/10 group-hover:border-white/30 transition-colors flex-shrink-0 shadow-lg">
+                                <img src="${team.logo || 'https://via.placeholder.com/60'}" onerror="this.src='https://via.placeholder.com/60'" class="w-14 h-14 object-cover border border-white/10 group-hover:border-white/30 transition-colors flex-shrink-0 shadow-lg rounded">
                                 <div class="min-w-0">
                                     <h4 class="text-2xl brand-font text-white uppercase truncate leading-none tracking-wide">${team.name} <span class="text-zinc-600 text-sm ml-2 data-font tracking-widest">[${team.tag}]</span></h4>
                                     <p class="text-[10px] font-bold tracking-[0.2em] text-zinc-400 mt-2 truncate uppercase data-font">${isApproved ? 'All Protocols Verified' : `AWAITING: ${team.missing}`}</p>
                                 </div>
                             </div>
-                            <div class="text-center border ${statusColor} px-4 py-2 flex-shrink-0">
+                            <div class="text-center border ${statusColor} px-4 py-2 flex-shrink-0 rounded">
                                 <i data-lucide="${icon}" class="w-5 h-5 mx-auto mb-1"></i>
                                 <span class="text-[10px] font-bold uppercase tracking-[0.2em] block leading-none data-font">${team.status}</span>
                             </div>
@@ -562,7 +604,7 @@
                     });
                     if(window.createIcons) window.createIcons();
                 } else {
-                    grid.innerHTML = '<div class="col-span-full text-center py-16 text-zinc-600 text-[10px] uppercase tracking-[0.4em] font-bold border border-dashed border-white/10 bg-black/20">0 Teams Registered</div>';
+                    grid.innerHTML = '<div class="col-span-full text-center py-16 text-zinc-600 text-[10px] uppercase tracking-[0.4em] font-bold border border-dashed border-white/10 bg-black/20 rounded-lg">0 Teams Registered</div>';
                 }
                 document.getElementById('tracker-loading').classList.add('hidden');
                 grid.classList.remove('hidden');
