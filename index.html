@@ -694,7 +694,16 @@
             if(window.createIcons) window.createIcons();
             errorBox.classList.add('hidden');
 
+            // 🛡️ IDEMPOTENCY KEY GENERATION
+            // Generates a session-bound key to prevent duplicate charges/submissions on network retries
+            let idempotencyKey = sessionStorage.getItem('pp_idemp_key');
+            if (!idempotencyKey) {
+                idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+                sessionStorage.setItem('pp_idemp_key', idempotencyKey);
+            }
+
             const payload = {
+                idempotencyKey: idempotencyKey, // 🛡️ Attached to payload
                 subIncluded: subActive,
                 inviteCode: document.getElementById('inviteCode').value,
                 teamName: document.getElementById('teamName').value,
@@ -718,6 +727,9 @@
                 const responseData = await res.json();
 
                 if (responseData.error) throw new Error(responseData.error);
+
+                // 🛡️ SUCCESS: Clear the idempotency key so a brand new registration can occur if needed
+                sessionStorage.removeItem('pp_idemp_key');
 
                 document.getElementById('registrationForm').classList.add('hidden');
                 document.getElementById('countdown-wrapper').classList.add('hidden');
