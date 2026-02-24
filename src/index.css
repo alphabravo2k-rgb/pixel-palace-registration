@@ -2,24 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  .btn-ignite {
-    @apply relative overflow-hidden bg-gradient-to-br from-brand-accent to-brand text-white font-display text-fluid-xl font-bold tracking-[4px] uppercase border-none cursor-pointer transition-all duration-300 shadow-neon;
-    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
-  }
-  .btn-ignite::before {
-    content: '';
-    @apply absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/80 to-transparent z-10 transition-all duration-500;
-    left: -100%;
-    transform: skewX(-25deg);
-  }
-  .btn-ignite:hover:not(:disabled) {
-    @apply scale-105 shadow-neon-strong;
-  }
-  .btn-ignite:hover:not(:disabled)::before {
-    left: 200%;
-  }
-  .btn-ignite:disabled {
-    @apply bg-tactical shadow-none text-tactical-muted cursor-not-allowed;
-  }
+:root { 
+    --neon-pink: #f000ff; 
+    --neon-purple: #8a2be2;
+    --neon-cyan: #00f0ff;
+    --bg-void: #050507;
+    --glass: rgba(15, 15, 20, 0.45);
+    --glass-border: rgba(255, 255, 255, 0.08);
 }
+
+body { 
+    background-color: var(--bg-void); 
+    color: #e4e4e7; 
+}
+
+.brand-font { font-family: 'Teko', sans-serif; text-transform: uppercase; }
+.data-font { font-family: 'Space Grotesk', sans-serif; }
+
+/* --- THE VOID ENGINE --- */
+.bg-void-engine {
+    position: fixed; inset: 0; z-index: -2;
+    background: radial-gradient(circle at 50% 0%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 100% 100%, rgba(240, 0, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, rgba(0, 240, 255, 0.05) 0%, transparent 50%),
+                var(--bg-void);
+    background-size: 200% 200%;
+    animation: breathe 20s ease-in-out infinite alternate;
+}
+@keyframes breathe { 0% { background-position: 0% 0%; } 100% { background-position: 100% 100%; } }
+
+.scanlines {
+    position: fixed; inset: 0; z-index: -1; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+    background-size: 100% 4px;
+    box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
+}
+
+/* --- EXACT COMPONENT CLASSES FROM YOUR HTML --- */
+.elite-panel {
+    background: var(--glass);
+    backdrop-filter: blur(24px) saturate(120%);
+    -webkit-backdrop-filter: blur(24px) saturate(120%);
+    border: 1px solid var(--glass-border);
+    position: relative;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    border-radius: 4px;
+}
+.elite-panel::after {
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+    background: linear-gradient(90deg, transparent, var(--neon-pink), transparent);
+    opacity: 0; transition: opacity 0.4s ease;
+}
+.elite-panel:hover { border-color: rgba(240, 0, 255, 0.3); transform: translateY(-2px); }
+.elite-panel:hover::after { opacity: 1; }
+
+.input-group {
+    display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); 
+    border-bottom: 2px solid rgba(255,255,255,0.1); border-top-left-radius: 4px; border-top-right-radius: 4px;
+    transition: all 0.3s ease; position: relative;
+}
+.input-group:focus-within {
+    background: rgba(0, 240, 255, 0.05); border-bottom-color: var(--neon-cyan);
+    box-shadow: 0 10px 20px -10px rgba(0, 240, 255, 0.2);
+}
+.input-group i, .input-group svg { color: rgba(255,255,255,0.3); transition: color 0.3s; margin-left: 12px; }
+.input-group:focus-within i, .input-group:focus-within svg { color: var(--neon-cyan); }
+
+.input-ghost {
+    width: 100%; background: transparent; border: none; color: #fff; 
+    font-family: 'Space Grotesk', sans-serif; font-size: 0.95rem; padding: 12px; outline: none;
+}
+.input-ghost::placeholder { color: rgba(255,255,255,0.25); font-family: 'Space Grotesk'; font-size: 0.8rem; }
+select.input-ghost { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; cursor: pointer; }
+select.input-ghost option { background: #111; color: #fff; font-family: 'Rajdhani'; }
+
+.btn-ignite {
+    background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
+    color: white; font-family: 'Teko', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 4px;
+    padding: 16px 32px; border: none; position: relative; overflow: hidden; cursor: pointer;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+    transition: all 0.3s ease; box-shadow: 0 0 20px rgba(240, 0, 255, 0.4); text-transform: uppercase;
+}
+.btn-ignite::before {
+    content: ''; position: absolute; top: 0; left: -100%; width: 50%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+    transform: skewX(-25deg); transition: 0.5s; z-index: 1;
+}
+.btn-ignite span { position: relative; z-index: 2; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.btn-ignite:hover:not(:disabled) { transform: scale(1.02); box-shadow: 0 0 40px rgba(240, 0, 255, 0.8); }
+.btn-ignite:hover:not(:disabled)::before { left: 200%; }
+.btn-ignite:disabled { background: #222; box-shadow: none; color: #555; cursor: not-allowed; }
+
+.dossier-card {
+    background: linear-gradient(180deg, rgba(20,20,25,0.8) 0%, rgba(10,10,15,0.9) 100%);
+    border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
+    position: relative; overflow: hidden; transition: all 0.3s ease;
+}
+.dossier-card:hover { border-color: rgba(255,255,255,0.15); box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: translateY(-2px); }
+.dossier-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; transition: opacity 0.3s; opacity: 0.7; }
+.dossier-card:hover .dossier-line { opacity: 1; box-shadow: 0 0 15px currentColor; }
+
+@keyframes subtle-pulse {
+    0% { box-shadow: 0 0 5px rgba(138,43,226,0.3); border-color: rgba(138,43,226,0.5); }
+    50% { box-shadow: 0 0 20px rgba(138,43,226,0.8); border-color: rgba(138,43,226,0.9); }
+    100% { box-shadow: 0 0 5px rgba(138,43,226,0.3); border-color: rgba(138,43,226,0.5); }
+}
+.highlight-toggle { animation: subtle-pulse 2.5s infinite; }
