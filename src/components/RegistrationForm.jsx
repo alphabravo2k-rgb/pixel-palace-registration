@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useReducer, useState, useEffect } from 'react';
 import { AlertTriangle, Award, CheckCircle2, Crosshair, Gamepad2, Globe, Image as ImageIcon, Key, Loader2, MessageSquare, Tag, UserPlus, Users } from 'lucide-react';
+import { getOrCreateSubmissionId, clearSubmissionId } from '../utils/idempotency';
+import { submitToGateway } from '../services/api/client';
+import { submissionReducer, SUBMISSION_STATES } from '../services/state/submissionMachine';
 
-export default function RegistrationForm({ API_URL, deadlineDate }) {
+export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }) {
+  const [state, dispatch] = useReducer(submissionReducer, { status: SUBMISSION_STATES.IDLE, error: null });
+  
   const [formData, setFormData] = useState({
     agreed: false, inviteCode: '', logoLink: '',
     p1Discord: '', p1Faceit: '', p1Rank: '', p1Steam: '',
@@ -14,16 +19,12 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
   });
   
   const [subActive, setSubActive] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
   const [timeLeft, setTimeLeft] = useState('--:--:--');
   const [vipStatus, setVipStatus] = useState('AWAITING INPUT...');
 
   useEffect(() => {
     if(!deadlineDate) return;
     const target = new Date(deadlineDate).getTime();
-    
     const interval = setInterval(() => {
       const diff = target - new Date().getTime();
       if(diff < 0) {
@@ -40,9 +41,7 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
     return () => clearInterval(interval);
   }, [deadlineDate]);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  };
+  const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleVIPBlur = async () => {
     if (!formData.inviteCode) { setVipStatus('AWAITING INPUT...'); return; }
@@ -51,42 +50,55 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
       const res = await fetch(`${API_URL}?validateCode=${encodeURIComponent(formData.inviteCode)}`);
       const data = await res.json();
       setVipStatus(data.valid ? 'CODE ACCEPTED' : 'INVALID CODE');
-    } catch (_err) { 
-      setVipStatus('AWAITING INPUT...'); 
-    }
+    } catch { setVipStatus('AWAITING INPUT...'); }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setSubmitting(true);
-    setErrorMsg('');
+    dispatch({ type: 'START' });
 
-    let idempotencyKey = sessionStorage.getItem('pp_idemp_key');
-    if (!idempotencyKey) {
-        idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
-        sessionStorage.setItem('pp_idemp_key', idempotencyKey);
+    // Build the Canonical Payload mapping
+    const roster = [];
+    for (let i = 1; i <= 6; i++) {
+      if (i === 6 && !subActive) continue;
+      roster.push({
+        discord: formData[`p${i}Discord`],
+        steam: formData[`p${i}Steam`],
+        faceit: formData[`p${i}Faceit`],
+        rank: formData[`p${i}Rank`],
+      });
     }
 
-    const payload = { ...formData, idempotencyKey, subIncluded: subActive };
+    const canonicalPayload = {
+      submission_id: getOrCreateSubmissionId(),
+      tournament_id: tournamentId,
+      team: {
+        team_name: formData.teamName,
+        team_tag: formData.teamTag,
+        region: formData.teamRegion,
+        logo_url: formData.logoLink,
+        invite_code: formData.inviteCode,
+      },
+      roster: roster,
+      metadata: {
+        submitted_at: new Date().toISOString(),
+        source: "portal_v1",
+        schema_version: "1.0",
+        sub_included: subActive
+      }
+    };
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
-      const res = await fetch(API_URL, { body: JSON.stringify(payload), method: 'POST', signal: controller.signal });
-      clearTimeout(timeoutId);
-      
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-
-      sessionStorage.removeItem('pp_idemp_key');
-      setSuccess(true);
+      // Pass data to the abstraction layer
+      await submitToGateway(canonicalPayload, API_URL);
+      clearSubmissionId();
+      dispatch({ type: 'SUCCESS' });
     } catch (err) {
-      setErrorMsg(err.name === 'AbortError' ? "Connection Timeout. Retry." : err.message);
-      setSubmitting(false);
+      dispatch({ type: 'ERROR', payload: err.message });
     }
   };
 
-  if (success) {
+  if (state.status === SUBMISSION_STATES.SUCCESS) {
     return (
       <div className="elite-panel p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
         <div className="relative mb-8">
@@ -147,12 +159,14 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
   };
 
   return (
-    <form id="registrationForm" onSubmit={handleSubmit} className="space-y-8">
-      <div className="elite-panel p-6 border-l-4 border-l-[var(--neon-pink)] max-w-sm mx-auto text-center" id="countdown-wrapper">
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* TIME LEFT */}
+      <div className="elite-panel p-6 border-l-4 border-l-[var(--neon-pink)] max-w-sm mx-auto text-center">
           <p className="text-[10px] uppercase tracking-[0.3em] text-[var(--neon-pink)] mb-2 font-bold data-font">Registration Closes In</p>
-          <p id="time-left" className={`text-5xl brand-font tracking-widest text-shadow-[0_0_15px_rgba(240,0,255,0.5)] ${timeLeft === 'OFFLINE' ? 'text-red-500' : 'text-white'}`}>{timeLeft}</p>
+          <p className={`text-5xl brand-font tracking-widest text-shadow-[0_0_15px_rgba(240,0,255,0.5)] ${timeLeft === 'OFFLINE' ? 'text-red-500' : 'text-white'}`}>{timeLeft}</p>
       </div>
 
+      {/* TEAM IDENTITY */}
       <div className="elite-panel p-0 overflow-hidden">
         <div className="flex items-stretch bg-black/50 border-b border-white/10">
           <div className="bg-[var(--neon-purple)] px-5 flex items-center justify-center font-bold brand-font text-3xl text-white italic">01</div>
@@ -166,28 +180,20 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
               <span className={`text-[10px] font-bold uppercase data-font ${vipStatus.includes('ACCEPTED') ? 'text-[var(--neon-cyan)]' : vipStatus.includes('INVALID') ? 'text-red-500' : 'text-zinc-500'}`}>{vipStatus}</span>
             </div>
             <div className="input-group">
-              <Key size={16}/>
-              <input type="text" name="inviteCode" onBlur={handleVIPBlur} onChange={handleChange} placeholder="Leave blank if none" className="input-ghost"/>
+              <Key size={16}/><input type="text" name="inviteCode" onBlur={handleVIPBlur} onChange={handleChange} placeholder="Leave blank if none" className="input-ghost"/>
             </div>
           </div>
           <div className="md:col-span-2">
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Registered Team Name</label>
-            <div className="input-group">
-              <Users size={16}/>
-              <input type="text" name="teamName" required onChange={handleChange} placeholder="e.g. Natus Vincere" className="input-ghost text-lg"/>
-            </div>
+            <div className="input-group"><Users size={16}/><input type="text" name="teamName" required onChange={handleChange} placeholder="e.g. Natus Vincere" className="input-ghost text-lg"/></div>
           </div>
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Tag</label>
-            <div className="input-group">
-              <Tag size={16}/>
-              <input type="text" name="teamTag" required pattern="[A-Za-z0-9]+" title="Letters/numbers only" onChange={handleChange} placeholder="e.g. NAVI" className="input-ghost"/>
-            </div>
+            <div className="input-group"><Tag size={16}/><input type="text" name="teamTag" required pattern="[A-Za-z0-9]+" onChange={handleChange} placeholder="e.g. NAVI" className="input-ghost"/></div>
           </div>
           <div>
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Server Region</label>
-            <div className="input-group">
-              <Globe size={16}/>
+            <div className="input-group"><Globe size={16}/>
               <select name="teamRegion" required onChange={handleChange} className="input-ghost" defaultValue="">
                 <option value="" disabled>Select Region...</option>
                 <option value="IND">India (IND)</option>
@@ -198,14 +204,12 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
           </div>
           <div className="col-span-full">
             <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block data-font">Team Logo URL</label>
-            <div className="input-group">
-              <ImageIcon size={16}/>
-              <input type="url" name="logoLink" required onChange={handleChange} placeholder="e.g. https://i.imgur.com/yourlogo.png" className="input-ghost"/>
-            </div>
+            <div className="input-group"><ImageIcon size={16}/><input type="url" name="logoLink" required onChange={handleChange} placeholder="e.g. https://i.imgur.com/yourlogo.png" className="input-ghost"/></div>
           </div>
         </div>
       </div>
 
+      {/* ROSTER */}
       <div className="elite-panel p-0 overflow-hidden">
         <div className="flex items-stretch justify-between bg-black/50 border-b border-white/10 pr-6">
           <div className="flex items-stretch">
@@ -225,6 +229,7 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
         </div>
       </div>
 
+      {/* VERIFICATION */}
       <div className="elite-panel p-0 overflow-hidden">
         <div className="flex items-stretch bg-black/50 border-b border-white/10">
           <div className="bg-white px-5 flex items-center justify-center font-bold brand-font text-3xl text-black italic">03</div>
@@ -234,18 +239,18 @@ export default function RegistrationForm({ API_URL, deadlineDate }) {
           <div className="space-y-4 mb-10 data-font">
             <label className="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
               <input type="checkbox" required onChange={(e)=>setFormData(prev => ({...prev, agreed: e.target.checked}))} className="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer" />
-              <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">I confirm Akros Anti-Cheat will be active, all players are in the Discord, and we consent to the processing of data.</span>
+              <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">I confirm Akros Anti-Cheat will be active, all players are in the Discord, and we consent to data processing.</span>
             </label>
           </div>
 
-          {errorMsg && (
+          {state.error && (
             <div className="mb-8 bg-red-950/80 border border-red-500 p-4 text-red-400 text-sm font-bold uppercase tracking-widest text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] data-font flex items-center justify-center gap-3">
-              <AlertTriangle size={20} /> <span>{errorMsg}</span>
+              <AlertTriangle size={20} /> <span>{state.error}</span>
             </div>
           )}
           
-          <button type="submit" disabled={submitting || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
-            {submitting ? <><Loader2 className="animate-spin" /> TRANSMITTING...</> : <span>SUBMIT REGISTRATION</span>}
+          <button type="submit" disabled={state.status === SUBMISSION_STATES.SUBMITTING || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
+            {state.status === SUBMISSION_STATES.SUBMITTING ? <><Loader2 className="animate-spin" /> TRANSMITTING...</> : <span>SUBMIT REGISTRATION</span>}
           </button>
         </div>
       </div>
