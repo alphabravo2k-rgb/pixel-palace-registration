@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-ignite {
+    @apply relative overflow-hidden bg-gradient-to-br from-brand-accent to-brand text-white font-display text-fluid-xl font-bold tracking-[4px] uppercase border-none cursor-pointer transition-all duration-300 shadow-neon;
+    clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+  }
+  .btn-ignite::before {
+    content: '';
+    @apply absolute top-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/80 to-transparent z-10 transition-all duration-500;
+    left: -100%;
+    transform: skewX(-25deg);
+  }
+  .btn-ignite:hover:not(:disabled) {
+    @apply scale-105 shadow-neon-strong;
+  }
+  .btn-ignite:hover:not(:disabled)::before {
+    left: 200%;
+  }
+  .btn-ignite:disabled {
+    @apply bg-tactical shadow-none text-tactical-muted cursor-not-allowed;
+  }
+}
