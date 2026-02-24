@@ -513,6 +513,20 @@
         const deadlineDate = new Date('2026-03-31T23:59:59Z').getTime(); 
         const API_URL = 'https://script.google.com/macros/s/AKfycbxYn_uD5M6FDk7ukmit6iRhCGo8JqzgB4xTT01-FnWRXttE0s4jpgEuxfaD693MUyQZ/exec';
 
+        // 🛡️ THE XSS FIX: HTML Escaper
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString().replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
         document.getElementById('tab-register').addEventListener('click', () => switchTab('register'));
         document.getElementById('tab-tracker').addEventListener('click', () => { switchTab('tracker'); fetchTrackerData(); });
 
@@ -616,13 +630,19 @@
                         const statusColor = isApproved ? 'text-[var(--neon-cyan)] border-[var(--neon-cyan)]/30 bg-[var(--neon-cyan)]/10 shadow-[0_0_15px_rgba(0,240,255,0.1)]' : 'text-yellow-400 border-yellow-500/30 bg-yellow-900/10';
                         const icon = isApproved ? 'shield-check' : 'activity';
                         
+                        // 🛡️ SANITIZE INPUTS BEFORE INJECTING
+                        const safeName = escapeHTML(team.name);
+                        const safeTag = escapeHTML(team.tag);
+                        const safeMissing = escapeHTML(team.missing);
+                        const safeLogo = escapeHTML(team.logo); 
+                        
                         grid.innerHTML += `
                         <div class="bg-black/40 border border-white/5 p-5 flex items-center justify-between gap-4 hover:border-white/20 transition-all hover:bg-black/60 group rounded-lg">
                             <div class="flex items-center gap-5 w-full min-w-0">
-                                <img src="${team.logo || 'https://via.placeholder.com/60'}" onerror="this.src='https://via.placeholder.com/60'" class="w-14 h-14 object-cover border border-white/10 group-hover:border-white/30 transition-colors flex-shrink-0 shadow-lg rounded">
+                                <img src="${safeLogo || 'https://via.placeholder.com/60'}" onerror="this.src='https://via.placeholder.com/60'" class="w-14 h-14 object-cover border border-white/10 group-hover:border-white/30 transition-colors flex-shrink-0 shadow-lg rounded">
                                 <div class="min-w-0">
-                                    <h4 class="text-2xl brand-font text-white uppercase truncate leading-none tracking-wide">${team.name} <span class="text-zinc-600 text-sm ml-2 data-font tracking-widest">[${team.tag}]</span></h4>
-                                    <p class="text-[10px] font-bold tracking-[0.2em] text-zinc-400 mt-2 truncate uppercase data-font">${isApproved ? 'All Protocols Verified' : `AWAITING: ${team.missing}`}</p>
+                                    <h4 class="text-2xl brand-font text-white uppercase truncate leading-none tracking-wide">${safeName} <span class="text-zinc-600 text-sm ml-2 data-font tracking-widest">[${safeTag}]</span></h4>
+                                    <p class="text-[10px] font-bold tracking-[0.2em] text-zinc-400 mt-2 truncate uppercase data-font">${isApproved ? 'All Protocols Verified' : `AWAITING: ${safeMissing}`}</p>
                                 </div>
                             </div>
                             <div class="text-center border ${statusColor} px-4 py-2 flex-shrink-0 rounded">
