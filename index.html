@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pixel Palace | Tournament Registration</title>
+    <title>Pixel Palace | Community Cup 2.0</title>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -32,7 +32,12 @@
         h1, h2, h3, .brand-font { font-family: 'Teko', sans-serif; text-transform: uppercase; }
         .data-font { font-family: 'Space Grotesk', sans-serif; }
 
-        /* --- THE VOID ENGINE --- */
+        input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus, input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0a0a0c inset !important;
+            -webkit-text-fill-color: white !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
         .bg-void-engine {
             position: fixed; inset: 0; z-index: -2;
             background: radial-gradient(circle at 50% 0%, rgba(138, 43, 226, 0.15) 0%, transparent 50%),
@@ -51,7 +56,6 @@
             box-shadow: inset 0 0 150px rgba(0,0,0,0.9);
         }
 
-        /* --- GLASS PANELS --- */
         .elite-panel {
             background: var(--glass);
             backdrop-filter: blur(24px) saturate(120%);
@@ -70,7 +74,6 @@
         .elite-panel:hover { border-color: rgba(240, 0, 255, 0.3); transform: translateY(-2px); }
         .elite-panel:hover::after { opacity: 1; }
 
-        /* --- HUD INPUTS --- */
         .input-group {
             display: flex; align-items: center; background: rgba(0, 0, 0, 0.4); 
             border-bottom: 2px solid rgba(255,255,255,0.1); border-top-left-radius: 4px; border-top-right-radius: 4px;
@@ -93,7 +96,32 @@
         select.input-ghost { appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; cursor: pointer; }
         select.input-ghost option { background: #111; color: #fff; font-family: 'Rajdhani'; }
 
-        /* --- THE IGNITE BUTTON --- */
+        .slider-container {
+            background: rgba(0, 0, 0, 0.4); 
+            border-bottom: 2px solid rgba(255,255,255,0.1); border-top-left-radius: 4px; border-top-right-radius: 4px;
+            padding: 8px 12px 12px 12px;
+            transition: all 0.3s ease;
+        }
+        .slider-container:focus-within, .slider-container:hover {
+            background: rgba(0, 240, 255, 0.05); border-bottom-color: var(--neon-cyan);
+            box-shadow: 0 10px 20px -10px rgba(0, 240, 255, 0.2);
+        }
+        .slider-container:focus-within i, .slider-container:hover i { color: var(--neon-cyan); }
+        
+        .cyber-slider {
+            -webkit-appearance: none; width: 100%; height: 4px; background: rgba(255,255,255,0.1);
+            outline: none; border-radius: 2px; margin-top: 8px;
+        }
+        .cyber-slider::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none; width: 16px; height: 16px;
+            background: var(--neon-cyan); cursor: pointer; border-radius: 50%;
+            box-shadow: 0 0 10px var(--neon-cyan); transition: transform 0.1s;
+        }
+        .cyber-slider::-moz-range-thumb {
+            width: 16px; height: 16px; background: var(--neon-cyan); cursor: pointer;
+            border-radius: 50%; border: none; box-shadow: 0 0 10px var(--neon-cyan); transition: transform 0.1s;
+        }
+
         .btn-ignite {
             background: linear-gradient(135deg, var(--neon-pink), var(--neon-purple));
             color: white; font-family: 'Teko', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 4px;
@@ -111,7 +139,6 @@
         .btn-ignite:hover:not(:disabled)::before { left: 200%; }
         .btn-ignite:disabled { background: #222; box-shadow: none; color: #555; cursor: not-allowed; }
 
-        /* --- MAP CARDS --- */
         .map-card {
             border: 1px solid rgba(255,255,255,0.05); height: 100px; position: relative; overflow: hidden;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
@@ -127,7 +154,6 @@
         .mc-green { --accent-rgb: 34, 197, 94; } .mc-orange { --accent-rgb: 249, 115, 22; } .mc-yellow { --accent-rgb: 234, 179, 8; }
         .mc-red { --accent-rgb: 239, 68, 68; } .mc-amber { --accent-rgb: 245, 158, 11; } .mc-cyan { --accent-rgb: 6, 182, 212; } .mc-purple { --accent-rgb: 168, 85, 247; }
 
-        /* --- TABS --- */
         .cyber-tab {
             font-family: 'Teko', sans-serif; font-size: 2rem; text-transform: uppercase; letter-spacing: 2px;
             color: rgba(255,255,255,0.4); background: transparent; border: none; padding: 0 20px;
@@ -141,7 +167,6 @@
         }
         .cyber-tab.active::after { width: 100%; }
 
-        /* --- ROSTER DOSSIER CARDS --- */
         .dossier-card {
             background: linear-gradient(180deg, rgba(20,20,25,0.8) 0%, rgba(10,10,15,0.9) 100%);
             border: 1px solid rgba(255,255,255,0.05); border-radius: 6px;
@@ -151,7 +176,6 @@
         .dossier-line { position: absolute; top: 0; left: 0; width: 100%; height: 3px; transition: opacity 0.3s; opacity: 0.7; }
         .dossier-card:hover .dossier-line { opacity: 1; box-shadow: 0 0 15px currentColor; }
 
-        /* --- HUD DECORATIONS --- */
         .hud-crosshair { position: absolute; width: 10px; height: 10px; border: 1px solid rgba(255,255,255,0.2); z-index: 5; pointer-events: none; }
         .tl { top: 10px; left: 10px; border-right: none; border-bottom: none; } .tr { top: 10px; right: 10px; border-left: none; border-bottom: none; }
         .bl { bottom: 10px; left: 10px; border-right: none; border-top: none; } .br { bottom: 10px; right: 10px; border-left: none; border-top: none; }
@@ -161,15 +185,6 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; } ::-webkit-scrollbar-thumb:hover { background: var(--neon-cyan); }
 
         .logo-supreme { filter: drop-shadow(0 0 20px rgba(240, 0, 255, 0.4)); transition: all 0.5s ease; cursor: crosshair; }
-        .logo-supreme:hover { filter: drop-shadow(0 0 50px rgba(0, 240, 255, 0.8)); transform: scale(1.05); }
-
-        /* Highlight Pulse for 6th Player Toggle */
-        @keyframes subtle-pulse {
-            0% { box-shadow: 0 0 5px rgba(138,43,226,0.3); border-color: rgba(138,43,226,0.5); }
-            50% { box-shadow: 0 0 20px rgba(138,43,226,0.8); border-color: rgba(138,43,226,0.9); }
-            100% { box-shadow: 0 0 5px rgba(138,43,226,0.3); border-color: rgba(138,43,226,0.5); }
-        }
-        .highlight-toggle { animation: subtle-pulse 2.5s infinite; }
     </style>
 </head>
 <body>
@@ -184,12 +199,20 @@
             <span class="sys-text" style="top: 0; right: 20px;">SYS_STATUS // ONLINE</span>
 
             <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
-                 alt="Pixel Palace Logo" class="w-48 h-48 md:w-64 md:h-64 object-contain mb-[-10px] logo-supreme relative z-20">
+                 alt="Pixel Palace Logo" class="w-40 h-40 md:w-56 md:h-56 object-contain mb-[-10px] logo-supreme relative z-20">
                  
-            <h1 class="text-6xl sm:text-[6rem] md:text-[8rem] font-black text-white italic tracking-tighter brand-font leading-none relative z-10 drop-shadow-2xl">
+            <h1 class="text-5xl sm:text-[5rem] md:text-[6.5rem] font-black text-white italic tracking-tighter brand-font leading-none relative z-10 drop-shadow-2xl">
                 PIXEL PALACE <br> 
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-[var(--neon-pink)] via-white to-[var(--neon-cyan)] inline-block pb-4 tracking-tight">COMMUNITY CUP 2.0</span>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-[var(--neon-pink)] via-white to-[var(--neon-cyan)] inline-block tracking-tight">COMMUNITY CUP 2.0</span>
             </h1>
+
+            <div class="flex items-center justify-center w-full max-w-md mx-auto mt-2 mb-8 relative z-20 opacity-80">
+                <div class="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
+                <div class="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white data-font uppercase">
+                    APRIL 03 &bull; 2026
+                </div>
+                <div class="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
+            </div>
             
             <div class="w-full max-w-4xl mx-auto mt-6 relative z-20">
                 <div class="hud-crosshair tl"></div><div class="hud-crosshair tr"></div><div class="hud-crosshair bl"></div><div class="hud-crosshair br"></div>
@@ -254,7 +277,7 @@
                             <i data-lucide="ticket" class="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5"></i>
                             <div>
                                 <strong class="text-white uppercase tracking-widest font-bold">Registration Status</strong>
-                                <p class="text-zinc-400 leading-tight mt-1">Free Entry for Community Cup 2.0. Slots are limited and filled on a first-come, first-served basis.</p>
+                                <p class="text-zinc-400 leading-tight mt-1">Free Entry. Slots are limited to 32 Teams and filled on a first-come, first-served basis.</p>
                             </div>
                         </li>
                     </ul>
@@ -275,14 +298,6 @@
                             <p class="text-xl font-bold text-white mt-1">MARCH 31, 2026 <span class="text-sm text-zinc-600">UTC</span></p>
                         </div>
                     </div>
-                    
-                    <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" class="w-full flex items-center justify-between p-4 mt-6 border border-zinc-700 hover:border-[var(--neon-pink)] bg-black/40 group transition-all rounded">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="book-open" class="w-5 h-5 text-zinc-400 group-hover:text-[var(--neon-pink)] transition-colors"></i>
-                            <span class="font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white data-font text-sm">Official Rulebook</span>
-                        </div>
-                        <i data-lucide="external-link" class="w-4 h-4 text-zinc-500 group-hover:text-[var(--neon-pink)]"></i>
-                    </a>
                 </div>
 
                 <div class="elite-panel p-6 border-l-4 border-l-[var(--neon-pink)]" id="countdown-wrapper">
@@ -383,17 +398,18 @@
                     </div>
 
                     <div class="elite-panel p-0 overflow-hidden">
-                         <div class="flex items-stretch justify-between bg-black/50 border-b border-white/10 pr-6">
+                         <div class="flex flex-col md:flex-row items-stretch justify-between bg-black/50 border-b border-white/10 pr-6">
                              <div class="flex items-stretch">
                                  <div class="bg-[var(--neon-cyan)] px-5 flex items-center justify-center font-bold brand-font text-3xl text-black italic">02</div>
                                  <h2 class="text-3xl text-white brand-font tracking-wider pl-6 py-4 italic">TEAM ROSTER</h2>
                              </div>
                              
-                             <div id="subToggleWrapper" class="flex items-center gap-3 bg-[var(--neon-purple)]/20 px-5 py-3 rounded border border-[var(--neon-purple)]/50 cursor-pointer group transition-all shadow-[0_0_15px_rgba(138,43,226,0.3)] my-auto highlight-toggle">
-                                 <i data-lucide="user-plus" class="w-5 h-5 text-[var(--neon-pink)]"></i>
-                                 <span class="text-[12px] font-bold uppercase tracking-[0.2em] text-white data-font drop-shadow-md">Add Substitute</span>
-                                 <div class="relative w-12 h-6 rounded-full bg-black border border-white/20 transition-colors duration-300 ml-2" id="toggleTrack">
-                                     <div class="absolute left-1 top-1 w-4 h-4 bg-zinc-400 rounded-full transition-transform duration-300 shadow-sm" id="toggleDot"></div>
+                             <div class="flex items-center gap-2 py-3 px-6 md:px-0">
+                                 <i data-lucide="users" class="w-4 h-4 text-zinc-400 mr-2"></i>
+                                 <div class="flex bg-black p-1 rounded border border-white/10" id="sub-selector">
+                                     <button type="button" onclick="updateSubs(0)" id="btn-sub-0" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded bg-[var(--neon-cyan)] text-black transition-all">0 Subs</button>
+                                     <button type="button" onclick="updateSubs(1)" id="btn-sub-1" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded text-zinc-500 hover:text-white transition-all">1 Sub</button>
+                                     <button type="button" onclick="updateSubs(2)" id="btn-sub-2" class="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded text-zinc-500 hover:text-white transition-all">2 Subs</button>
                                  </div>
                              </div>
                         </div>
@@ -418,19 +434,15 @@
                             <div class="space-y-4 mb-10 data-font">
                                 <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                     <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed"><strong>Akros Anti-Cheat</strong> will be installed and active throughout all matches.</span>
+                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed"><strong>MANDATORY ANTI-CHEAT</strong> (Our team acknowledges that Akros Anti-Cheat must be installed by all <strong class="text-[var(--neon-cyan)] player-count-text">5</strong> players.)</span>
                                 </label>
                                 <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                     <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">All registered players are members of the <strong>Pixel Palace Discord Server</strong>.</span>
+                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed"><strong>COMMUNICATION</strong> (All <strong class="text-[var(--neon-cyan)] player-count-text">5</strong> players have joined the Pixel Palace Discord server.)</span>
                                 </label>
                                 <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
                                     <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">Our team will be present in the designated <strong>Pixel Voice Channels</strong> during all of our official matches.</span>
-                                </label>
-                                <label class="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
-                                    <input type="checkbox" required class="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer">
-                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">We consent to the processing of data for tournament bracket organization.</span>
+                                    <span class="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed"><strong>SCHEDULE</strong> (We confirm availability for the April 2026 tournament dates.)</span>
                                 </label>
                             </div>
 
@@ -512,20 +524,14 @@
     <script>
         const deadlineDate = new Date('2026-03-31T23:59:59Z').getTime(); 
         
-            // 🚨 PLACE YOUR NEW DEPLOYMENT URL HERE 🚨
-            const API_URL = 'https://script.google.com/macros/s/AKfycbxZRahhIuVNNbxqvsdfDSt6X9SaciMARwVeSXkjMSpzEoegrF_F4vqWG5HXYu50z1RM/exec';
+        // 🚨 ADD YOUR NEW DEPLOYMENT URL HERE 🚨
+        const API_URL = 'https://script.google.com/macros/s/AKfycbwAOZQj_ai8S9dft8PJ12i2gww292q7FlYrivbpO8IpKmrglN689txtGlUhA0WE0gbH/exec';
 
         // 🛡️ THE XSS FIX: HTML Escaper
         function escapeHTML(str) {
             if (!str) return '';
             return str.toString().replace(/[&<>'"]/g, 
-                tag => ({
-                    '&': '&amp;',
-                    '<': '&lt;',
-                    '>': '&gt;',
-                    "'": '&#39;',
-                    '"': '&quot;'
-                }[tag] || tag)
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
 
@@ -541,17 +547,16 @@
 
         // DYNAMIC ROSTER GRID GENERATION
         const gridContainer = document.getElementById('roster-grid');
-        const ranks = '<option value="" disabled selected>Select Rank...</option><option value="Level 1-3">Level 1-3</option><option value="Level 4-7">Level 4-7</option><option value="Level 8-9">Level 8-9</option><option value="Level 10">Level 10</option>';
         
         let gridHtml = '';
-        for(let i=1; i<=6; i++) {
-            let title = i === 1 ? 'CAPTAIN' : (i === 6 ? 'SUBSTITUTE' : 'STARTER');
-            let req = i === 6 ? '' : 'required';
-            let colorClass = i === 1 ? 'text-yellow-400' : (i === 6 ? 'text-[var(--neon-pink)]' : 'text-white');
-            let bgClass = i === 1 ? 'bg-yellow-500' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-white');
-            let dotClass = i === 1 ? 'bg-yellow-400' : (i === 6 ? 'bg-[var(--neon-pink)]' : 'bg-[var(--neon-cyan)]');
+        for(let i=1; i<=7; i++) {
+            let title = i === 1 ? 'CAPTAIN' : (i >= 6 ? `SUBSTITUTE 0${i-5}` : 'STARTER');
+            let req = i >= 6 ? '' : 'required';
+            let colorClass = i === 1 ? 'text-yellow-400' : (i >= 6 ? 'text-[var(--neon-pink)]' : 'text-white');
+            let bgClass = i === 1 ? 'bg-yellow-500' : (i >= 6 ? 'bg-[var(--neon-pink)]' : 'bg-white');
+            let dotClass = i === 1 ? 'bg-yellow-400' : (i >= 6 ? 'bg-[var(--neon-pink)]' : 'bg-[var(--neon-cyan)]');
             
-            let visibilityClass = i === 6 ? 'hidden opacity-0' : 'opacity-100';
+            let visibilityClass = i >= 6 ? 'hidden opacity-0' : 'opacity-100';
             
             gridHtml += `
             <div id="player-card-${i}" class="dossier-card p-6 ${visibilityClass} transition-opacity duration-300">
@@ -566,78 +571,88 @@
                 <div class="space-y-4">
                     <div class="input-group">
                         <i data-lucide="message-square" class="w-4 h-4"></i>
-                        <input type="text" id="p${i}Discord" ${req} placeholder="Discord Username (e.g. s1mple)" class="input-ghost">
+                        <input type="text" id="p${i}Discord" ${req} placeholder="Discord Username (e.g. s1mple)" class="input-ghost player-field">
                     </div>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="input-group">
                             <i data-lucide="gamepad-2" class="w-4 h-4"></i>
-                            <input type="url" id="p${i}Steam" ${req} placeholder="Steam URL" class="input-ghost">
+                            <input type="url" id="p${i}Steam" ${req} placeholder="Steam URL" class="input-ghost player-field">
                         </div>
                         <div class="input-group">
                             <i data-lucide="crosshair" class="w-4 h-4"></i>
-                            <input type="url" id="p${i}Faceit" ${req} placeholder="FACEIT URL" class="input-ghost">
+                            <input type="url" id="p${i}Faceit" ${req} placeholder="FACEIT URL" class="input-ghost player-field">
                         </div>
                     </div>
-                    <div class="input-group">
-                        <i data-lucide="award" class="w-4 h-4"></i>
-                        <select id="p${i}Rank" ${req} class="input-ghost w-full">${ranks}</select>
+                    
+                    <div class="slider-container">
+                        <div class="flex justify-between items-center w-full mb-2">
+                            <div class="flex items-center gap-2 text-zinc-400">
+                                <i data-lucide="award" class="w-4 h-4"></i>
+                                <span class="text-[10px] font-bold uppercase tracking-[0.2em] data-font">FACEIT Level</span>
+                            </div>
+                            <span id="p${i}RankVal" class="text-xl brand-font text-[var(--neon-cyan)] text-shadow-[0_0_10px_rgba(0,240,255,0.5)]">5</span>
+                        </div>
+                        <input type="range" id="p${i}Rank" min="1" max="10" value="5" class="cyber-slider player-field" oninput="document.getElementById('p${i}RankVal').innerText = this.value">
                     </div>
                 </div>
             </div>`;
         }
         gridContainer.innerHTML = gridHtml;
 
-        // GLOWING TOGGLE LOGIC
-        let subActive = false;
-        document.getElementById('subToggleWrapper').addEventListener('click', function() {
-            subActive = !subActive;
-            const bgSpan = document.getElementById('toggleTrack');
-            const dotSpan = document.getElementById('toggleDot');
-            const p6Card = document.getElementById('player-card-6');
-            
-            if (subActive) {
-                bgSpan.classList.replace('bg-black', 'bg-[var(--neon-cyan)]');
-                dotSpan.classList.add('translate-x-[24px]');
-                dotSpan.classList.replace('bg-zinc-400', 'bg-white');
-                p6Card.classList.remove('hidden');
-                setTimeout(() => p6Card.classList.remove('opacity-0'), 10);
-            } else {
-                bgSpan.classList.replace('bg-[var(--neon-cyan)]', 'bg-black');
-                dotSpan.classList.remove('translate-x-[24px]');
-                dotSpan.classList.replace('bg-white', 'bg-zinc-400');
-                p6Card.classList.add('opacity-0');
-                setTimeout(() => p6Card.classList.add('hidden'), 300);
-                
-                // Clear fields if disabled
-                document.getElementById('p6Discord').value = '';
-                document.getElementById('p6Steam').value = '';
-                document.getElementById('p6Faceit').value = '';
-                document.getElementById('p6Rank').value = '';
+        // 3-WAY SUBSTITUTE SELECTOR LOGIC & DYNAMIC CHECKBOX TEXT
+        let activeSubCount = 0;
+        function updateSubs(count) {
+            activeSubCount = count;
+
+            // Update Dynamic Checkbox text
+            let numPlayers = 5 + count;
+            document.querySelectorAll('.player-count-text').forEach(el => el.innerText = numPlayers);
+
+            for(let num=0; num<=2; num++) {
+                let btn = document.getElementById('btn-sub-'+num);
+                if(num === count) {
+                    btn.className = "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded bg-[var(--neon-cyan)] text-black transition-all";
+                } else {
+                    btn.className = "px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest rounded text-zinc-500 hover:text-white transition-all";
+                }
             }
-        });
+            let p6Card = document.getElementById('player-card-6');
+            let p6Fields = p6Card.querySelectorAll('.player-field');
+            if(count >= 1) {
+                p6Card.classList.remove('hidden'); setTimeout(() => p6Card.classList.remove('opacity-0'), 10);
+                p6Fields.forEach(f => { if(f.type !== 'range') f.required = true; });
+            } else {
+                p6Card.classList.add('opacity-0'); setTimeout(() => p6Card.classList.add('hidden'), 300);
+                p6Fields.forEach(f => { f.required = false; f.value = (f.type==='range')?'5':''; });
+                document.getElementById('p6RankVal').innerText = '5';
+            }
+            let p7Card = document.getElementById('player-card-7');
+            let p7Fields = p7Card.querySelectorAll('.player-field');
+            if(count === 2) {
+                p7Card.classList.remove('hidden'); setTimeout(() => p7Card.classList.remove('opacity-0'), 10);
+                p7Fields.forEach(f => { if(f.type !== 'range') f.required = true; });
+            } else {
+                p7Card.classList.add('opacity-0'); setTimeout(() => p7Card.classList.add('hidden'), 300);
+                p7Fields.forEach(f => { f.required = false; f.value = (f.type==='range')?'5':''; });
+                document.getElementById('p7RankVal').innerText = '5';
+            }
+        }
 
         async function fetchTrackerData() {
             document.getElementById('tracker-loading').classList.remove('hidden');
             document.getElementById('tracker-grid').classList.add('hidden');
-            
             try {
                 const res = await fetch(`${API_URL}?action=getTeams&t=${new Date().getTime()}`);
                 const data = await res.json();
                 const grid = document.getElementById('tracker-grid');
                 grid.innerHTML = '';
-
                 if (data.teams && data.teams.length > 0) {
                     data.teams.forEach(team => {
-                        const isApproved = team.status.toLowerCase() === 'approved';
+                        const isApproved = team.status.toLowerCase() === 'approved' || team.status.toLowerCase() === 'verified';
                         const statusColor = isApproved ? 'text-[var(--neon-cyan)] border-[var(--neon-cyan)]/30 bg-[var(--neon-cyan)]/10 shadow-[0_0_15px_rgba(0,240,255,0.1)]' : 'text-yellow-400 border-yellow-500/30 bg-yellow-900/10';
                         const icon = isApproved ? 'shield-check' : 'activity';
-                        
-                        // 🛡️ SANITIZE INPUTS BEFORE INJECTING
-                        const safeName = escapeHTML(team.name);
-                        const safeTag = escapeHTML(team.tag);
-                        const safeMissing = escapeHTML(team.missing);
-                        const safeLogo = escapeHTML(team.logo); 
-                        
+                        const safeName = escapeHTML(team.name); const safeTag = escapeHTML(team.tag);
+                        const safeMissing = escapeHTML(team.missing); const safeLogo = escapeHTML(team.logo); 
                         grid.innerHTML += `
                         <div class="bg-black/40 border border-white/5 p-5 flex items-center justify-between gap-4 hover:border-white/20 transition-all hover:bg-black/60 group rounded-lg">
                             <div class="flex items-center gap-5 w-full min-w-0">
@@ -660,7 +675,7 @@
                 document.getElementById('tracker-loading').classList.add('hidden');
                 grid.classList.remove('hidden');
             } catch (err) {
-                document.getElementById('tracker-loading').innerHTML = '<span class="text-red-500 font-bold uppercase tracking-widest text-xs data-font"><i data-lucide="wifi-off" class="w-6 h-6 mx-auto mb-2"></i>Connection Failed</span>';
+                document.getElementById('tracker-loading').innerHTML = '<span class="text-red-500 font-bold uppercase tracking-widest text-xs data-font"><i data-lucide="wifi-off" class="w-6 h-6 mx-auto mb-2"></i>Connection Failed - Check Deployment Permissions</span>';
                 if(window.lucide) lucide.createIcons();
             }
         }
@@ -669,19 +684,15 @@
             try {
                 const res = await fetch(`${API_URL}?t=${new Date().getTime()}`); 
                 const data = await res.json();
-                if (data.isFull) {
+                if (data.isFull || data.confirmed >= 32) {
                     document.getElementById('slot-display').innerHTML = '<span class="text-red-500">FULL</span>';
                 } else {
-                    const remaining = data.cap - data.confirmed;
-                    document.getElementById('slot-display').innerHTML = `
-                        ${data.confirmed} <span class="text-2xl text-zinc-600 opacity-50">/ ${data.cap}</span>
-                        <span class="block text-[8px] data-font text-[var(--neon-cyan)] uppercase tracking-[0.3em] mt-2 leading-none">Remaining: ${remaining}</span>
-                    `;
+                    const remaining = 32 - data.confirmed;
+                    document.getElementById('slot-display').innerHTML = `${data.confirmed} <span class="text-2xl text-zinc-600 opacity-50">/ 32</span><span class="block text-[8px] data-font text-[var(--neon-cyan)] uppercase tracking-[0.3em] mt-2 leading-none">Remaining: ${remaining}</span>`;
                 }
             } catch(e) {}
         }
-        fetchSlots();
-        setInterval(fetchSlots, 15000); 
+        fetchSlots(); setInterval(fetchSlots, 15000); 
 
         document.getElementById('inviteCode').addEventListener('blur', async (e) => {
             const code = e.target.value.trim();
@@ -700,8 +711,7 @@
             const tLeft = document.getElementById('time-left');
             if(diff < 0) { 
                 tLeft.textContent = 'OFFLINE'; tLeft.classList.add('text-red-500'); 
-                document.getElementById('submitBtn').disabled = true; 
-                clearInterval(timerInterval); return; 
+                document.getElementById('submitBtn').disabled = true; clearInterval(timerInterval); return; 
             }
             const d = Math.floor(diff / 86400000), h = Math.floor((diff % 86400000) / 3600000), m = Math.floor((diff % 3600000) / 60000), s = Math.floor((diff % 60000) / 1000);
             tLeft.textContent = `${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
@@ -716,7 +726,6 @@
             if(window.lucide) lucide.createIcons();
             errorBox.classList.add('hidden');
 
-            // 🛡️ IDEMPOTENCY KEY GENERATION
             let idempotencyKey = sessionStorage.getItem('pp_idemp_key');
             if (!idempotencyKey) {
                 idempotencyKey = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -724,8 +733,7 @@
             }
 
             const payload = {
-                idempotencyKey: idempotencyKey, 
-                subIncluded: subActive,
+                idempotencyKey: idempotencyKey, subCount: activeSubCount,
                 inviteCode: document.getElementById('inviteCode').value,
                 teamName: document.getElementById('teamName').value,
                 teamTag: document.getElementById('teamTag').value,
@@ -733,7 +741,7 @@
                 logoLink: document.getElementById('logoLink').value
             };
             
-            for(let i=1; i<=6; i++) {
+            for(let i=1; i<=7; i++) {
                 payload[`p${i}Discord`] = document.getElementById(`p${i}Discord`).value;
                 payload[`p${i}Steam`] = document.getElementById(`p${i}Steam`).value;
                 payload[`p${i}Faceit`] = document.getElementById(`p${i}Faceit`).value;
@@ -743,15 +751,19 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000);
-                const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify(payload), signal: controller.signal });
+                
+                const res = await fetch(API_URL, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload), 
+                    signal: controller.signal
+                });
+                
                 clearTimeout(timeoutId);
                 const responseData = await res.json();
-
                 if (responseData.error) throw new Error(responseData.error);
 
-                // 🛡️ SUCCESS: Clear the idempotency key so a brand new registration can occur if needed
                 sessionStorage.removeItem('pp_idemp_key');
-
                 document.getElementById('registrationForm').classList.add('hidden');
                 document.getElementById('countdown-wrapper').classList.add('hidden');
                 document.getElementById('successMessage').classList.remove('hidden');
