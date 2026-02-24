@@ -1,0 +1,166 @@
+# File: .gitignore
+# ⚡ COMP-OS — REPOSITORY SHIELD CONTRACT
+# =============================================================================
+# FILE          : .gitignore
+# RESPONSIBILITY: Git Air-Gap Defense & Secret Leak Prevention
+# OWNERSHIP     : DevOps Core / Security
+# DOMAIN        : Infrastructure
+# LAYER         : Version Control (L0)
+# RISK LEVEL    : CRITICAL (Secret Protection & Repo Integrity)
+# =============================================================================
+#
+# RELEASE METADATA
+# -----------------------------------------------------------------------------
+# VERSION       : v1.0.0 (ABSOLUTE-ZERO-STABLE)
+# REVISION ID   : INFRA-GIT-001
+# RELEASE TAG   : PRODUCTION-SHIELD-GOLD
+# LAST UPDATE   : 2026-02-20
+# STATUS        : ENFORCED
+#
+# ARCHITECTURAL MANDATES:
+# 1. SECURITY VAULT: Mandatory blocking of all .env variants and private keys.
+# 2. DATA QUARANTINE: Prevents heavy database dumps (.sql, .db) from bloating history.
+# 3. AUDIO GATING: whitelists UI-critical sound triggers while blocking bulk media.
+# 4. WORKSPACE HYGIENE: Syncs shared team IDE settings while ignoring local state.
+#
+# =============================================================================
+# INTENT & RESPONSIBILITY
+# -----------------------------------------------------------------------------
+# This file defines the "Forbidden Zone" for version control. It is the first 
+# line of defense against accidental PII leaks and the ingestion of large 
+# binary artifacts that degrade cloning performance.
+#
+# CONTRACT:
+# 1. NO SECRETS: Any file containing VITE_ keys (except .example) is blocked.
+# 2. NO BLOAT: Media files exceeding 1MB (except UI cues) must be hosted on CDN.
+# 3. NO TRASH: OS-specific and IDE-local cache files are strictly quarantined.
+#
+# CHANGELOG:
+# - v1.0.0: Initial stable release. Implemented refined Audio Gating for 
+# SoundNexus UI cues and strict Supabase branch isolation.
+#
+# =============================================================================
+# * ARCHITECTURE:
+# 1. EXCEPTION MAPPING: Uses negative lookaheads (!) to allow .env.example 
+# and UI-specific sounds while maintaining a blanket block on sensitive siblings.
+# 2. BRANCH ISOLATION: Explicitly ignores Supabase temporary folders to 
+# prevent local dev-state collisions during remote deployment.
+# * =============================================================================
+
+# 📦 DEPENDENCIES & KERNEL CACHE
+node_modules/
+.pnp
+.pnp.js
+.vite/
+.eslintcache
+.prettiercache
+.stylelintcache
+.turbo/
+.cache/
+.parcel-cache
+
+# 🏗️ BUILD ARTIFACTS (STAGING & PRODUCTION)
+dist/
+dist-ssr/
+build/
+out/
+package-lock.json.log
+dist_stats.html
+bundle-stats.html
+stats.html
+
+# 🔐 SECURITY VAULT (NON-NEGOTIABLE)
+.env
+.env.*
+!.env.example
+.env.production
+.env.local
+.env.local.*
+.env.staging
+.env.test
+*.pem
+*.key
+*.cert
+secrets.json
+supabase/.temp/
+supabase/.branches/
+supabase/functions/.import_map.json
+supabase/tmp/
+
+# 💾 DATA & BACKUPS (PREVENTS ACCIDENTAL LEAKS)
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+*.backup
+*.old
+*.tmp
+*.temp
+
+# 🎮 TOURNAMENT HARD-FILES & 3D ASSETS
+public/assets/raw-3d/
+public/assets/audio-stems/
+*.mp4
+*.dem
+*.mov
+*.glb
+*.gltf
+*.obj
+*.zip
+*.7z
+
+# 🔉 AUDIO GATING
+# Block heavy audio files to keep repo size small (<1GB)
+*.wav
+*.mp3
+# ALLOW exception for tiny UI sound effects (SoundNexus)
+!public/sounds/ui/*.mp3
+!public/sounds/ui/*.wav
+
+# 🛠️ IDE & WORKSPACE PREFERENCES
+.idea/
+.vscode/*
+# ALLOW core team workspace settings to sync
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+\#*\#
+.\#*
+
+# 🖥️ OS & SYSTEM TRASH
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Icon?
+
+# 🧪 TESTING & COVERAGE
+coverage/
+*.lcov
+.nyc_output
+cypress/videos/
+cypress/screenshots/
+
+# ☁️ CLOUD PLATFORM ARTIFACTS
+.vercel
+.netlify
+.wrangler
+.turbo
+
+# 📝 LOGS & TELEMETRY
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
