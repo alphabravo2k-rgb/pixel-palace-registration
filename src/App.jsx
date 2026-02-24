@@ -1,11 +1,17 @@
+// File: src/App.jsx
+import React from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { HashRouter, Link, Route, Routes } from 'react-router-dom';
 
-import { TournamentHub } from './pages/TournamentHub';
+// 🛡️ EXPLICIT TOURNAMENT PAGES
+import CommunityCup2 from './pages/CommunityCup2';
+import RamadanLeague from './pages/RamadanLeague';
 
+// 🔌 GLOBAL BACKEND UPLINK
 export const API_URL = 'https://script.google.com/macros/s/AKfycbxZRahhIuVNNbxqvsdfDSt6X9SaciMARwVeSXkjMSpzEoegrF_F4vqWG5HXYu50z1RM/exec';
 
-const Layout = ({ children }) => {
+// 🎨 GLOBAL LAYOUT SHELL
+const LayoutShell = ({ children }) => {
   return (
     <div className="min-h-screen flex flex-col bg-bg font-sans text-zinc-300 relative">
       {/* COMP-OS Visual Engine Layers */}
@@ -67,17 +73,26 @@ const Layout = ({ children }) => {
   );
 };
 
-export const App = () => {
+// 🚦 ROUTING MANIFEST
+export default function App() {
   return (
     <HashRouter>
-      <Layout>
+      <LayoutShell>
         <Routes>
-          <Route element={<TournamentHub />} path="/:tournamentId" />
-          <Route element={<div className="text-center font-display text-4xl mt-20 text-brand-glow">HOME ROUTE INACTIVE (USE /#/community-cup-2)</div>} path="/" />
+          
+          {/* Explicit Event Routing */}
+          <Route path="/registration/community-cup-2" element={<CommunityCup2 />} />
+          <Route path="/registration/ramadan-league" element={<RamadanLeague />} />
+          
+          {/* Default Fallback / Index Route */}
+          <Route path="/" element={
+            <div className="text-center font-display text-4xl mt-20 text-brand-glow animate-pulse">
+              SELECT AN EVENT DOMAIN
+            </div>
+          } />
+          
         </Routes>
-      </Layout>
+      </LayoutShell>
     </HashRouter>
   );
-};
-
-export default App;
+}
