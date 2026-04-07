@@ -139,6 +139,28 @@
   .hud-crosshair.tr { @apply top-2.5 right-2.5 border-l-0 border-b-0; }
   .hud-crosshair.bl { @apply bottom-2.5 left-2.5 border-r-0 border-t-0; }
   .hud-crosshair.br { @apply bottom-2.5 right-2.5 border-l-0 border-t-0; }
+
+  /* CUSTOM ANIMATIONS */
+  .animate-shake {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  }
+
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+
+  .animate-pulse-fast {
+    animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  /* SECTION ENHANCEMENTS */
+  .glass-panel.group\/section:hover {
+     border-color: rgba(0, 240, 255, 0.4);
+     box-shadow: 0 0 30px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+  }
 }
 
 /* SCROLLBAR */
