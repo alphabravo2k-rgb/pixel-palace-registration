@@ -1,8 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarX } from 'lucide-react';
 import { tournaments } from '../config/tournaments';
-import TournamentFilterTabs from '../components/registration/TournamentFilterTabs';
-import TournamentCard from '../components/registration/TournamentCard';
+import TournamentFilterTabs from '../components/hub/TournamentFilterTabs';
+import TournamentCard from '../components/hub/TournamentCard';
 
 export const Home = () => {
   // Check if any live tournaments exist to set intelligent default tab

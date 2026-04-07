@@ -3,6 +3,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import { getTournamentBySlug } from '../config/tournaments';
 import { fetchTournamentSlots } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
+import { TournamentInfo } from '../components/registration/TournamentInfo';
 import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export const Register = () => {
@@ -204,30 +205,7 @@ export const Register = () => {
                 </ul>
               </div>
 
-              <div className="glass-panel p-6">
-                <div className="hud-crosshair tl"></div><div className="hud-crosshair br"></div>
-                <h3 className="text-3xl text-white font-heading mb-4 flex items-center gap-3 border-b border-white/10 pb-3 uppercase">
-                  <Target className="w-6 h-6 text-neon-cyan" /> Tournament Info
-                </h3>
-                <div className="space-y-5 font-body">
-                  <div>
-                    <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">01 // TOURNAMENT DATE</p>
-                    <p className="text-xl font-bold text-neon-cyan mt-1 uppercase">DATE: {tournament.tournamentDate}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">02 // START TIME</p>
-                    <p className="text-xl font-bold text-white mt-1 uppercase">{tournament.startTime}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">03 // GAME MODE</p>
-                    <p className="text-xl font-bold text-white mt-1 uppercase">{tournament.gameMode}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">04 // REGISTRATION DEADLINE</p>
-                    <p className="text-xl font-bold text-white mt-1 uppercase">{new Date(tournament.registrationDeadline).toUTCString().replace('GMT', 'GMT')} </p>
-                  </div>
-                </div>
-              </div>
+              <TournamentInfo tournament={tournament} />
 
               <div className="glass-panel p-6 border-l-4 border-l-neon-pink">
                 <p className="text-[10px] uppercase tracking-[0.3em] text-neon-pink mb-2 font-bold font-body">Registration Closes In</p>
@@ -318,40 +296,7 @@ export const Register = () => {
         )}
       </div>
 
-      {/* FOOTER */}
-      <footer className="w-full bg-black/90 border-t border-white/10 mt-20 py-12 relative z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
-          <div className="flex items-center gap-5 justify-center md:justify-start group cursor-pointer">
-            <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" alt="Logo" className="w-16 h-16 object-contain filter grayscale opacity-40 group-hover:opacity-100 group-hover:grayscale-0 group-hover:drop-shadow-[0_0_15px_rgba(240,0,255,0.5)] transition-all duration-500" />
-            <div className="h-12 w-[2px] bg-white/10 group-hover:bg-neon-pink transition-colors"></div>
-            <div className="text-left flex flex-col justify-center">
-              <h4 className="font-heading text-3xl text-zinc-300 group-hover:text-white leading-none tracking-[0.15em] transition-colors">PIXEL PALACE</h4>
-              <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600 mt-1 font-bold font-body">
-                © 2026 Sovereign Systems
-              </p>
-            </div>
-          </div>
 
-          <div className="flex flex-col items-center justify-center text-center">
-             <span className="text-[8px] uppercase tracking-[0.5em] text-zinc-700 font-bold mb-2 font-body">Engineered By</span>
-             <a href="https://discordapp.com/users/bravo.gg" target="_blank" rel="noreferrer" className="text-lg font-black tracking-[0.3em] uppercase text-zinc-400 hover:text-white hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-all duration-300 font-heading">
-                BRAVO<span className="text-neon-pink">.</span>GG
-             </a>
-          </div>
-
-          <div className="flex items-center justify-center md:justify-end">
-            <a href="https://discord.gg/xGMZ5wrgUd" target="_blank" rel="noreferrer" className="group flex items-center gap-4 px-6 py-3 bg-black border border-white/10 hover:border-neon-cyan transition-all duration-300 shadow-[0_5px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_25px_rgba(0,240,255,0.2)]">
-                <div className="bg-zinc-900 group-hover:bg-neon-cyan/20 p-2.5 rounded-sm transition-colors">
-                    <ShieldAlert className="w-5 h-5 text-zinc-500 group-hover:text-neon-cyan transition-colors" />
-                </div>
-                <div className="flex flex-col text-left font-body">
-                    <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-zinc-600 leading-none">Need Backup?</span>
-                    <span className="text-sm font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white mt-1.5 leading-none transition-colors">Contact Support</span>
-                </div>
-            </a>
-          </div>
-        </div>
-      </footer>
     </>
   );
 };
