@@ -1,45 +1,54 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useMemo } from 'react';
+import { CalendarX } from 'lucide-react';
 import { tournaments } from '../config/tournaments';
-import { Badge } from '../components/ui/Badge';
-import { PageWrapper } from '../components/layout/PageWrapper';
+import TournamentFilterTabs from '../components/registration/TournamentFilterTabs';
+import TournamentCard from '../components/registration/TournamentCard';
 
 export const Home = () => {
+  // Check if any live tournaments exist to set intelligent default tab
+  const hasLive = tournaments.some(t => t.status === "LIVE");
+  const [activeTab, setActiveTab] = useState(hasLive ? "LIVE" : "ALL");
+
+  const filteredTournaments = useMemo(() => {
+    if (activeTab === "ALL") return tournaments;
+    return tournaments.filter(t => t.status === activeTab);
+  }, [activeTab]);
+
   return (
-    <PageWrapper>
-      <div className="w-full max-w-5xl">
-        <h2 className="text-2xl font-body text-gray-400 uppercase tracking-widest mb-8 border-b border-white/10 pb-4">
-          Active Operations
-        </h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {tournaments.map((tournament) => (
-            <div key={tournament.slug} className={`glass-panel p-6 flex flex-col justify-between min-h-[220px] transition-all duration-300 ${tournament.status === 'closed' ? 'opacity-50 grayscale' : 'hover:border-esports-accent hover:-translate-y-1'}`}>
-              <div>
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-2xl font-heading text-white font-bold max-w-[70%]">{tournament.name}</h3>
-                  <Badge status={tournament.status} />
-                </div>
-                <p className="text-sm font-body text-gray-400 mb-6 line-clamp-2">
-                  Official registration portal for {tournament.name}. Prepare your roster.
-                </p>
-              </div>
-              
-              <div className="mt-auto">
-                {tournament.status === 'active' ? (
-                  <Link to={`/register/${tournament.slug}`} className="btn-primary inline-flex w-full justify-center">
-                    REGISTER NOW
-                  </Link>
-                ) : (
-                  <button disabled className="w-full bg-gray-900 border border-gray-700 text-gray-500 px-6 py-2 uppercase font-heading font-bold tracking-widest cursor-not-allowed">
-                    {tournament.status === 'closed' ? 'REGISTRATION CLOSED' : 'COMING SOON'}
-                  </button>
-                )}
-              </div>
-            </div>
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 animate-in fade-in duration-500 relative z-10">
+      
+      {/* Header Area */}
+      <div className="mb-12">
+        <h1 className="text-5xl md:text-6xl font-black text-white italic tracking-tighter font-heading uppercase drop-shadow-2xl">
+          TOURNAMENT <span className="text-transparent bg-clip-text bg-gradient-to-r from-[var(--neon-cyan)] to-blue-500">HUB</span>
+        </h1>
+        <p className="text-zinc-400 font-body text-sm uppercase tracking-widest mt-2">
+          Select an active circuit to begin registration protocols.
+        </p>
+      </div>
+
+      {/* Tabs */}
+      <TournamentFilterTabs activeTab={activeTab} onTabChange={setActiveTab} />
+
+      {/* Grid or Empty State */}
+      {filteredTournaments.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTournaments.map((tournament) => (
+            <TournamentCard key={tournament.id} tournament={tournament} />
           ))}
         </div>
-      </div>
-    </PageWrapper>
+      ) : (
+        <div className="glass-panel p-16 flex flex-col items-center justify-center text-center border-dashed border-white/10 mt-8">
+          <div className="bg-black/50 p-5 rounded-full mb-6">
+            <CalendarX size={48} className="text-zinc-600" />
+          </div>
+          <h3 className="font-heading text-3xl text-zinc-400 mb-2">NO CIRCUITS FOUND</h3>
+          <p className="font-body text-xs uppercase tracking-widest text-zinc-600 font-bold">
+            There are currently no {activeTab !== "ALL" ? activeTab.toLowerCase() : ""} tournaments in the database.
+          </p>
+        </div>
+      )}
+
+    </div>
   );
-};
+}
