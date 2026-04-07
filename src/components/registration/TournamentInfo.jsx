@@ -1,5 +1,6 @@
 import React from 'react';
 import { Target } from 'lucide-react';
+import { formatEsportsDate, formatEsportsTime } from '../../utils/dateHelper';
 
 export function TournamentInfo({ tournament }) {
   if (!tournament) return null;
@@ -13,7 +14,7 @@ export function TournamentInfo({ tournament }) {
       <div className="space-y-5 font-body">
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">01 // TOURNAMENT DATE</p>
-          <p className="text-xl font-bold text-[#00f0ff] mt-1 uppercase">DATE: {tournament.tournamentDate || 'TBD'}</p>
+          <p className="text-xl font-bold text-[#00f0ff] mt-1 uppercase">DATE: {formatEsportsDate(tournament.tournamentDate)}</p>
         </div>
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">02 // START TIME</p>
@@ -26,9 +27,7 @@ export function TournamentInfo({ tournament }) {
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">04 // REGISTRATION DEADLINE</p>
           <p className="text-xl font-bold text-white mt-1 uppercase">
-            {tournament.registrationDeadline && tournament.registrationDeadline !== 'TBD' ? 
-              new Date(tournament.registrationDeadline).toUTCString().replace('GMT', 'GMT') : 'TBD'
-            }
+             {formatEsportsDate(tournament.registrationDeadline)} — {formatEsportsTime(tournament.registrationDeadline)}
           </p>
         </div>
       </div>

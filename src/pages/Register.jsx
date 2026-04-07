@@ -4,6 +4,7 @@ import { getTournamentBySlug } from '../config/tournaments';
 import { fetchTournamentSlots } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
 import { TournamentInfo } from '../components/registration/TournamentInfo';
+import { formatEsportsDate } from '../utils/dateHelper';
 import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export const Register = () => {
@@ -98,7 +99,7 @@ export const Register = () => {
           <div className="flex items-center justify-center w-full max-w-md mx-auto mt-2 mb-8 relative z-20 opacity-80">
             <div className="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
             <div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">
-              {tournament.tournamentDate}
+              {formatEsportsDate(tournament.tournamentDate)}
             </div>
             <div className="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
           </div>

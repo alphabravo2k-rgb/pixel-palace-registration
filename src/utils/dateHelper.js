@@ -15,3 +15,25 @@ export const getTimeStatus = (targetDateString) => {
   }
   return { expired: false, text: `${hours} HOUR${hours > 1 ? 'S' : ''}` };
 };
+
+export const formatEsportsDate = (isoString) => {
+  if (!isoString || isoString === "TBD") return "TBD";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return "TBD";
+  return date.toLocaleDateString('en-US', { 
+    month: 'long', 
+    day: 'numeric', 
+    year: 'numeric' 
+  }).toUpperCase();
+};
+
+export const formatEsportsTime = (isoString) => {
+  if (!isoString || isoString === "TBD") return "TBD";
+  const date = new Date(isoString);
+  if (isNaN(date.getTime())) return "TBD";
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZoneName: 'short'
+  }).toUpperCase();
+};
