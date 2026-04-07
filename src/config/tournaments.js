@@ -30,7 +30,7 @@ export const tournaments = [
       "p3Discord", "p3Steam", "p3Faceit", "p3Rank"  
     ],
     maps: [
-      "Overpass", "Cobblestone", "Shoreline", "Lake", "Mutiny", "Guard"
+      "Overpass", "Cbble", "Train", "Vertigo", "Nuke"
     ]
   },
   {
