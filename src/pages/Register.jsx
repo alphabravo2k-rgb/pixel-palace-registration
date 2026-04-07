@@ -1,15 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useParams, Navigate } from 'react-router-dom';
 import { getTournamentBySlug } from '../config/tournaments';
 import { fetchTournamentSlots } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
-import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, Activity, RefreshCw } from 'lucide-react';
+import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
   const tournament = getTournamentBySlug(tournamentSlug);
   const [activeTab, setActiveTab] = useState('register');
   const [slots, setSlots] = useState(null);
+  const [failedMapImages, setFailedMapImages] = useState(new Set());
+
+  const handleMapImgError = useCallback((mapName) => {
+    setFailedMapImages(prev => new Set([...prev, mapName]));
+  }, []);
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState('LOADING');
@@ -252,19 +257,27 @@ export const Register = () => {
                     <Layers className="w-5 h-5 text-zinc-400" /> {tournament.gameMode} Map Pool
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {tournament.maps.map((mapName, i) => (
-                      <div key={mapName} className={`map-card ${mapAccentClasses[i % mapAccentClasses.length]}`}>
-                        <div 
-                          className="map-card-img" 
-                          style={{ backgroundImage: `url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapName.toLowerCase()}.png')` }}
-                          onError={(e) => e.target.style.backgroundImage = 'none'}
-                        ></div>
-                        <div className="map-card-overlay"></div>
-                        <div className="map-card-content justify-center w-full">
-                          <span className="text-sm font-bold uppercase font-heading tracking-widest">{mapName}</span>
+                    {tournament.maps.map((mapName, i) => {
+                      const imgUrl = `https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapName.toLowerCase()}.png`;
+                      const hasFailed = failedMapImages.has(mapName);
+                      return (
+                        <div key={mapName} className={`map-card ${mapAccentClasses[i % mapAccentClasses.length]}`}>
+                          {!hasFailed ? (
+                            <div
+                              className="map-card-img"
+                              style={{ backgroundImage: `url('${imgUrl}')` }}
+                              onError={() => handleMapImgError(mapName)}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-black/80 z-10" />
+                          )}
+                          <div className="map-card-overlay" />
+                          <div className="map-card-content justify-center w-full">
+                            <span className="text-sm font-bold uppercase font-heading tracking-widest">{mapName}</span>
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

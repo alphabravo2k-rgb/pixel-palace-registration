@@ -156,11 +156,36 @@
     animation: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
-  /* SECTION ENHANCEMENTS */
-  .glass-panel.group\/section:hover {
-     border-color: rgba(0, 240, 255, 0.4);
-     box-shadow: 0 0 30px rgba(0, 240, 255, 0.1), inset 0 0 20px rgba(0, 0, 0, 0.5);
+  /* SECTION ENHANCEMENTS — glass-panel containing a group/section will glow cyan on hover */
+  /* Note: Tailwind group/section variant is handled inline; this CSS targets the base class */
+  .glass-panel:has(> .flex > .bg-neon-purple),
+  .glass-panel:has(> .flex > .bg-neon-cyan),
+  .glass-panel:has(> .flex > .bg-white) {
+    /* section panels */
   }
+  .glass-panel:hover {
+    box-shadow: 0 0 30px rgba(0, 240, 255, 0.08), 0 30px 60px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  }
+
+  /* ANIMATE-IN UTILITIES */
+  @keyframes animate-in-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes animate-in-zoom {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  @keyframes animate-in-slide-bottom {
+    from { opacity: 0; transform: translateY(1rem); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .animate-in { animation-fill-mode: both; }
+  .fade-in { animation-name: animate-in-fade; }
+  .zoom-in { animation-name: animate-in-zoom; }
+  .slide-in-from-bottom-4 { animation-name: animate-in-slide-bottom; }
+  .duration-500 { animation-duration: 500ms; }
 }
 
 /* SCROLLBAR */
@@ -168,3 +193,4 @@
 ::-webkit-scrollbar-track { background: var(--bg-void); }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
 ::-webkit-scrollbar-thumb:hover { background: #00f0ff; }
+
