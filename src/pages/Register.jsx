@@ -71,8 +71,8 @@ export const Register = () => {
 
   return (
     <>
-      <div className="bg-void-engine"></div>
-      <div className="bg-scanlines"></div>
+      <div className="app-bg-void"></div>
+      <div className="app-bg-scanlines"></div>
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-12 flex-grow">
         

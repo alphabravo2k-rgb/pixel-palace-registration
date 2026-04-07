@@ -10,12 +10,12 @@
 
 @layer components {
   /* BACKGROUND OVERLAYS */
-  .bg-void-engine {
+  .app-bg-void {
     @apply fixed inset-0 -z-20 bg-void-engine bg-[length:200%_200%] animate-breathe;
     background-color: #050507;
   }
 
-  .bg-scanlines {
+  .app-bg-scanlines {
     @apply fixed inset-0 -z-10 bg-scanlines bg-[length:100%_4px] pointer-events-none shadow-[inset_0_0_150px_rgba(0,0,0,0.9)];
   }
 
