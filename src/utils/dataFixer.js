@@ -1,50 +1,78 @@
 /**
- * Transforms flat form data from TournamentForm into the CanonicalSchema format.
+ * DATA TRANSFORMER — Form Output → Canonical Schema
+ *
+ * Converts react-hook-form output (which uses a `players[]` array) into
+ * the CanonicalSchema shape expected by client.js and validated by Zod.
+ *
+ * The form's `players` array has this shape (from useFieldArray):
+ *   [{ discord, steam, faceit, rank }, ...]
+ *
+ * The canonical `roster` array has this shape:
+ *   [{ player_id (UUID), role (ENUM), discord, steam, faceit, rank }, ...]
  */
-export const transformToCanonical = (tournamentId, flatData) => {
-  const submission_id = flatData.idempotencyKey || crypto.randomUUID();
-  
-  const team = {
-    team_name: flatData.teamName || "",
-    team_tag: flatData.teamTag || "",
-    region: flatData.teamRegion || "",
-    logo_url: flatData.logoLink || "",
-    invite_code: flatData.inviteCode || ""
-  };
 
-  const roster = [];
-  // Correctly iterate through players based on flatData keys
-  // p1Discord, p2Discord, etc.
-  const playerIndices = new Set();
-  Object.keys(flatData).forEach(key => {
-    const match = key.match(/^p(\d+)/);
-    if (match) playerIndices.add(parseInt(match[1]));
-  });
+/**
+ * Derive a canonical role from the player's array index plus tournament config.
+ *
+ * @param {number} idx - Zero-based index in the players array
+ * @param {number} coreCount - tournament.playersPerTeam
+ * @returns {'CAPTAIN'|'PARTNER'|'STARTER'|'SUBSTITUTE'}
+ */
+const deriveRole = (idx, coreCount) => {
+  if (idx === 0) return 'CAPTAIN';
+  if (idx >= coreCount) return 'SUBSTITUTE';
+  // 2v2 format: second core player is PARTNER instead of STARTER
+  if (coreCount === 2) return 'PARTNER';
+  return 'STARTER';
+};
 
-  const sortedIndices = Array.from(playerIndices).sort((a, b) => a - b);
-  
-  sortedIndices.forEach(idx => {
-    // Only include if at least one field is present
-    if (flatData[`p${idx}Discord`] || flatData[`p${idx}Steam`] || flatData[`p${idx}Faceit`]) {
-      roster.push({
-        discord: flatData[`p${idx}Discord`] || "",
-        steam: flatData[`p${idx}Steam`] || "",
-        faceit: flatData[`p${idx}Faceit`] || "",
-        rank: flatData[`p${idx}Rank`] || "5"
-      });
-    }
-  });
+/**
+ * @param {import('../config/tournaments').Tournament} tournament
+ * @param {object} formData - react-hook-form validated output
+ * @param {string} [submissionId] - Pre-generated UUID (from sessionStorage)
+ * @returns {import('../schemas/canonical').CanonicalSchema}
+ */
+export const transformToCanonical = (tournament, formData, submissionId) => {
+  const {
+    inviteCode = '',
+    teamName,
+    teamTag,
+    teamRegion,
+    logoLink,
+    players = [],
+  } = formData;
+
+  const coreCount = tournament.playersPerTeam ?? 5;
+
+  // Generate stable UUIDs for each roster player.
+  // Using crypto.randomUUID() — supported in all modern browsers.
+  const roster = players
+    .filter((p) => p.discord?.trim() || p.steam?.trim())
+    .map((p, idx) => ({
+      player_id: crypto.randomUUID(),
+      role: deriveRole(idx, coreCount),
+      discord: p.discord?.trim() ?? '',
+      steam: p.steam?.trim() ?? '',
+      faceit: p.faceit?.trim() ?? '',
+      rank: p.rank ?? '5',
+    }));
 
   return {
-    submission_id,
-    tournament_id: tournamentId,
-    team,
+    submission_id: submissionId ?? crypto.randomUUID(),
+    tournament_id: tournament.id,
+    team: {
+      team_name: teamName,
+      team_tag: teamTag,
+      region: teamRegion,
+      logo_url: logoLink,
+      invite_code: inviteCode,
+    },
     roster,
     metadata: {
       submitted_at: new Date().toISOString(),
-      source: "portal_v1",
-      schema_version: "1.0",
-      sub_included: !!flatData.subCount
-    }
+      source: 'portal_v1',
+      schema_version: '1.0',
+      sub_included: players.length > coreCount,
+    },
   };
 };
