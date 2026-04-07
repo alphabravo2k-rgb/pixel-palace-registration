@@ -131,6 +131,7 @@ export default defineConfig(({ mode }) => {
     root: '.',
     resolve: {
       alias: {
+        "zod/v4/core": "zod",
         "@": path.resolve(__dirname, "./src"),
         "@security": path.resolve(__dirname, "./src/lib/security"),
         "@modules": path.resolve(__dirname, "./src/components/modules"),
