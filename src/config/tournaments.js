@@ -19,7 +19,7 @@ export const tournaments = [
     substitutes: { min: 0, max: 1 },
     // Updated Active Duty Wingman Maps
     maps: ["Poseidon", "Sanctum", "Overpass", "Vertigo", "Nuke", "Inferno"],
-    sheetsEndpoint: "", // Add your Master Sheet Apps Script URL here
+    sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec", // Add your Master Sheet Apps Script URL here
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our duo acknowledges that Akros Anti-Cheat must be installed by all players.",
       "COMMUNICATION — All players have joined the Pixel Palace Discord server.",
