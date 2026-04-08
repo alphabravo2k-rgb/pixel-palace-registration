@@ -28,7 +28,7 @@ export const tournaments = [
       "SCHEDULE — We confirm availability for the registration deadline and all tournament dates."
     ]
   },
-  
+
   // --- REAL ARCHIVED HISTORY FROM EXTRACT ---
   {
     id: "ramadan-league",
@@ -62,7 +62,7 @@ export const tournaments = [
   },
   {
     id: "wingman-ep1",
-    name: "CS2 Wingman Clash – Ep 01",
+    name: "Wingman Clash I",
     slug: "wingman-ep1",
     status: "ARCHIVED",
     format: "2v2",
