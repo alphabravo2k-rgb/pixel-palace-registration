@@ -96,30 +96,35 @@ export const Register = () => {
       <div className="app-bg-void"></div>
       <div className="app-bg-scanlines"></div>
 
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-12 flex-grow">
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 md:py-12 flex-grow">
         
-        {/* TOP HUB NAVIGATION */}
-        <div className="absolute top-4 left-4 md:top-8 md:left-8 z-50">
+        {/* TOP HUB NAVIGATION - GLOBAL STANDARD */}
+        <nav className="absolute top-0 left-4 md:left-8 z-50 pt-6 animate-in fade-in duration-1000">
           <Link 
             to="/" 
-            className="flex items-center gap-2 text-zinc-500 hover:text-neon-cyan transition-all duration-300 group font-body text-[10px] font-bold tracking-[0.3em] uppercase bg-black/40 px-4 py-2 border border-white/5 rounded hover:border-neon-cyan/30"
+            className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-neon-cyan/50 px-5 py-2.5 rounded-sm transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)]"
           >
-            <ChevronLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
-            <span>BACK TO HUB</span>
+            <div className="w-5 h-5 flex items-center justify-center bg-zinc-900 rounded-full border border-white/10 group-hover:border-neon-cyan/50 transition-colors">
+              <ChevronLeft className="w-3 h-3 text-zinc-400 group-hover:text-neon-cyan transition-colors" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-white font-heading text-xs tracking-[0.2em] font-bold group-hover:text-neon-cyan transition-colors">BACK TO HUB</span>
+              <span className="text-[7px] text-zinc-500 tracking-[0.4em] font-body uppercase opacity-60 group-hover:opacity-100 transition-all font-bold">EXIT PROTOCOL</span>
+            </div>
           </Link>
-        </div>
+        </nav>
 
         {/* HEADER SECTION */}
-        <header className="text-center mb-12 flex flex-col items-center relative">
+        <header className="text-center mb-12 flex flex-col items-center relative pt-12 md:pt-4">
           <span className="absolute top-0 left-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">INIT_SEQ // 0x4F9A</span>
           <span className="absolute top-0 right-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">SYS_STATUS // ONLINE</span>
 
-          <Link to="/" className="relative group block cursor-pointer">
+          <Link to="/" className="relative group block cursor-pointer mb-2">
             <div className="absolute inset-0 bg-neon-pink/20 blur-[60px] rounded-full scale-150 opacity-40 group-hover:opacity-80 transition-opacity duration-700 animate-pulse-fast"></div>
             <img 
               src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
               alt="Pixel Palace Logo" 
-              className="w-40 h-40 md:w-56 md:h-56 object-contain mb-[-10px] relative z-20 transition-all duration-500 hover:scale-105 animate-logo-breathe hover:drop-shadow-[0_0_30px_rgba(240,0,255,0.8)]"
+              className="w-40 h-40 md:w-56 md:h-56 object-contain relative z-20 transition-all duration-500 hover:scale-105 animate-logo-breathe hover:drop-shadow-[0_0_30px_rgba(240,0,255,0.8)]"
             />
           </Link>
           
