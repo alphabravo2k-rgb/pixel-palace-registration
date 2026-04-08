@@ -491,23 +491,32 @@ export const TournamentForm = ({ tournament }) => {
   const duoOrTeam = corePlayerCount === 2 ? 'duo' : 'team';
   const totalActivePlayers = fields.length;
 
-  const verificationItems = [
-    {
-      key: 'anticheat',
-      label: 'MANDATORY ANTI-CHEAT',
-      body: `Our ${duoOrTeam} acknowledges that ${tournament.antiCheat ?? 'Akros'} Anti-Cheat must be installed by all ${totalActivePlayers} players.`,
-    },
-    {
-      key: 'discord',
-      label: 'COMMUNICATION',
-      body: `All ${totalActivePlayers} players have joined the Pixel Palace Discord server.`,
-    },
-    {
-      key: 'schedule',
-      label: 'SCHEDULE',
-      body: `We confirm availability for the registration deadline and all tournament dates.`,
-    },
-  ];
+  const verificationItems = tournament.customVerification
+    ? tournament.customVerification.map((str, i) => {
+        const parts = str.split(' — ');
+        return {
+          key: `custom-${i}`,
+          label: parts[0],
+          body: parts.length > 1 ? parts.slice(1).join(' — ') : ''
+        };
+      })
+    : [
+        {
+          key: 'anticheat',
+          label: 'MANDATORY ANTI-CHEAT',
+          body: `Our ${duoOrTeam} acknowledges that ${tournament.antiCheat ?? 'Akros'} Anti-Cheat must be installed by all ${totalActivePlayers} players.`,
+        },
+        {
+          key: 'discord',
+          label: 'COMMUNICATION',
+          body: `All ${totalActivePlayers} players have joined the Pixel Palace Discord server.`,
+        },
+        {
+          key: 'schedule',
+          label: 'SCHEDULE',
+          body: `We confirm availability for the registration deadline and all tournament dates.`,
+        },
+      ];
 
   const FinalVerification = (
     <div className="glass-panel p-0 overflow-hidden group/section">
@@ -539,8 +548,7 @@ export const TournamentForm = ({ tournament }) => {
               />
               <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed font-body">
                 <strong className="text-white uppercase tracking-wider">{item.label}</strong>
-                {' '}—{' '}
-                {item.body}
+                {item.body && <>{' '}—{' '}{item.body}</>}
               </span>
             </label>
           ))}
