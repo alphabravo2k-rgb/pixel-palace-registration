@@ -1,7 +1,7 @@
 export const tournaments = [
   {
     id: "chaos-ii",
-    name: "Pixel Palace Wingman Chaos – 2nd Ed",
+    name: "Wingman Chaos II",
     slug: "chaos-ii",
     status: "LIVE",
     format: "2v2",
@@ -10,9 +10,10 @@ export const tournaments = [
     maxTeams: 50,
     openSlots: 50,     // Replaced 64 total / 24 invite logic
     inviteSlots: 0,    // Pure first-come, first-serve
-    region: "PAK, IND & ME",
-    tournamentDate: "2026-04-24T18:00:00Z", // Apr 24-27
-    registrationDeadline: "2026-04-23T23:59:00Z",
+    region: "Pak Ind & Middle East",
+    startTime: "9:00 PM PKT ONWARDS",
+    tournamentDate: "2026-04-24T21:00:00+05:00", // Apr 24-27
+    registrationDeadline: "2026-04-18T23:59:00+05:00",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
     antiCheat: "Akros",
     playersPerTeam: 2,
