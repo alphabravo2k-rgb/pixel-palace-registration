@@ -37,7 +37,7 @@ import { tournaments } from '../../config/tournaments';
  * @param {string} tournamentId
  * @returns {Promise<{ success: boolean }>}
  */
-export const submitToGateway = async (canonicalPayload, tournamentId) => {
+export const submitToGateway = async (tournamentId, canonicalPayload) => {
   const tournament = tournaments.find((t) => t.id === tournamentId);
 
   if (!tournament) {
