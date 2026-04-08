@@ -268,18 +268,28 @@ export const Register = () => {
               <TournamentInfo tournament={tournament} />
 
               <div className="glass-panel p-6 border-l-4 border-l-neon-pink group">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-neon-pink mb-2 font-bold font-body">Registration Closes In</p>
-                <div className="flex flex-col">
-                  <p className={`text-5xl font-heading tracking-widest leading-none ${timeLeft === 'OFFLINE' ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'text-white drop-shadow-[0_0_15px_rgba(240,0,255,0.5)]'}`}>
-                    {timeLeft}
-                  </p>
-                  {timeLeft !== 'OFFLINE' && (
-                    <div className="flex justify-between items-center w-full mt-3 pt-2 border-t border-white/5 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[9px] font-bold text-zinc-500 tracking-[0.5em] font-body uppercase">DAYS</span>
-                      <span className="text-[9px] font-bold text-zinc-500 tracking-[0.5em] font-body uppercase">HRS</span>
-                      <span className="text-[9px] font-bold text-zinc-500 tracking-[0.5em] font-body uppercase">MIN</span>
-                      <span className="text-[9px] font-bold text-zinc-500 tracking-[0.5em] font-body uppercase">SEC</span>
-                    </div>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-neon-pink mb-4 font-bold font-body">Registration Closes In</p>
+                <div className="flex items-center gap-3">
+                  {timeLeft === 'OFFLINE' || timeLeft === 'TBD' ? (
+                    <p className={`text-5xl font-heading tracking-widest leading-none ${timeLeft === 'OFFLINE' ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'text-white'}`}>
+                      {timeLeft}
+                    </p>
+                  ) : (
+                    timeLeft.split(':').map((val, i) => (
+                      <React.Fragment key={i}>
+                        <div className="flex flex-col items-center">
+                          <span className="text-4xl md:text-5xl font-heading tracking-widest leading-none text-white drop-shadow-[0_0_15px_rgba(240,0,255,0.4)]">
+                            {val}
+                          </span>
+                          <span className="text-[8px] font-bold text-zinc-500 tracking-[0.2em] font-body uppercase mt-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                            {['DAYS', 'HRS', 'MIN', 'SEC'][i]}
+                          </span>
+                        </div>
+                        {i < 3 && (
+                          <span className="text-2xl font-heading text-white/10 mb-5">:</span>
+                        )}
+                      </React.Fragment>
+                    ))
                   )}
                 </div>
               </div>
