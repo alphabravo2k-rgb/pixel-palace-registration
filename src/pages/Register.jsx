@@ -98,16 +98,30 @@ export const Register = () => {
 
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-12 flex-grow">
         
+        {/* TOP HUB NAVIGATION */}
+        <div className="absolute top-4 left-4 md:top-8 md:left-8 z-50">
+          <Link 
+            to="/" 
+            className="flex items-center gap-2 text-zinc-500 hover:text-neon-cyan transition-all duration-300 group font-body text-[10px] font-bold tracking-[0.3em] uppercase bg-black/40 px-4 py-2 border border-white/5 rounded hover:border-neon-cyan/30"
+          >
+            <ChevronLeft className="w-3 h-3 group-hover:-translate-x-1 transition-transform" />
+            <span>BACK TO HUB</span>
+          </Link>
+        </div>
+
         {/* HEADER SECTION */}
         <header className="text-center mb-12 flex flex-col items-center relative">
           <span className="absolute top-0 left-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">INIT_SEQ // 0x4F9A</span>
           <span className="absolute top-0 right-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">SYS_STATUS // ONLINE</span>
 
-          <img 
-            src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
-            alt="Pixel Palace Logo" 
-            className="w-40 h-40 md:w-56 md:h-56 object-contain mb-[-10px] relative z-20 cursor-crosshair transition-all duration-500 hover:drop-shadow-[0_0_20px_rgba(240,0,255,0.6)] drop-shadow-[0_0_20px_rgba(240,0,255,0.4)]"
-          />
+          <Link to="/" className="relative group block cursor-pointer">
+            <div className="absolute inset-0 bg-neon-pink/20 blur-[60px] rounded-full scale-150 opacity-40 group-hover:opacity-80 transition-opacity duration-700 animate-pulse-fast"></div>
+            <img 
+              src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" 
+              alt="Pixel Palace Logo" 
+              className="w-40 h-40 md:w-56 md:h-56 object-contain mb-[-10px] relative z-20 transition-all duration-500 hover:scale-105 animate-logo-breathe hover:drop-shadow-[0_0_30px_rgba(240,0,255,0.8)]"
+            />
+          </Link>
           
           <h1 className="text-5xl sm:text-[5rem] md:text-[6.5rem] font-black text-white italic tracking-tighter font-heading leading-none relative z-10 drop-shadow-2xl uppercase">
             PIXEL PALACE <br />
