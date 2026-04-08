@@ -14,11 +14,15 @@ export function TournamentInfo({ tournament }) {
       <div className="space-y-5 font-body">
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">01 // TOURNAMENT DATE</p>
-          <p className="text-xl font-bold text-[#00f0ff] mt-1 uppercase">DATE: {formatEsportsDate(tournament.tournamentDate)}</p>
+          <p className="text-xl font-bold text-[#00f0ff] mt-1 uppercase">
+            {tournament.displayDate ? `${tournament.displayDate}, ${tournament.displayYear}` : `DATE: ${formatEsportsDate(tournament.tournamentDate)}`}
+          </p>
         </div>
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">02 // START TIME</p>
-          <p className="text-xl font-bold text-white mt-1 uppercase">{tournament.startTime || 'TBD'}</p>
+          <p className="text-xl font-bold text-white mt-1 uppercase">
+            {tournament.displayTime || tournament.startTime || 'TBD'}
+          </p>
         </div>
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">03 // GAME MODE</p>

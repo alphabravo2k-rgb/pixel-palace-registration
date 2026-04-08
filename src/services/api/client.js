@@ -127,3 +127,38 @@ export const fetchSlots = async (tournamentId) => {
   );
   return res.json();
 };
+/**
+ * Fetch live roster (team list) from the Apps Script.
+ * Phase 2: Replace with supabase.from('registrations').select('team_name, team_tag, logo_url').eq('tournament_id', tournamentId).
+ *
+ * @returns {Promise<{ teams: Array<{ name: string, tag: string, logo: string }> }>}
+ */
+export const fetchTeams = async (tournamentId) => {
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+
+  if (!tournament?.sheetsEndpoint) {
+    // Mock data for dev
+    return new Promise((resolve) =>
+      setTimeout(
+        () => resolve({ 
+          teams: [
+            { name: "Natus Vincere", tag: "NAVI", logo: "https://i.imgur.com/yourlogo.png", status: "VERIFIED" },
+            { name: "Team Vitality", tag: "VIT", logo: "https://i.imgur.com/yourlogo2.png", status: "VERIFIED" }
+          ] 
+        }),
+        1200
+      )
+    );
+  }
+
+  try {
+    const res = await fetch(
+      `${tournament.sheetsEndpoint}?action=getTeams&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
+    );
+    if (!res.ok) throw new Error("Tracker offline");
+    return res.json();
+  } catch (err) {
+    console.error("Tracker fetch failed:", err);
+    return { teams: [], error: true };
+  }
+};

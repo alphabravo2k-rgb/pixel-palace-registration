@@ -14,4 +14,5 @@ export {
   submitToGateway as submitRegistration,
   validateCode as validateInviteCode,
   fetchSlots as fetchTournamentSlots,
+  fetchTeams as fetchTournamentTeams,
 } from './api/client';

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { getTournamentBySlug } from '../config/tournaments';
-import { fetchTournamentSlots } from '../services/sheets';
+import { fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
 import { TournamentInfo } from '../components/registration/TournamentInfo';
 import { formatEsportsDate } from '../utils/dateHelper';
@@ -12,6 +12,8 @@ export const Register = () => {
   const tournament = getTournamentBySlug(tournamentSlug);
   const [activeTab, setActiveTab] = useState('register');
   const [slots, setSlots] = useState(null);
+  const [teams, setTeams] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [failedMapImages, setFailedMapImages] = useState(new Set());
 
   const handleMapImgError = useCallback((mapName) => {
@@ -24,19 +26,37 @@ export const Register = () => {
   useEffect(() => {
     if (!tournament) return;
     
-    // Fetch live slots
-    const loadSlots = async () => {
+    // Fetch live slots & teams
+    const loadData = async () => {
       try {
-        const liveSlots = await fetchTournamentSlots(tournament.id);
+        const [liveSlots, liveTeams] = await Promise.all([
+          fetchTournamentSlots(tournament.id),
+          fetchTournamentTeams(tournament.id)
+        ]);
         setSlots(liveSlots);
+        setTeams(liveTeams?.teams || []);
       } catch(err) {
         setSlots('error');
+        setTeams('error');
       }
     };
-    loadSlots();
-    const interval = setInterval(loadSlots, 15000);
+    loadData();
+    const interval = setInterval(loadData, 15000);
     return () => clearInterval(interval);
   }, [tournament]);
+
+  const handleManualRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      const liveTeams = await fetchTournamentTeams(tournament.id);
+      setTeams(liveTeams?.teams || []);
+    } catch {
+      setTeams('error');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     if (!tournament) return;
@@ -96,12 +116,32 @@ export const Register = () => {
             </span>
           </h1>
 
-          <div className="flex items-center justify-center w-full max-w-md mx-auto mt-2 mb-8 relative z-20 opacity-80">
-            <div className="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
-            <div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">
-              {formatEsportsDate(tournament.tournamentDate)}
-            </div>
-            <div className="h-[1px] bg-zinc-500 w-12 sm:w-24"></div>
+          <div className="flex items-center justify-center w-full max-w-2xl mx-auto mt-2 mb-8 relative z-20">
+            {tournament.displayTime ? (
+              <div className="flex flex-col items-center gap-1">
+                <div className="text-neon-cyan font-heading text-2xl tracking-[0.2em] font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)] uppercase">
+                  {tournament.displayTime}
+                </div>
+                <div className="flex items-center gap-4 w-full">
+                  <div className="h-[1px] bg-white/10 flex-grow"></div>
+                  <div className="font-heading text-4xl text-white italic tracking-tighter uppercase whitespace-nowrap px-2">
+                    {tournament.displayDate}
+                  </div>
+                  <div className="h-[1px] bg-white/10 flex-grow"></div>
+                </div>
+                <div className="text-zinc-500 font-body text-xl font-bold tracking-[0.5em] uppercase">
+                  {tournament.displayYear}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-6 w-full opacity-80">
+                <div className="h-[1px] bg-zinc-500 flex-grow"></div>
+                <div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">
+                  {formatEsportsDate(tournament.tournamentDate)}
+                </div>
+                <div className="h-[1px] bg-zinc-500 flex-grow"></div>
+              </div>
+            )}
           </div>
           
           {/* HUD STATS PANEL */}
@@ -282,16 +322,71 @@ export const Register = () => {
               <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
               <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
                 <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase">Registered Teams</h2>
-                 <button className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body">
-                   <RefreshCw className="w-4 h-4" /> Refresh Tracker
+                 <button 
+                  onClick={handleManualRefresh}
+                  disabled={isRefreshing}
+                  className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body disabled:opacity-50"
+                 >
+                   <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+                   {isRefreshing ? 'REFRESHING...' : 'REFRESH TRACKER'}
                  </button>
               </div>
 
-              <div className="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
-                 <Loader2 className="w-12 h-12 animate-spin mb-6 text-neon-pink drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]" />
-                 <span className="font-bold tracking-[0.3em] uppercase text-sm font-body">Fetching Database...</span>
-                 <p className="mt-8 text-[10px] text-zinc-600 border border-dashed border-white/10 p-4 rounded-lg">Tracker endpoint requires Phase 2 configuration.</p>
-              </div>
+              {!teams ? (
+                <div className="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
+                  <Loader2 className="w-12 h-12 animate-spin mb-6 text-neon-pink drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]" />
+                  <span className="font-bold tracking-[0.3em] uppercase text-sm font-body">Fetching Database...</span>
+                </div>
+              ) : teams === 'error' ? (
+                <div className="text-center py-32 text-red-500 flex flex-col items-center justify-center bg-red-950/10 border border-dashed border-red-500/20 rounded-md">
+                   <AlertOctagon className="w-12 h-12 mb-6" />
+                   <span className="font-heading text-2xl uppercase">CONNECTION FAILED</span>
+                   <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">Could not stabilize link to the master raw data sheet.</p>
+                </div>
+              ) : teams.length === 0 ? (
+                <div className="text-center py-32 text-zinc-600 flex flex-col items-center justify-center">
+                   <Layers className="w-12 h-12 mb-6 opacity-20" />
+                   <span className="font-heading text-2xl uppercase">SYSTEMS EMPTY</span>
+                   <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No rotations detected in the master raw data sheet for this circuit.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {teams.map((team, idx) => (
+                    <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team hover:border-neon-cyan/50 transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
+                      <div className="flex items-stretch h-20 bg-black/40">
+                        <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
+                          <img 
+                            src={team.logo} 
+                            alt={team.name} 
+                            className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500"
+                            onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }}
+                          />
+                        </div>
+                        <div className="flex-grow p-4 flex flex-col justify-center min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">
+                              {team.tag || 'TEAM'}
+                            </span>
+                            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate">
+                              #{String(idx + 1).padStart(2, '0')}
+                            </span>
+                          </div>
+                          <h4 className="text-lg font-heading text-white truncate leading-none uppercase tracking-wider group-hover/team:text-neon-cyan transition-colors">
+                            {team.name}
+                          </h4>
+                        </div>
+                      </div>
+                      <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
+                        <div className="flex items-center gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.2em] font-body">STATUS: {team.status || 'VERIFIED'}</span>
+                        </div>
+                        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-body">ACCESS SECURED</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
