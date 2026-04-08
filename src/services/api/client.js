@@ -98,7 +98,7 @@ export const validateCode = async (tournamentId, code) => {
   }
 
   const res = await fetch(
-    `${tournament.sheetsEndpoint}?validateCode=${encodeURIComponent(code)}`
+    `${tournament.sheetsEndpoint}?validateCode=${encodeURIComponent(code)}&tournamentId=${encodeURIComponent(tournamentId)}`
   );
   return res.json();
 };
@@ -123,7 +123,7 @@ export const fetchSlots = async (tournamentId) => {
   }
 
   const res = await fetch(
-    `${tournament.sheetsEndpoint}?action=getSlots&t=${Date.now()}`
+    `${tournament.sheetsEndpoint}?action=getSlots&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
   );
   return res.json();
 };
