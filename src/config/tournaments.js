@@ -1,26 +1,25 @@
 export const tournaments = [
   {
     id: "chaos-ii",
-    name: "Wingman Chaos II",
+    name: "Wingman Chaos II (2026)",
     slug: "chaos-ii",
     status: "LIVE",
     format: "2v2",
     gameMode: "CS2 Wingman",
-    prizePool: "TBA",
+    prizePool: "$400",
     maxTeams: 50,
-    openSlots: 50,     // Replaced 64 total / 24 invite logic
-    inviteSlots: 0,    // Pure first-come, first-serve
+    openSlots: 50,
+    inviteSlots: 0,
     region: "Pak Ind & Middle East",
     startTime: "9:00 PM PKT ONWARDS",
-    tournamentDate: "2026-04-24T21:00:00+05:00", // Apr 24-27
+    tournamentDate: "2026-04-24T21:00:00+05:00",
     registrationDeadline: "2026-04-18T23:59:00+05:00",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
     antiCheat: "Akros",
     playersPerTeam: 2,
     substitutes: { min: 0, max: 1 },
-    // Updated Active Duty Wingman Maps
     maps: ["Poseidon", "Sanctum", "Overpass", "Vertigo", "Nuke", "Inferno"],
-    sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec", // Add your Master Sheet Apps Script URL here
+    sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec",
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our duo acknowledges that Akros Anti-Cheat must be installed by all players.",
       "COMMUNICATION — All players have joined the Pixel Palace Discord server.",
@@ -29,10 +28,9 @@ export const tournaments = [
     ]
   },
 
-  // --- REAL ARCHIVED HISTORY FROM EXTRACT ---
   {
-    id: "ramadan-league",
-    name: "CS2 Ramadan League 2026",
+    id: "ramadan-league-1",
+    name: "Ramadan League I (2026)",
     slug: "ramadan-league",
     status: "ARCHIVED",
     format: "5v5",
@@ -46,8 +44,64 @@ export const tournaments = [
     playersPerTeam: 5
   },
   {
-    id: "community-cup-1",
-    name: "CS2 5v5 Community Cup",
+    id: "fc26-tournament-ii",
+    name: "FC26 Tournament II (2026)",
+    slug: "fc26-ii",
+    status: "ARCHIVED",
+    format: "1v1",
+    gameMode: "FC26",
+    prizePool: "$100",
+    maxTeams: 32,
+    region: "PAK / IND",
+    tournamentDate: "2026-02-14T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png",
+    playersPerTeam: 1
+  },
+  {
+    id: "chaos-i",
+    name: "Wingman Chaos I (2026)",
+    slug: "chaos-i",
+    status: "ARCHIVED",
+    format: "2v2",
+    gameMode: "CS2 Wingman",
+    prizePool: "$600",
+    maxTeams: 64,
+    region: "PAK / IND",
+    tournamentDate: "2026-01-30T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png",
+    playersPerTeam: 2
+  },
+  {
+    id: "rocket-league-1",
+    name: "Rocket League 2v2 I (2026)",
+    slug: "rocket-league-i",
+    status: "ARCHIVED",
+    format: "2v2",
+    gameMode: "Rocket League",
+    prizePool: "$100",
+    maxTeams: 16,
+    region: "PAK / IND",
+    tournamentDate: "2026-01-23T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png",
+    playersPerTeam: 2
+  },
+  {
+    id: "fc26-tournament-i",
+    name: "FC26 Tournament I (2026)",
+    slug: "fc26-i",
+    status: "ARCHIVED",
+    format: "1v1",
+    gameMode: "FC26",
+    prizePool: "$250",
+    maxTeams: 32,
+    region: "PAK / IND",
+    tournamentDate: "2026-01-18T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png",
+    playersPerTeam: 1
+  },
+  {
+    id: "community-cup-i",
+    name: "Community Cup I (2026)",
     slug: "community-cup-1",
     status: "ARCHIVED",
     format: "5v5",
@@ -61,8 +115,50 @@ export const tournaments = [
     playersPerTeam: 5
   },
   {
-    id: "wingman-ep1",
-    name: "Wingman Clash I",
+    id: "8ball-pool-i",
+    name: "8 Ball Pool I (2026)",
+    slug: "8ball-i",
+    status: "ARCHIVED",
+    format: "1v1",
+    gameMode: "8 Ball Pool",
+    prizePool: "$25",
+    maxTeams: 16,
+    region: "PAK / IND",
+    tournamentDate: "2026-01-02T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
+    playersPerTeam: 1
+  },
+  {
+    id: "flying-clowns-i",
+    name: "Flying Clowns I (2025)",
+    slug: "flying-clowns",
+    status: "ARCHIVED",
+    format: "2v2",
+    gameMode: "Flying Scoutzman",
+    prizePool: "$100",
+    maxTeams: 16,
+    region: "PAK / IND",
+    tournamentDate: "2025-12-28T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
+    playersPerTeam: 2
+  },
+  {
+    id: "cs2-1v1-i",
+    name: "CS2 1v1 Tournament I (2025)",
+    slug: "cs2-1v1-i",
+    status: "ARCHIVED",
+    format: "1v1",
+    gameMode: "CS2 1v1",
+    prizePool: "ASUS 240Hz Monitor",
+    maxTeams: 32,
+    region: "PAK / IND",
+    tournamentDate: "2025-12-14T18:00:00Z",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_aim_map.png",
+    playersPerTeam: 1
+  },
+  {
+    id: "wingman-clash-i",
+    name: "Wingman Clash I (2025)",
     slug: "wingman-ep1",
     status: "ARCHIVED",
     format: "2v2",
