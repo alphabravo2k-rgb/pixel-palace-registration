@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, Link } from 'react-router-dom';
 import { getTournamentBySlug } from '../config/tournaments';
 import { fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
 import { TournamentInfo } from '../components/registration/TournamentInfo';
 import { formatEsportsDate } from '../utils/dateHelper';
-import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw } from 'lucide-react';
+import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft } from 'lucide-react';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
@@ -346,8 +346,8 @@ export const Register = () => {
               ) : teams.length === 0 ? (
                 <div className="text-center py-32 text-zinc-600 flex flex-col items-center justify-center">
                    <Layers className="w-12 h-12 mb-6 opacity-20" />
-                   <span className="font-heading text-2xl uppercase">SYSTEMS EMPTY</span>
-                   <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No rotations detected in the master raw data sheet for this circuit.</p>
+                   <span className="font-heading text-2xl uppercase tracking-widest">SYSTEMS COLD</span>
+                   <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No teams have initialized registration for this event yet.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
