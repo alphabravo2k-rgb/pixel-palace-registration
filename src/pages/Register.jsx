@@ -193,7 +193,7 @@ export const Register = () => {
                 </div>
               </div>
               <div className="bg-black/40 p-4 text-center flex flex-col justify-center items-center">
-                <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Security</p>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Anti Cheat</p>
                 <p className="text-sm font-body text-green-400 font-bold tracking-widest mt-1 flex items-center gap-1">
                   <ShieldCheck className="w-4 h-4" /> {tournament.antiCheat.toUpperCase()}
                 </p>
@@ -227,7 +227,7 @@ export const Register = () => {
               onClick={() => setActiveTab('tracker')}
               className={`font-heading text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'tracker' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
             >
-              Live Roster Tracker
+              Registered Teams
               <span className="bg-neon-pink text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span>
               <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'tracker' ? 'w-full' : 'w-0'}`}></div>
             </button>
@@ -304,7 +304,7 @@ export const Register = () => {
                     <span className="leading-tight"><strong>Akros Anti-Cheat</strong> is 100% required. No exceptions.</span>
                   </li>
                 </ul>
-                <a href="https://akros.ac/#downloadSteps" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black text-sm font-bold uppercase tracking-widest transition-all font-body rounded shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+                <a href="https://akros.ac/#download" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black text-sm font-bold uppercase tracking-widest transition-all font-body rounded shadow-[0_0_15px_rgba(0,240,255,0.2)]">
                   <Download className="w-4 h-4" /> Download Akros Client
                 </a>
               </div>
@@ -367,7 +367,7 @@ export const Register = () => {
                   className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body disabled:opacity-50"
                  >
                    <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> 
-                   {isRefreshing ? 'REFRESHING...' : 'REFRESH TRACKER'}
+                   {isRefreshing ? 'REFRESHING...' : 'REFRESH LIST'}
                  </button>
               </div>
 

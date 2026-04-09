@@ -34,6 +34,12 @@ export function TournamentInfo({ tournament }) {
              {formatEsportsDate(tournament.registrationDeadline)} — {formatEsportsTime(tournament.registrationDeadline)}
           </p>
         </div>
+        {tournament.serverLocation && (
+          <div>
+            <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">05 // SERVER LOCATION</p>
+            <p className="text-xl font-bold text-neon-cyan mt-1 uppercase">{tournament.serverLocation}</p>
+          </div>
+        )}
       </div>
     </div>
   );
