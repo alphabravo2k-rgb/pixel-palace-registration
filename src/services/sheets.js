@@ -15,4 +15,5 @@ export {
   validateCode as validateInviteCode,
   fetchSlots as fetchTournamentSlots,
   fetchTeams as fetchTournamentTeams,
+  fetchBracket as fetchTournamentBracket,
 } from './api/client';

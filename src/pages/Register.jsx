@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, Navigate, Link } from 'react-router-dom';
 import { getTournamentBySlug } from '../config/tournaments';
-import { fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
+import { fetchTournamentSlots, fetchTournamentTeams, fetchTournamentBracket } from '../services/sheets';
 import { TournamentForm } from '../components/forms/TournamentForm';
 import { TournamentInfo } from '../components/registration/TournamentInfo';
 import { formatEsportsDate } from '../utils/dateHelper';
-import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft } from 'lucide-react';
+import { DiscordGate } from '../components/modals/DiscordGate';
+import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft, Trophy, Medal } from 'lucide-react';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
@@ -13,6 +14,8 @@ export const Register = () => {
   const [activeTab, setActiveTab] = useState('register');
   const [slots, setSlots] = useState(null);
   const [teams, setTeams] = useState(null);
+  const [bracketData, setBracketData] = useState(null);
+  const [expandedTeamIdx, setExpandedTeamIdx] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [failedMapImages, setFailedMapImages] = useState(new Set());
 
@@ -29,15 +32,18 @@ export const Register = () => {
     // Fetch live slots & teams
     const loadData = async () => {
       try {
-        const [liveSlots, liveTeams] = await Promise.all([
+        const [liveSlots, liveTeams, liveBracket] = await Promise.all([
           fetchTournamentSlots(tournament.id),
-          fetchTournamentTeams(tournament.id)
+          fetchTournamentTeams(tournament.id),
+          tournament.bracketsEnabled ? fetchTournamentBracket(tournament.id) : Promise.resolve(null)
         ]);
         setSlots(liveSlots);
         setTeams(liveTeams?.teams || []);
+        if (liveBracket) setBracketData(liveBracket);
       } catch(err) {
         setSlots('error');
         setTeams('error');
+        setBracketData('error');
       }
     };
     loadData();
@@ -93,6 +99,8 @@ export const Register = () => {
 
   return (
     <>
+      <DiscordGate tournament={tournament} />
+      
       <div className="app-bg-void"></div>
       <div className="app-bg-scanlines"></div>
 
@@ -214,23 +222,32 @@ export const Register = () => {
           </div>
 
           {/* NAVIGATION TABS */}
-          <div className="flex justify-center gap-12 w-full max-w-2xl mt-16 relative">
-            <div className="absolute bottom-0 w-full h-[1px] bg-white/10"></div>
+          <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-3xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0">
+            <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10"></div>
             <button 
               onClick={() => setActiveTab('register')}
-              className={`font-heading text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
+              className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
             >
               Register Team
               <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`}></div>
             </button>
             <button 
               onClick={() => setActiveTab('tracker')}
-              className={`font-heading text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'tracker' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
+              className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'tracker' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
             >
               Registered Teams
               <span className="bg-neon-pink text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span>
               <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'tracker' ? 'w-full' : 'w-0'}`}></div>
             </button>
+            {tournament.bracketsEnabled && (
+              <button 
+                onClick={() => setActiveTab('brackets')}
+                className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}
+              >
+                Brackets
+                <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`}></div>
+              </button>
+            )}
           </div>
         </header>
 
@@ -389,10 +406,26 @@ export const Register = () => {
                    <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No teams have initialized registration for this event yet.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {teams.map((team, idx) => (
-                    <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team hover:border-neon-cyan/50 transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)]">
-                      <div className="flex items-stretch h-20 bg-black/40">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {teams.map((team, idx) => {
+                    const isExpanded = expandedTeamIdx === idx;
+                    const hasRoster = team.roster && team.roster.length > 0;
+                    return (
+                    <div 
+                      key={`${team.name}-${idx}`} 
+                      className={`glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${isExpanded ? 'border-neon-cyan/50' : 'hover:border-neon-cyan/20'} ${!isExpanded ? 'cursor-pointer' : ''}`}
+                      onClick={() => !isExpanded && hasRoster && setExpandedTeamIdx(idx)}
+                    >
+                      <div className="flex items-stretch h-20 bg-black/40 relative">
+                        {isExpanded && (
+                          <button 
+                            type="button" 
+                            className="absolute top-2 right-2 text-zinc-500 hover:text-white transition-colors z-20"
+                            onClick={(e) => { e.stopPropagation(); setExpandedTeamIdx(null); }}
+                          >
+                            <span className="text-[10px] font-bold uppercase tracking-widest bg-black/50 px-2 py-1 border border-white/10 rounded">CLOSE</span>
+                          </button>
+                        )}
                         <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
                           <img 
                             src={team.logo} 
@@ -401,7 +434,7 @@ export const Register = () => {
                             onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }}
                           />
                         </div>
-                        <div className="flex-grow p-4 flex flex-col justify-center min-w-0">
+                        <div className="flex-grow p-4 flex flex-col justify-center min-w-0 pr-16">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">
                               {team.tag || 'TEAM'}
@@ -415,20 +448,162 @@ export const Register = () => {
                           </h4>
                         </div>
                       </div>
+
+                      {isExpanded && hasRoster && (
+                        <div className="bg-black/80 border-t border-white/5 p-4 animate-in slide-in-from-top-4 duration-300">
+                           <div className="space-y-2">
+                             {team.roster.map((p, i) => (
+                                <div key={i} className="flex justify-between items-center bg-black/40 border border-white/5 p-2 rounded">
+                                   <div className="flex items-center gap-3">
+                                      <div className="w-1 h-1 bg-neon-cyan rounded-full" />
+                                      <span className="text-xs font-bold text-white uppercase tracking-wider font-body">{p.ign || p.discord || 'PLAYER'}</span>
+                                   </div>
+                                   <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest font-body">
+                                      <span className="bg-zinc-900 text-zinc-400 px-2 py-1 rounded border border-zinc-700">LVL {p.faceitLevel || '?'}</span>
+                                      <span className="bg-neon-cyan/10 text-neon-cyan px-2 py-1 rounded border border-neon-cyan/20">ELO {p.faceitElo || 'N/A'}</span>
+                                   </div>
+                                </div>
+                             ))}
+                           </div>
+                        </div>
+                      )}
+
                       <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
                         <div className="flex items-center gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                          <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.2em] font-body">STATUS: {team.status || 'VERIFIED'}</span>
+                          <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${team.status === 'PENDING REVIEW' ? 'bg-yellow-500' : 'bg-green-500'}`} />
+                          <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.2em] font-body">
+                             STATUS: {team.status || 'VERIFIED'}
+                          </span>
                         </div>
-                        <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-widest font-body">ACCESS SECURED</span>
+                        <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">
+                           {team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}
+                           {hasRoster && !isExpanded && <span className="text-zinc-600">| CLICK TO EXPAND</span>}
+                        </span>
                       </div>
                     </div>
-                  ))}
+                  )})}
+                </div>
+              )}
+            </div>
+            {/* WINNERS SHOWCASE */}
+            {tournament.tournamentComplete && (
+              <div className="glass-panel p-8 mt-8 border-t-4 border-t-yellow-500 overflow-hidden relative group">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 blur-[100px] rounded-full point-events-none" />
+                <h2 className="text-3xl text-white font-heading tracking-wider leading-none uppercase mb-8 flex items-center gap-3">
+                  <Trophy className="w-8 h-8 text-yellow-500" /> TOURNAMENT RESULTS
+                </h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
+                  {/* CHAMPION */}
+                  <div className="bg-gradient-to-br from-yellow-900/30 to-black border border-yellow-500/30 p-6 rounded relative">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 blur-[30px]" />
+                    <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2">
+                       <Trophy className="w-4 h-4" /> Grand Champion
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-yellow-500/50 overflow-hidden shrink-0">
+                          <img 
+                            src={tournament.champion?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png"} 
+                            alt="Champion" 
+                            className="w-16 h-16 object-contain"
+                          />
+                       </div>
+                       <div>
+                          <div className="text-yellow-500 text-xs font-bold uppercase tracking-widest border border-yellow-500/30 px-2 py-0.5 rounded-sm inline-block mb-1">
+                             {tournament.champion?.tag || "WIN"}
+                          </div>
+                          <h3 className="text-3xl text-white font-heading uppercase tracking-widest leading-none drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">
+                             {tournament.champion?.name || "TBD"}
+                          </h3>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* RUNNER UP */}
+                  <div className="bg-gradient-to-br from-zinc-800/30 to-black border border-zinc-500/30 p-6 rounded relative">
+                    <div className="absolute top-0 right-0 w-16 h-16 bg-zinc-500/20 blur-[30px]" />
+                    <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2">
+                       <Medal className="w-4 h-4" /> Runner Up
+                    </div>
+                    <div className="flex items-center gap-4">
+                       <div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-zinc-600 overflow-hidden shrink-0">
+                          <img 
+                            src={tournament.runnerUp?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png"} 
+                            alt="Runner Up" 
+                            className="w-16 h-16 object-contain grayscale opacity-80"
+                          />
+                       </div>
+                       <div>
+                          <div className="text-zinc-400 text-xs font-bold uppercase tracking-widest border border-zinc-600 px-2 py-0.5 rounded-sm inline-block mb-1">
+                             {tournament.runnerUp?.tag || "2ND"}
+                          </div>
+                          <h3 className="text-2xl text-zinc-300 font-heading uppercase tracking-widest leading-none">
+                             {tournament.runnerUp?.name || "TBD"}
+                          </h3>
+                       </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'brackets' && tournament.bracketsEnabled ? (
+          /* BRACKETS TAB */
+          <div className="max-w-6xl mx-auto xl:max-w-7xl">
+            <div className="glass-panel p-8 min-h-[600px]">
+              <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
+              <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3">
+                <Target className="w-8 h-8 text-neon-cyan" /> Tournament Bracket
+              </h2>
+
+              {!bracketData ? (
+                <div className="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
+                  <Loader2 className="w-12 h-12 animate-spin mb-6 text-neon-pink drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]" />
+                  <span className="font-bold tracking-[0.3em] uppercase text-sm font-body">Generating Bracket Link...</span>
+                </div>
+              ) : bracketData === 'error' ? (
+                <div className="text-center py-32 text-red-500 flex flex-col items-center justify-center bg-red-950/10 border border-dashed border-red-500/20 rounded-md">
+                   <AlertOctagon className="w-12 h-12 mb-6" />
+                   <span className="font-heading text-2xl uppercase">BRACKETS OFFLINE</span>
+                   <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">Bracket generation failed. Seeding may still be in progress.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col lg:flex-row gap-8">
+                  <div className="flex-grow bg-black/50 border border-white/10 rounded overflow-hidden min-h-[400px] flex items-center justify-center relative p-8">
+                     <p className="absolute top-4 left-4 text-[10px] text-zinc-500 font-bold uppercase font-body tracking-[0.3em]">LIVE FEED // STANDINGS</p>
+                     
+                     {bracketData.bracketUrl ? (
+                       <img src={bracketData.bracketUrl} alt="Tournament Bracket" className="max-w-full rounded shadow-[0_0_50px_rgba(0,240,255,0.1)] border border-neon-cyan/20" />
+                     ) : (
+                        <div className="text-center text-zinc-600">
+                          <Target className="w-16 h-16 mb-4 mx-auto opacity-20" />
+                          <h3 className="font-heading text-xl uppercase tracking-widest">Seeding Phase</h3>
+                          <p className="text-xs font-body tracking-widest opacity-60 mt-2 uppercase">The bracket will be visible once all teams verify their check-in.</p>
+                        </div>
+                     )}
+                  </div>
+                  
+                  <div className="lg:w-80 flex-shrink-0 flex flex-col gap-6">
+                     <div className="bg-black/50 border border-white/10 rounded p-6">
+                        <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">Schedule</h3>
+                        <ul className="space-y-3 font-body text-sm font-bold text-zinc-300">
+                           {bracketData.schedule ? bracketData.schedule.map((item, i) => (
+                             <li key={i} className="flex gap-2 items-start">
+                               <div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>
+                               {item}
+                             </li>
+                           )) : (
+                             <li className="text-zinc-500 opacity-60 font-medium">TBA</li>
+                           )}
+                        </ul>
+                     </div>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
 

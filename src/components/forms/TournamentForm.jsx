@@ -19,6 +19,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useFormSubmit } from '../../hooks/useFormSubmit';
 import { validateInviteCode } from '../../services/sheets';
+import { resolveSteam64 } from '../../services/steam';
+import { fetchFaceitProfile } from '../../services/faceit';
+import { LogoUploader } from './LogoUploader';
 import {
   Loader2,
   CheckCircle2,
@@ -33,6 +36,7 @@ import {
   Tag,
   Globe,
   Image as ImageIcon,
+  Zap,
 } from 'lucide-react';
 
 // ─── Dynamic Zod Schema ────────────────────────────────────────────────────────
@@ -43,10 +47,14 @@ const buildFormSchema = (tournament) => {
   const coreCount = tournament.playersPerTeam ?? 5;
 
   const playerSchema = z.object({
-    discord: z.string().min(1, 'Discord handle required'),
+    ign: z.string().min(1, 'In-Game Name required'),
+    discord: z.string().min(1, 'Discord handle required').transform(v => v.trim().toLowerCase()),
     steam: z.string().min(1, 'Steam URL required'),
+    steam64: z.string().optional(),
     faceit: z.string().min(1, 'FACEIT URL required'),
-    rank: z.string().default('5'),
+    faceitLevel: z.string().default('N/A'),
+    faceitElo: z.string().default('N/A'),
+    cs2RankLabel: z.string().default('Not Linked'),
   });
 
   return z.object({
@@ -65,7 +73,7 @@ const buildFormSchema = (tournament) => {
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-const blankPlayer = () => ({ discord: '', steam: '', faceit: '', rank: '5' });
+const blankPlayer = () => ({ ign: '', discord: '', steam: '', steam64: '', faceit: '', faceitLevel: '', faceitElo: '', cs2RankLabel: '' });
 
 const getPlayerMeta = (index, coreCount) => {
   if (index === 0)
@@ -110,6 +118,8 @@ export const TournamentForm = ({ tournament }) => {
     register,
     control,
     handleSubmit,
+    setValue,
+    getValues,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
@@ -154,6 +164,78 @@ export const TournamentForm = ({ tournament }) => {
       setInviteStatus('AWAITING INPUT...');
     }
   };
+
+  // ── Auto-Resolving UI Status Caches ──────────────────────────────────────────
+  const [steamStatus, setSteamStatus] = useState({});
+  const [faceitStatus, setFaceitStatus] = useState({});
+
+  const handleSteamBlur = async (index, value) => {
+    if (!value) return;
+    setSteamStatus((prev) => ({ ...prev, [index]: 'RESOLVING...' }));
+    try {
+      const steam64 = await resolveSteam64(value, tournament.steamApiKey);
+      setValue(`players.${index}.steam64`, steam64);
+      setSteamStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
+    } catch (err) {
+      setSteamStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
+    }
+  };
+
+  const handleFaceitBlur = async (index, value) => {
+    if (!value) return;
+    setFaceitStatus((prev) => ({ ...prev, [index]: 'FETCHING...' }));
+    try {
+      const data = await fetchFaceitProfile(value, tournament.faceitApiKey);
+      if (data) {
+        setValue(`players.${index}.faceitLevel`, data.faceitLevel?.toString());
+        setValue(`players.${index}.faceitElo`, data.faceitElo?.toString());
+        setValue(`players.${index}.cs2RankLabel`, data.cs2RankLabel?.toString());
+        
+        // Auto-populate Steam if blank and Faceit provided it
+        if (data.steam64 && !getValues(`players.${index}.steam64`)) {
+           setValue(`players.${index}.steam64`, data.steam64);
+           // Not overwriting the visible URL input so it won't be weird, just the hidden field
+        }
+        setFaceitStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
+      } else {
+        setFaceitStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
+      }
+    } catch (err) {
+      setFaceitStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
+    }
+  };
+
+  // ── Mock Pre-Fill Injection (Admin Testing) ──────────────────────────────────
+  useEffect(() => {
+    const handleMockFill = () => {
+      setValue('teamName', 'PIXEL TEST SQUAD', { shouldValidate: true });
+      setValue('teamTag', 'TEST', { shouldValidate: true });
+      setValue('teamRegion', 'EU', { shouldValidate: true });
+      setValue('logoLink', 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png', { shouldValidate: true });
+      
+      const mockProfiles = [
+        { ign: "s1mple", steam: "https://steamcommunity.com/id/s1mpleO", faceit: "https://www.faceit.com/en/players/s1mple", discord: "s1mple_test" },
+        { ign: "ZywOo", steam: "https://steamcommunity.com/id/ZywOo_test", faceit: "https://www.faceit.com/en/players/ZywOo", discord: "zywoo_test" },
+        { ign: "NiKo", steam: "https://steamcommunity.com/profiles/76561197990449419", faceit: "https://www.faceit.com/en/players/NiKo", discord: "niko_test" },
+        { ign: "m0NESY", steam: "https://steamcommunity.com/profiles/76561198428588049", faceit: "https://www.faceit.com/en/players/m0NESY", discord: "m0nesy_test" },
+        { ign: "donk", steam: "https://steamcommunity.com/id/donk_test", faceit: "https://www.faceit.com/en/players/donk", discord: "donk_test" }
+      ];
+
+      fields.forEach((_, idx) => {
+        const mock = mockProfiles[idx] || mockProfiles[0];
+        setValue(`players.${idx}.ign`, mock.ign, { shouldValidate: true });
+        setValue(`players.${idx}.discord`, mock.discord, { shouldValidate: true });
+        setValue(`players.${idx}.steam`, mock.steam, { shouldValidate: true });
+        setValue(`players.${idx}.faceit`, mock.faceit, { shouldValidate: true });
+        
+        handleSteamBlur(idx, mock.steam);
+        handleFaceitBlur(idx, mock.faceit);
+      });
+    };
+
+    window.addEventListener('admin-mock-fill', handleMockFill);
+    return () => window.removeEventListener('admin-mock-fill', handleMockFill);
+  }); // Omitted dependency array because it captures local hook closures without tearing them down
 
   // ── Submit (react-hook-form calls this only when schema passes) ─────────────
   const onSubmit = async (formData) => {
@@ -298,26 +380,14 @@ export const TournamentForm = ({ tournament }) => {
           </div>
         </div>
 
-        {/* Logo URL */}
-        <div>
-          <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-2 block font-body">
-            Team Logo URL <span className="text-red-500">*</span>
-          </label>
-          <div className="input-group">
-            <ImageIcon className="ml-3 w-4 h-4 text-white/30" />
-            <input
-              {...register('logoLink')}
-              type="url"
-              placeholder="https://i.imgur.com/yourlogo.png"
-              className="input-ghost"
-            />
-          </div>
-          {errors.logoLink && (
-            <p className="text-red-400 text-[10px] mt-1 font-body uppercase tracking-widest">
-              {errors.logoLink.message}
-            </p>
-          )}
-        </div>
+        {/* Logo Upload Component */}
+        <LogoUploader
+          tournament={tournament}
+          formRegister={register}
+          errorMessage={errors.logoLink?.message}
+          onUploadSuccess={(url) => setValue('logoLink', url, { shouldValidate: true })}
+          onUploadRemove={() => setValue('logoLink', '', { shouldValidate: true })}
+        />
       </div>
     </div>
   );
@@ -387,96 +457,144 @@ export const TournamentForm = ({ tournament }) => {
                 </div>
 
                 <div className="space-y-3">
-                  {/* Discord — full width */}
+                  {/* IGN + Discord */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
+                        In-Game Name (IGN) <span className="text-red-500">*</span>
+                      </label>
+                      <div className="input-group">
+                        <Zap className="ml-3 w-4 h-4 text-white/30" />
+                        <input
+                          {...register(`players.${index}.ign`)}
+                          type="text"
+                          placeholder="What you're called in-game"
+                          className="input-ghost text-xs"
+                        />
+                      </div>
+                      {errors.players?.[index]?.ign && (
+                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].ign.message}</p>
+                      )}
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
+                        Discord Username <span className="text-red-500">*</span>
+                      </label>
+                      <div className="input-group">
+                        <MessageSquare className="ml-3 w-4 h-4 text-white/30" />
+                        <input
+                          {...register(`players.${index}.discord`)}
+                          type="text"
+                          placeholder="username (no #0000)"
+                          className="input-ghost text-xs"
+                        />
+                      </div>
+                      <p className="text-zinc-500 text-[9px] mt-1 font-body">Exact username, no display names.</p>
+                      {errors.players?.[index]?.discord && (
+                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].discord.message}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Steam URL */}
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
-                      Discord Username <span className="text-red-500">*</span>
+                      Steam Profile URL <span className="text-red-500">*</span>
                     </label>
                     <div className="input-group">
-                      <MessageSquare className="ml-3 w-4 h-4 text-white/30" />
+                      <Gamepad2 className="ml-3 w-4 h-4 text-white/30" />
                       <input
-                        {...register(`players.${index}.discord`)}
-                        type="text"
-                        placeholder="e.g. s1mple"
-                        className="input-ghost"
+                        {...register(`players.${index}.steam`)}
+                        type="url"
+                        placeholder="https://steamcommunity.com/id/yourname"
+                        className="input-ghost text-xs"
+                        onBlur={(e) => handleSteamBlur(index, e.target.value)}
                       />
                     </div>
-                    {errors.players?.[index]?.discord && (
-                      <p className="text-red-400 text-[10px] mt-1 font-body">
-                        {errors.players[index].discord.message}
-                      </p>
+                    {/* Resolution Status Display */}
+                    <div className="mt-1 min-h-[16px] flex items-center">
+                    {steamStatus[index] === 'RESOLVING...' && <span className="text-zinc-400 text-[9px] font-bold font-body tracking-wider">RESOLVING ID...</span>}
+                    {steamStatus[index] === 'SUCCESS' && <span className="text-neon-cyan text-[9px] font-bold font-body tracking-wider">STEAM ID VERIFIED ✓ ({getValues(`players.${index}.steam64`)})</span>}
+                    {steamStatus[index] === 'FAILED' && <span className="text-red-500 text-[9px] font-bold font-body tracking-wider">RESOLUTION FAILED — Enter ID manually below</span>}
+                    </div>
+                    
+                    {steamStatus[index] === 'FAILED' && (
+                        <input
+                           {...register(`players.${index}.steam64`)}
+                           type="text"
+                           placeholder="Steam64 ID (17 digits)"
+                           className="input-ghost mt-1 border border-red-500/30 font-mono text-xs text-red-100"
+                        />
                     )}
                   </div>
 
-                  {/* Steam + FACEIT — side by side */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
-                        Steam URL <span className="text-red-500">*</span>
-                      </label>
-                      <div className="input-group">
-                        <Gamepad2 className="ml-3 w-4 h-4 text-white/30" />
-                        <input
-                          {...register(`players.${index}.steam`)}
-                          type="url"
-                          placeholder="steamcommunity.com/id/..."
-                          className="input-ghost text-xs"
-                        />
-                      </div>
-                      {errors.players?.[index]?.steam && (
-                        <p className="text-red-400 text-[10px] mt-1 font-body">
-                          {errors.players[index].steam.message}
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
-                        FACEIT URL <span className="text-red-500">*</span>
-                      </label>
-                      <div className="input-group">
-                        <Crosshair className="ml-3 w-4 h-4 text-white/30" />
-                        <input
-                          {...register(`players.${index}.faceit`)}
-                          type="url"
-                          placeholder="faceit.com/en/players/..."
-                          className="input-ghost text-xs"
-                        />
-                      </div>
-                      {errors.players?.[index]?.faceit && (
-                        <p className="text-red-400 text-[10px] mt-1 font-body">
-                          {errors.players[index].faceit.message}
-                        </p>
-                      )}
+                  {/* FACEIT URL */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
+                      FACEIT Profile URL <span className="text-red-500">*</span>
+                    </label>
+                    <div className="input-group">
+                      <Crosshair className="ml-3 w-4 h-4 text-white/30" />
+                      <input
+                        {...register(`players.${index}.faceit`)}
+                        type="url"
+                        placeholder="https://www.faceit.com/en/players/yourname"
+                        className="input-ghost text-xs"
+                        onBlur={(e) => handleFaceitBlur(index, e.target.value)}
+                      />
                     </div>
                   </div>
 
-                  {/* FACEIT Level — Controller for live display */}
+                  {/* FACEIT & CS2 Stat Badges */}
                   <Controller
                     control={control}
-                    name={`players.${index}.rank`}
-                    defaultValue="5"
-                    render={({ field: rankField }) => (
-                      <div className="bg-black/40 border-b-2 border-white/10 rounded-t p-2 px-3 hover:bg-neon-cyan/5 hover:border-neon-cyan transition-colors">
-                        <div className="flex justify-between items-center w-full mb-2">
-                          <div className="flex items-center gap-2 text-zinc-400">
-                            <Award className="w-4 h-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-[0.2em] font-body">
-                              FACEIT Level
-                            </span>
-                          </div>
-                          <span className="text-xl font-heading text-neon-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]">
-                            {rankField.value || '5'}
-                          </span>
-                        </div>
-                        <input
-                          type="range"
-                          min={1}
-                          max={10}
-                          {...rankField}
-                          className="cyber-slider"
-                        />
-                      </div>
-                    )}
+                    name={`players.${index}.faceitLevel`}
+                    render={({ field: lvlField }) => {
+                       const elo = getValues(`players.${index}.faceitElo`);
+                       const rank = getValues(`players.${index}.cs2RankLabel`);
+                       const state = faceitStatus[index];
+                       const lvl = lvlField.value;
+
+                       let badgeColor = 'bg-zinc-800 text-zinc-400 border-zinc-700'; // DEFAULT
+                       if (state === 'FETCHING...') badgeColor = 'bg-cyan-900/30 text-neon-cyan border-neon-cyan animate-pulse';
+                       else if (state === 'FAILED') badgeColor = 'bg-yellow-900/30 text-yellow-400 border-yellow-500';
+                       else if (state === 'SUCCESS') {
+                          const l = parseInt(lvl);
+                          if (l <= 3) badgeColor = 'bg-zinc-800 text-white border-zinc-500';
+                          else if (l <= 6) badgeColor = 'bg-green-900/30 text-green-400 border-green-500';
+                          else if (l <= 8) badgeColor = 'bg-yellow-900/30 text-yellow-500 border-yellow-500';
+                          else badgeColor = 'bg-red-900/30 text-red-500 border-red-500';
+                       }
+
+                       return (
+                         <div className="bg-black/40 border-t-2 border-white/10 rounded-t p-3 flex gap-2 sm:gap-4 mt-2">
+                           <div className="flex flex-col flex-1">
+                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">FACEIT LVL</span>
+                              <div className={`px-2 py-1.5 flex items-center justify-center font-bold text-xs rounded border ${badgeColor}`}>
+                                 {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'MANUAL INPUT' : (lvl || 'AWAITING URL'))}
+                              </div>
+                              {state === 'FAILED' && (
+                                <select {...lvlField} className="mt-2 bg-black border border-yellow-500 text-yellow-400 text-xs px-2 py-1 outline-none w-full cursor-pointer focus:ring-0">
+                                   <option value="N/A">Select Lvl</option>
+                                   {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                                </select>
+                              )}
+                           </div>
+                           <div className="flex flex-col flex-1">
+                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">ELO</span>
+                              <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider">
+                                 {state === 'FETCHING...' ? '...' : (elo || 'N/A')}
+                              </div>
+                           </div>
+                           <div className="flex flex-col flex-1">
+                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">CS2 RANK</span>
+                              <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider text-center px-1">
+                                 {state === 'FETCHING...' ? '...' : (rank || 'Not Linked')}
+                              </div>
+                           </div>
+                         </div>
+                       )
+                    }}
                   />
                 </div>
               </div>

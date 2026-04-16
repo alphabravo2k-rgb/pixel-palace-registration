@@ -9,10 +9,14 @@ export const PlayerRole = z.enum(['CAPTAIN', 'PARTNER', 'STARTER', 'SUBSTITUTE']
 export const RosterPlayerSchema = z.object({
   player_id: z.string().uuid('player_id must be a valid UUID'),
   role: PlayerRole,
+  ign: z.string().min(1, 'IGN is required'),
   discord: z.string().min(1, 'Discord handle is required'),
   steam: z.string().min(1, 'Steam URL is required'),
+  steam64: z.string().optional().default(''),
   faceit: z.string().min(1, 'FACEIT URL is required'),
-  rank: z.string().default('5'),
+  faceitLevel: z.string().default('N/A'),
+  faceitElo: z.string().default('N/A'),
+  cs2RankLabel: z.string().default('Not Linked'),
 });
 
 // ─── Canonical Submission ─────────────────────────────────────────────────────
@@ -35,7 +39,8 @@ export const CanonicalSchema = z.object({
   metadata: z.object({
     submitted_at: z.string().datetime(),
     source: z.literal('portal_v1'),
-    schema_version: z.literal('1.0'),
+    schema_version: z.literal('1.1'),
     sub_included: z.boolean(),
+    status: z.string().default('VERIFIED'),
   }),
 });

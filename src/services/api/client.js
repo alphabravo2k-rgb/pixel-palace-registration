@@ -50,6 +50,24 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
     return new Promise((resolve) => setTimeout(() => resolve({ success: true }), 1500));
   }
 
+  // ── Soft Ban Check ───────────────────────────────────────────────────────
+  if (tournament.softBanEnabled) {
+    try {
+      const steamIds = canonicalPayload.roster.map(p => p.steam64).filter(Boolean);
+      if (steamIds.length > 0) {
+        const banRes = await fetch(`${tournament.sheetsEndpoint}?action=checkBans&steamIds=${encodeURIComponent(steamIds.join(','))}`);
+        if (banRes.ok) {
+           const banData = await banRes.json();
+           if (banData.hasBans) {
+              canonicalPayload.metadata.status = 'PENDING REVIEW';
+           }
+        }
+      }
+    } catch (e) {
+      console.warn("[Gateway] Soft ban check failed, proceeding safely", e);
+    }
+  }
+
   // ── Phase 1: Flatten for Google Sheets adapter ─────────────────────────
   const flatPayload = flattenForSheets(canonicalPayload);
 
@@ -142,8 +160,20 @@ export const fetchTeams = async (tournamentId) => {
       setTimeout(
         () => resolve({ 
           teams: [
-            { name: "Natus Vincere", tag: "NAVI", logo: "https://i.imgur.com/yourlogo.png", status: "VERIFIED" },
-            { name: "Team Vitality", tag: "VIT", logo: "https://i.imgur.com/yourlogo2.png", status: "VERIFIED" }
+            { 
+              name: "Natus Vincere", tag: "NAVI", logo: "https://i.imgur.com/yourlogo.png", status: "VERIFIED", averageElo: 2840,
+              roster: [
+                 { ign: "s1mple", faceitLevel: "10", faceitElo: "3100" },
+                 { ign: "b1t", faceitLevel: "10", faceitElo: "2580" }
+              ]
+            },
+            { 
+              name: "Team Vitality", tag: "VIT", logo: "https://i.imgur.com/yourlogo2.png", status: "VERIFIED", averageElo: 2750,
+              roster: [
+                 { ign: "ZywOo", faceitLevel: "10", faceitElo: "3200" },
+                 { ign: "Spinx", faceitLevel: "10", faceitElo: "2300" }
+              ]
+            }
           ] 
         }),
         1200
@@ -160,5 +190,36 @@ export const fetchTeams = async (tournamentId) => {
   } catch (err) {
     console.error("Tracker fetch failed:", err);
     return { teams: [], error: true };
+  }
+};
+
+/**
+ * Fetch Bracket data from the Apps Script.
+ * @returns {Promise<{ bracketUrl: string, schedule: string[] }>}
+ */
+export const fetchBracket = async (tournamentId) => {
+  const tournament = tournaments.find((t) => t.id === tournamentId);
+
+  if (!tournament?.sheetsEndpoint) {
+    // Mock data for dev
+    return new Promise((resolve) =>
+      setTimeout(
+        () => resolve({ 
+           bracketUrl: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png", 
+           schedule: ["Quarterfinals: 18:00 GST", "Semifinals: 20:00 GST", "Grand Finals: 22:00 GST"] 
+        }),
+        800
+      )
+    );
+  }
+
+  try {
+    const res = await fetch(
+      `${tournament.sheetsEndpoint}?action=getBracket&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
+    );
+    if (!res.ok) throw new Error("Bracket offline");
+    return res.json();
+  } catch (err) {
+    throw err;
   }
 };

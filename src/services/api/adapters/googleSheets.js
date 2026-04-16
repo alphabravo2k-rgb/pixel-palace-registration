@@ -33,6 +33,8 @@ export const flattenForSheets = (canonicalPayload) => {
     tournament_id,
     submitted_at: metadata.submitted_at,
     sub_included: metadata.sub_included,
+    status: metadata.status, // ADDED for Soft Bans
+
     // Team fields
     team_name: team.team_name,
     team_tag: team.team_tag,
@@ -44,13 +46,19 @@ export const flattenForSheets = (canonicalPayload) => {
   // Flatten roster array → p1Discord, p2Discord, etc.
   roster.forEach((player, idx) => {
     const n = idx + 1;
-    flat[`p${n}Role`]    = player.role;
-    flat[`p${n}Discord`] = player.discord;
-    flat[`p${n}Steam`]   = player.steam;
-    flat[`p${n}Faceit`]  = player.faceit;
-    flat[`p${n}Rank`]    = player.rank;
-    // player_id preserved for any script-side dedup logic
-    flat[`p${n}Id`]      = player.player_id;
+    flat[`p${n}Role`]         = player.role;
+    flat[`p${n}Id`]           = player.player_id;
+    flat[`p${n}IGN`]          = player.ign;
+    flat[`p${n}Discord`]      = player.discord;
+    flat[`p${n}Steam`]        = player.steam;
+    flat[`p${n}Steam64`]      = player.steam64;
+    flat[`p${n}Faceit`]       = player.faceit;
+    flat[`p${n}FaceitLevel`]  = player.faceitLevel;
+    flat[`p${n}FaceitElo`]    = player.faceitElo;
+    flat[`p${n}CS2Rank`]      = player.cs2RankLabel;
+    
+    // Legacy support for backend script if it strictly looks for "Rank" instead of "FaceitLevel"
+    flat[`p${n}Rank`]         = player.faceitLevel;
   });
 
   return flat;

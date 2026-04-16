@@ -29,8 +29,15 @@ export const tournaments = [
       "COMMUNICATION — All players have joined the Pixel Palace Discord server.",
       "VOICE COMMS — All players confirm to join Pixel Voice Channels during their matches.",
       "SCHEDULE — We confirm availability for the registration deadline and all tournament dates."
-    ]
+    ],
+    
+    // Feature flags for Chaos II
+    discordRequired: true,
+    softBanEnabled: true,
+    bracketsEnabled: true,
+    supportsLogoUpload: true,
   },
+
 
   {
     id: "ramadan-league-1",
@@ -177,6 +184,31 @@ export const tournaments = [
   }
 ];
 
-export const getTournamentBySlug = (slug) => {
-  return tournaments.find((t) => t.slug === slug);
+// Fallback configuration for old tournaments so nothing breaks
+const defaultConfig = {
+  discordRequired: false,
+  discordInviteUrl: "https://discord.gg/y6ZW8jHn2Q",
+  softBanEnabled: false,
+  bracketsEnabled: false,
+  tournamentComplete: false,
+  supportsLogoUpload: false,
+  champion: { name: "", tag: "", logo: "" },
+  runnerUp: { name: "", tag: "", logo: "" },
+  
+  // API Keys (empty strings = fallback UI logic is triggered)
+  faceitApiKey: "",       // developers.faceit.com (Required for auto ELO fetch)
+  steamApiKey: "",        // steamcommunity.com/dev/apikey (Required for vanity URL resolving)
+  cloudinaryCloudName: "",
+  cloudinaryUploadPreset: "",
+  discordWebhookUrl: "",  // Integration webhooks 
+  adminPreviewKey: "pixel-palace-internal-2026",
+  
+  playerFields: ["ign", "discord", "steam", "faceit"],
 };
+
+export const getTournamentBySlug = (slug) => {
+  const tournament = tournaments.find((t) => t.slug === slug);
+  if (!tournament) return null;
+  return { ...defaultConfig, ...tournament };
+};
+

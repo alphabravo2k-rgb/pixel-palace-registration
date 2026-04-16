@@ -3,6 +3,8 @@ import { Home } from './pages/Home';
 import { Register } from './pages/Register';
 import { NotFound } from './pages/NotFound';
 
+import { AdminPreview } from './pages/AdminPreview';
+
 import { Footer } from './components/layout/Footer';
 
 function App() {
@@ -12,6 +14,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/register/:tournamentSlug" element={<Register />} />
+          <Route path="/admin/preview/:tournamentSlug" element={<AdminPreview />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
