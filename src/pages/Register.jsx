@@ -371,7 +371,7 @@ export const Register = () => {
               )}
             </div>
           </div>
-        ) : (
+        ) : activeTab === 'tracker' ? (
           /* LIVE ROSTER TRACKER VIEW */
           <div className="max-w-6xl mx-auto">
             <div className="glass-panel p-8 min-h-[600px]">
@@ -548,7 +548,8 @@ export const Register = () => {
               </div>
             )}
           </div>
-        ) : activeTab === 'brackets' && tournament.bracketsEnabled ? (
+        </div>
+      ) : activeTab === 'brackets' && tournament.bracketsEnabled ? (
           /* BRACKETS TAB */
           <div className="max-w-6xl mx-auto xl:max-w-7xl">
             <div className="glass-panel p-8 min-h-[600px]">
