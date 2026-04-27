@@ -72,12 +72,23 @@ export default function TournamentCard({ tournament }) {
 
         {/* Winner Display for Archived Tournaments */}
         {isArchived && tournament.champion && (
-          <div className="mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded p-3 flex items-center gap-3">
-             <Trophy size={20} className="text-yellow-500 shrink-0" />
-             <div className="min-w-0">
-               <div className="text-[9px] text-yellow-500 font-bold tracking-[0.2em] uppercase mb-0.5 font-body">Grand Champions</div>
-               <div className="text-lg font-heading tracking-wider text-white uppercase leading-none truncate">{tournament.champion.name}</div>
-             </div>
+          <div className="mb-4 bg-gradient-to-br from-yellow-900/20 to-black border border-yellow-500/20 rounded overflow-hidden">
+            <div className="px-3 py-2 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Trophy size={14} className="text-yellow-500 shrink-0" />
+                <div>
+                  <div className="text-[8px] text-yellow-500/70 font-bold tracking-[0.2em] uppercase font-body">Champions</div>
+                  <div className="text-base font-heading tracking-wider text-yellow-300 uppercase leading-none truncate">{tournament.champion.name}</div>
+                </div>
+              </div>
+              {tournament.champion.score && <div className="text-yellow-500/60 font-heading text-sm tracking-widest shrink-0">{tournament.champion.score}</div>}
+            </div>
+            {tournament.runnerUp && (
+              <div className="border-t border-white/5 px-3 py-1.5 flex items-center gap-2 bg-black/30">
+                <div className="text-[8px] text-zinc-500 font-bold tracking-[0.2em] uppercase font-body">Runner Up</div>
+                <div className="text-sm font-heading tracking-wider text-zinc-400 uppercase leading-none truncate">{tournament.runnerUp.name}</div>
+              </div>
+            )}
           </div>
         )}
 

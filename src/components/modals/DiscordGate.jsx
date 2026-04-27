@@ -6,16 +6,19 @@ export const DiscordGate = ({ tournament }) => {
   const [isChecked, setIsChecked] = useState(false);
   const [shake, setShake] = useState(false);
 
+  const isArchived = tournament?.status === 'ARCHIVED';
   const storageKey = `discord-gate-${tournament?.id}`;
 
   useEffect(() => {
+    // Archived tournaments skip the Discord gate entirely — no registration happening
+    if (isArchived) return;
     if (tournament?.discordRequired) {
       const hasPassed = localStorage.getItem(storageKey);
       if (!hasPassed) {
         setIsOpen(true);
       }
     }
-  }, [tournament, storageKey]);
+  }, [tournament, storageKey, isArchived]);
 
   const handleProceed = () => {
     if (isChecked) {
