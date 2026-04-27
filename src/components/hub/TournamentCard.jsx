@@ -18,7 +18,7 @@ export default function TournamentCard({ tournament }) {
       const status = getTimeStatus(tournament.tournamentDate);
       setTimeText(status?.expired ? "STARTING NOW" : `BEGINS IN ${status?.text || 'TBD'}`);
     } else {
-      setTimeText("TOURNAMENT CONCLUDED");
+      setTimeText(`CONCLUDED ${tournament.displayDate || ''}`);
     }
   }, [tournament, isLive, isUpcoming]);
 

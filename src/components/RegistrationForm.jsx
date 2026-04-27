@@ -55,6 +55,23 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Custom Validation
+    for (let i = 1; i <= 6; i++) {
+      if (i === 6 && !subActive) continue;
+      const faceit = formData[`p${i}Faceit`];
+      const steam = formData[`p${i}Steam`];
+      
+      if (faceit && !faceit.includes('faceit.com')) {
+        dispatch({ type: 'ERROR', payload: `Player ${i} FACEIT URL is invalid. Must contain faceit.com.` });
+        return;
+      }
+      if (steam && !steam.includes('steamcommunity.com')) {
+        dispatch({ type: 'ERROR', payload: `Player ${i} Steam URL is invalid. Must contain steamcommunity.com.` });
+        return;
+      }
+    }
+
     dispatch({ type: 'START' });
 
     // Build the Canonical Payload mapping

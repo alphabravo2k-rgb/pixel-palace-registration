@@ -6,7 +6,8 @@ import { TournamentForm } from '../components/forms/TournamentForm';
 import { TournamentInfo } from '../components/registration/TournamentInfo';
 import { formatEsportsDate } from '../utils/dateHelper';
 import { DiscordGate } from '../components/modals/DiscordGate';
-import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft, Trophy, Medal } from 'lucide-react';
+import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft, Trophy, Medal, Share2, Check } from 'lucide-react';
+import { TeamProfileModal } from '../components/modals/TeamProfileModal';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
@@ -23,6 +24,7 @@ export const Register = () => {
   const [bracketData, setBracketData] = useState(null);
   const [expandedTeamIdx, setExpandedTeamIdx] = useState(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const [failedMapImages, setFailedMapImages] = useState(new Set());
 
   const handleMapImgError = useCallback((mapName) => {
@@ -31,6 +33,13 @@ export const Register = () => {
   
   // Timer state
   const [timeLeft, setTimeLeft] = useState('LOADING');
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (!tournament) return;
@@ -103,7 +112,9 @@ export const Register = () => {
 
   const mapAccentClasses = ['mc-green', 'mc-orange', 'mc-yellow', 'mc-red', 'mc-amber', 'mc-cyan'];
 
-  const renderRegister = () => (
+  const renderRegister = () => {
+    console.log('[Render] Register Tab');
+    return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
       {/* LEFT SIDEBAR */}
       <div className="lg:col-span-4 space-y-8">
@@ -198,15 +209,24 @@ export const Register = () => {
         ) : <TournamentForm tournament={tournament} />}
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderResults = () => (
+  const renderResults = () => {
+    console.log('[Render] Results Tab');
+    return (
     <div className="max-w-6xl mx-auto space-y-8">
       {/* Hero Winner Banner */}
       <div className="glass-panel overflow-hidden relative border-t-4 border-t-yellow-500">
         <div className="absolute inset-0 bg-gradient-to-br from-yellow-900/20 via-black to-black pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 bg-yellow-500/10 blur-[80px] pointer-events-none" />
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
+        <div className="absolute top-4 right-4 z-20">
+          <button onClick={handleShare} className="flex items-center gap-2 text-xs font-bold font-body uppercase tracking-widest text-zinc-400 hover:text-white bg-black/50 hover:bg-black/80 px-3 py-1.5 rounded border border-white/10 transition-all shadow-lg">
+            {copied ? <Check className="w-3 h-3 text-green-400" /> : <Share2 className="w-3 h-3" />}
+            {copied ? <span className="text-green-400">COPIED!</span> : "SHARE RESULTS"}
+          </button>
+        </div>
         <div className="relative z-10 p-8 md:p-12">
           <div className="text-[10px] text-yellow-500/70 font-bold uppercase tracking-[0.4em] font-body mb-4 flex items-center gap-2">
             <Trophy className="w-3 h-3" /> Grand Final // {tournament.displayDate} {tournament.displayYear}
@@ -304,6 +324,36 @@ export const Register = () => {
         </div>
       </div>
 
+      {/* Map Pool Final Overlay */}
+      {tournament.maps && tournament.maps.length > 0 && (
+        <div className="glass-panel p-6">
+          <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] font-body mb-5 flex items-center gap-2">
+            <Layers className="w-4 h-4 text-zinc-400" /> Grand Final Map Veto
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+            {tournament.maps.map((mapName, i) => {
+              const playedMatch = tournament.champion?.matchHistory?.find(m => m.map.toLowerCase() === mapName.toLowerCase());
+              const isPlayed = !!playedMatch;
+              
+              return (
+                <div key={mapName} className={`relative overflow-hidden rounded border transition-all ${isPlayed ? 'border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)]' : 'border-white/5 opacity-40 grayscale hover:opacity-80 hover:grayscale-0'}`}>
+                  <div className="absolute inset-0 bg-black/60 z-10" />
+                  <img src={`https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapName.toLowerCase()}.png`} alt={mapName} className="w-full h-16 object-cover" onError={(e) => { e.target.style.display='none'; }} />
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2">
+                    <span className="text-sm font-bold uppercase font-heading tracking-widest text-white drop-shadow-md">{mapName}</span>
+                    {isPlayed ? (
+                      <span className="text-[8px] bg-neon-cyan text-black px-2 py-0.5 mt-1 rounded font-bold tracking-widest">PLAYED</span>
+                    ) : (
+                      <span className="text-[8px] bg-red-500/80 text-white px-2 py-0.5 mt-1 rounded font-bold tracking-widest">VETOED</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Full standings table from teams data */}
       <div className="glass-panel p-8">
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
@@ -330,21 +380,45 @@ export const Register = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderTracker = () => (
+  const renderTracker = () => {
+    console.log('[Render] Tracker Tab');
+    return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-panel p-8 min-h-[600px]">
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
         <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-          <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase">Registered Teams</h2>
-          <button onClick={handleManualRefresh} disabled={isRefreshing} className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body disabled:opacity-50">
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'REFRESHING...' : 'REFRESH LIST'}
-          </button>
+          <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase">{isArchived ? 'All Teams' : 'Registered Teams'}</h2>
+          {!isArchived && (
+            <button onClick={handleManualRefresh} disabled={isRefreshing} className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body disabled:opacity-50">
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'REFRESHING...' : 'REFRESH LIST'}
+            </button>
+          )}
         </div>
         {!teams ? (
-          <div className="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
-            <Loader2 className="w-12 h-12 animate-spin mb-6 text-neon-pink drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]" /><span className="font-bold tracking-[0.3em] uppercase text-sm font-body">Fetching Database...</span>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-60">
+            {[1,2,3,4,5,6].map((idx) => (
+              <div key={idx} className="glass-panel p-0 overflow-hidden border-white/5 animate-pulse">
+                <div className="flex items-stretch h-20 bg-black/40 relative">
+                  <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5">
+                    <div className="w-12 h-12 rounded-full bg-white/5"></div>
+                  </div>
+                  <div className="flex-grow p-4 flex flex-col justify-center">
+                    <div className="flex gap-2 mb-2">
+                      <div className="h-3 w-12 bg-neon-cyan/20 rounded"></div>
+                      <div className="h-3 w-8 bg-white/10 rounded"></div>
+                    </div>
+                    <div className="h-5 w-48 bg-white/10 rounded"></div>
+                  </div>
+                </div>
+                <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
+                  <div className="h-2 w-24 bg-white/10 rounded"></div>
+                  <div className="h-2 w-16 bg-white/10 rounded"></div>
+                </div>
+              </div>
+            ))}
           </div>
         ) : teams === 'error' ? (
           <div className="text-center py-32 text-red-500 flex flex-col items-center justify-center bg-red-950/10 border border-dashed border-red-500/20 rounded-md">
@@ -357,13 +431,8 @@ export const Register = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {teams.map((team, idx) => (
-              <div key={`${team.name}-${idx}`} className={`glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] ${expandedTeamIdx === idx ? 'border-neon-cyan/50' : 'hover:border-neon-cyan/20 cursor-pointer'}`} onClick={() => expandedTeamIdx !== idx && team.roster?.length > 0 && setExpandedTeamIdx(idx)}>
+              <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" onClick={() => team.roster?.length > 0 && setSelectedTeam(team)}>
                 <div className="flex items-stretch h-20 bg-black/40 relative">
-                  {expandedTeamIdx === idx && (
-                    <button type="button" className="absolute top-2 right-2 text-zinc-500 hover:text-white transition-colors z-20" onClick={(e) => { e.stopPropagation(); setExpandedTeamIdx(null); }}>
-                      <span className="text-[10px] font-bold uppercase tracking-widest bg-black/50 px-2 py-1 border border-white/10 rounded">CLOSE</span>
-                    </button>
-                  )}
                   <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
                     <img src={team.logo} alt={team.name} className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500" onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }} />
                   </div>
@@ -375,21 +444,9 @@ export const Register = () => {
                     <h4 className="text-lg font-heading text-white truncate leading-none uppercase tracking-wider group-hover/team:text-neon-cyan transition-colors">{team.name}</h4>
                   </div>
                 </div>
-                {expandedTeamIdx === idx && team.roster?.length > 0 && (
-                  <div className="bg-black/80 border-t border-white/5 p-4 animate-in slide-in-from-top-4 duration-300">
-                    <div className="space-y-2">
-                      {team.roster.map((p, i) => (
-                        <div key={i} className="flex justify-between items-center bg-black/40 border border-white/5 p-2 rounded">
-                          <div className="flex items-center gap-3"><div className="w-1 h-1 bg-neon-cyan rounded-full" /><span className="text-xs font-bold text-white uppercase tracking-wider font-body">{p.ign || p.discord || 'PLAYER'}</span></div>
-                          <div className="flex gap-2 text-[10px] font-bold uppercase tracking-widest font-body"><span className="bg-zinc-900 text-zinc-400 px-2 py-1 rounded border border-zinc-700">LVL {p.faceitLevel || '?'}</span><span className="bg-neon-cyan/10 text-neon-cyan px-2 py-1 rounded border border-neon-cyan/20">ELO {p.faceitElo || 'N/A'}</span></div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
                 <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
                   <div className="flex items-center gap-2"><div className={`w-1.5 h-1.5 rounded-full animate-pulse ${team.status === 'PENDING REVIEW' ? 'bg-yellow-500' : 'bg-green-500'}`} /><span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.2em] font-body">STATUS: {team.status || 'VERIFIED'}</span></div>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">{team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}{team.roster?.length > 0 && expandedTeamIdx !== idx && <span className="text-zinc-600">| CLICK TO EXPAND</span>}</span>
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">{team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}{team.roster?.length > 0 && <span className="text-zinc-600">| CLICK FOR ROSTER</span>}</span>
                 </div>
               </div>
             ))}
@@ -484,9 +541,12 @@ export const Register = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderBrackets = () => (
+  const renderBrackets = () => {
+    console.log('[Render] Brackets Tab');
+    return (
     <div className="max-w-6xl mx-auto xl:max-w-7xl">
       <div className="glass-panel p-8 min-h-[600px]">
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
@@ -515,9 +575,18 @@ export const Register = () => {
             </div>
             <div className="lg:w-80 flex-shrink-0 flex flex-col gap-6">
               <div className="bg-black/50 border border-white/10 rounded p-6">
-                <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">Schedule</h3>
+                <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">{isArchived ? "Final Stage" : "Schedule"}</h3>
                 <ul className="space-y-3 font-body text-sm font-bold text-zinc-300">
-                  {(bracketData && bracketData.schedule) ? bracketData.schedule.map((item, i) => (<li key={i} className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>{item}</li>)) : <li className="text-zinc-500 opacity-60 font-medium">TBA</li>}
+                  {isArchived ? (
+                    <>
+                      <li className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>Grand Final: {tournament.champion?.name || "TBD"} vs {tournament.runnerUp?.name || "TBD"}</li>
+                      {tournament.thirdPlace && <li className="flex gap-2 items-start opacity-70"><div className="w-1.5 h-1.5 bg-amber-600 rounded-full mt-1.5 shrink-0"></div>Semifinalists: {tournament.thirdPlace?.name} / {tournament.fourthPlace?.name}</li>}
+                    </>
+                  ) : (bracketData && bracketData.schedule) ? (
+                    bracketData.schedule.map((item, i) => (<li key={i} className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>{item}</li>))
+                  ) : (
+                    <li className="text-zinc-500 opacity-60 font-medium">TBA</li>
+                  )}
                 </ul>
               </div>
             </div>
@@ -525,11 +594,14 @@ export const Register = () => {
         )}
       </div>
     </div>
-  );
+    );
+  };
 
+  console.log('[Render] Register Page Layout', { activeTab, isArchived, tournamentSlug });
   return (
     <>
       <DiscordGate tournament={tournament} />
+      <TeamProfileModal team={selectedTeam} onClose={() => setSelectedTeam(null)} />
       <div className="app-bg-void"></div>
       <div className="app-bg-scanlines"></div>
 
@@ -592,7 +664,7 @@ export const Register = () => {
             <a href="https://www.twitch.tv/pXpLgg" target="_blank" rel="noreferrer" className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20 transition-all duration-300"><Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" /><span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span></a>
           </div>
 
-          <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0">
+          <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0 sticky top-4 z-40 bg-[#050507]/90 backdrop-blur-md pt-4 rounded-t-xl border-t border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
             <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10"></div>
             {tournament.tournamentComplete && (
               <button onClick={() => setActiveTab('results')} className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400' : 'text-white/40 hover:text-white/80'}`}>
