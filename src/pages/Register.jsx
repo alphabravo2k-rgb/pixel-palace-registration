@@ -268,16 +268,32 @@ export const Register = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
               
               {/* Champion */}
-              <div className="bg-gradient-to-br from-yellow-900/30 to-black border border-yellow-500/30 p-6 rounded relative lg:col-span-2">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 blur-[30px]" />
-                <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center justify-between">
-                  <div className="flex items-center gap-2"><Trophy className="w-4 h-4" /> Grand Champion</div>
-                  {tournament.champion?.score && <span className="bg-yellow-500/20 border border-yellow-500/50 px-2 py-0.5 rounded text-yellow-400">Final Score: {tournament.champion.score}</span>}
+              <div className="bg-gradient-to-br from-yellow-900/30 to-black border border-yellow-500/30 p-6 rounded relative lg:col-span-2 shimmer-effect flex flex-col justify-between">
+                <div>
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 blur-[30px]" />
+                  <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center justify-between relative z-20">
+                    <div className="flex items-center gap-2"><Trophy className="w-4 h-4" /> Grand Champion</div>
+                    {tournament.champion?.score && <span className="bg-yellow-500/20 border border-yellow-500/50 px-2 py-0.5 rounded text-yellow-400">Final Score: {tournament.champion.score}</span>}
+                  </div>
+                  <div className="flex items-center gap-4 relative z-20">
+                    <div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-yellow-500/50 overflow-hidden shrink-0"><img src={tournament.champion?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png"} alt="Champion" className="w-16 h-16 object-contain relative z-20" /></div>
+                    <div><div className="text-yellow-500 text-xs font-bold uppercase tracking-widest border border-yellow-500/30 px-2 py-0.5 rounded-sm inline-block mb-1 relative z-20">{tournament.champion?.tag || "1ST PLACE"}</div><h3 className="text-3xl md:text-4xl text-white font-heading uppercase tracking-widest leading-none drop-shadow-[0_0_10px_rgba(234,179,8,0.5)] relative z-20">{tournament.champion?.name || "TBD"}</h3></div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-4">
-                  <div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-yellow-500/50 overflow-hidden shrink-0"><img src={tournament.champion?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png"} alt="Champion" className="w-16 h-16 object-contain" /></div>
-                  <div><div className="text-yellow-500 text-xs font-bold uppercase tracking-widest border border-yellow-500/30 px-2 py-0.5 rounded-sm inline-block mb-1">{tournament.champion?.tag || "1ST PLACE"}</div><h3 className="text-3xl md:text-4xl text-white font-heading uppercase tracking-widest leading-none drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{tournament.champion?.name || "TBD"}</h3></div>
-                </div>
+                {/* Match History Breakdown */}
+                {tournament.champion?.matchHistory && (
+                  <div className="mt-6 pt-6 border-t border-yellow-500/20 relative z-20">
+                    <div className="text-[9px] text-yellow-500/70 font-bold uppercase tracking-[0.2em] font-body mb-3">Grand Final - Map Breakdown</div>
+                    <div className="flex gap-2">
+                      {tournament.champion.matchHistory.map((match, i) => (
+                        <div key={i} className={`flex-1 border p-2 rounded text-center ${match.win ? 'bg-yellow-500/10 border-yellow-500/40 text-yellow-400 shadow-[0_0_15px_rgba(234,179,8,0.15)]' : 'bg-red-500/5 border-red-500/20 text-red-400/80'}`}>
+                          <div className="text-[9px] uppercase tracking-widest font-body opacity-80">{match.map}</div>
+                          <div className="text-sm font-bold font-heading tracking-widest">{match.score} {match.win ? 'W' : 'L'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               
               {/* Runner Up */}
@@ -313,6 +329,23 @@ export const Register = () => {
               )}
 
             </div>
+
+            {/* Tournament Statistics Summary Bar */}
+            <div className="mt-8 flex flex-col md:flex-row bg-black/40 border border-white/5 rounded divide-y md:divide-y-0 md:divide-x divide-white/10 relative z-10">
+              <div className="flex-1 p-4 flex items-center justify-between md:justify-center gap-4">
+                <div className="text-zinc-500 font-bold uppercase tracking-[0.2em] font-body text-[10px]">Format</div>
+                <div className="text-neon-cyan font-heading tracking-widest text-xl">{tournament.format} {tournament.gameMode}</div>
+              </div>
+              <div className="flex-1 p-4 flex items-center justify-between md:justify-center gap-4">
+                <div className="text-zinc-500 font-bold uppercase tracking-[0.2em] font-body text-[10px]">Prize Pool Awarded</div>
+                <div className="text-green-400 font-heading tracking-widest text-xl drop-shadow-[0_0_8px_rgba(74,222,128,0.4)]">{tournament.prizePool}</div>
+              </div>
+              <div className="flex-1 p-4 flex items-center justify-between md:justify-center gap-4">
+                <div className="text-zinc-500 font-bold uppercase tracking-[0.2em] font-body text-[10px]">Total Competitors</div>
+                <div className="text-white font-heading tracking-widest text-xl">{tournament.maxTeams} Teams</div>
+              </div>
+            </div>
+
           </div>
         )}
       </div>
