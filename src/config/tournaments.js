@@ -205,6 +205,7 @@ export const tournaments = [
 const defaultConfig = {
   discordRequired: false,
   discordInviteUrl: "https://discord.gg/y6ZW8jHn2Q",
+  sheetsEndpoint: "https://script.google.com/macros/s/AKfycbyaIDyEwLl7DD_1VS4Rd0QtLE8o9TPUJnrn-uHGZKemnX7x8ncSGEnjJf086F-JTCaF/exec",
   softBanEnabled: false,
   bracketsEnabled: false,
   tournamentComplete: false,
