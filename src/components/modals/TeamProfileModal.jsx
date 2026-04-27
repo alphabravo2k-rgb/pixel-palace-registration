@@ -1,7 +1,9 @@
 import React from 'react';
 import { X, ShieldAlert, Crosshair, Trophy } from 'lucide-react';
+import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
 export function TeamProfileModal({ team, onClose }) {
+  useKeyboardShortcut('Escape', onClose);
   if (!team) return null;
 
   return (

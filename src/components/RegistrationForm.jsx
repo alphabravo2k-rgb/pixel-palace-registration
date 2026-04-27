@@ -5,6 +5,7 @@ import { submitToGateway } from '../services/api/client';
 import { submissionReducer, SUBMISSION_STATES } from '../services/state/submissionMachine';
 import { useToast } from '../contexts/ToastContext';
 import { useAudio } from '../hooks/useAudio';
+import { Magnetic } from './ui/Magnetic';
 
 export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }) {
   const [state, dispatch] = useReducer(submissionReducer, { status: SUBMISSION_STATES.IDLE, error: null });
@@ -278,9 +279,11 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
             </label>
           </div>
           
-          <button onClick={playClick} onMouseEnter={playHover} type="submit" disabled={state.status === SUBMISSION_STATES.SUBMITTING || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
-            {state.status === SUBMISSION_STATES.SUBMITTING ? <><Loader2 className="animate-spin" /> TRANSMITTING...</> : <span>SUBMIT REGISTRATION</span>}
-          </button>
+          <Magnetic>
+            <button onClick={playClick} onMouseEnter={playHover} type="submit" disabled={state.status === SUBMISSION_STATES.SUBMITTING || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
+              {state.status === SUBMISSION_STATES.SUBMITTING ? <><Loader2 className="animate-spin" /> TRANSMITTING...</> : <span>SUBMIT REGISTRATION</span>}
+            </button>
+          </Magnetic>
         </div>
       </div>
     </form>
