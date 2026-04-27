@@ -38,21 +38,32 @@ export const ToastProvider = ({ children }) => {
           <div 
             key={toast.id}
             className={`
-              pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-lg border shadow-2xl
-              backdrop-blur-md animate-in slide-in-from-right-8 fade-in duration-300
-              ${toast.type === 'success' ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : ''}
-              ${toast.type === 'error' ? 'bg-red-500/10 border-red-500/30 text-red-500' : ''}
-              ${toast.type === 'info' ? 'bg-white/5 border-white/10 text-white' : ''}
-              ${toast.type === 'warning' ? 'bg-yellow-500/10 border-yellow-500/30 text-yellow-500' : ''}
+              relative pointer-events-auto flex items-center gap-3 px-6 py-4 rounded overflow-hidden
+              backdrop-blur-xl animate-in slide-in-from-right-10 fade-in duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)]
+              border-l-4
+              ${toast.type === 'success' ? 'bg-black/80 border-l-neon-cyan border-white/5 text-neon-cyan' : ''}
+              ${toast.type === 'error' ? 'bg-black/80 border-l-red-500 border-white/5 text-red-500' : ''}
+              ${toast.type === 'info' ? 'bg-black/80 border-l-white border-white/5 text-white' : ''}
+              ${toast.type === 'warning' ? 'bg-black/80 border-l-yellow-500 border-white/5 text-yellow-500' : ''}
             `}
           >
-            <div className="font-mono text-sm tracking-wide">{toast.message}</div>
+            <div className="font-heading text-xs uppercase tracking-[0.2em]">{toast.message}</div>
             <button 
               onClick={() => removeToast(toast.id)}
-              className="ml-4 opacity-50 hover:opacity-100 transition-opacity"
+              className="ml-4 opacity-40 hover:opacity-100 transition-opacity text-[10px]"
             >
-              ✕
+              [X]
             </button>
+            {/* Progress Bar Animation */}
+            <div 
+              className={`absolute bottom-0 left-0 h-0.5 w-full origin-left animate-toast-progress
+                ${toast.type === 'success' ? 'bg-neon-cyan' : ''}
+                ${toast.type === 'error' ? 'bg-red-500' : ''}
+                ${toast.type === 'info' ? 'bg-white' : ''}
+                ${toast.type === 'warning' ? 'bg-yellow-500' : ''}
+              `}
+              style={{ animationDuration: '4000ms' }}
+            />
           </div>
         ))}
       </div>

@@ -23,7 +23,7 @@ export const tournaments = [
     playersPerTeam: 2,
     substitutes: { min: 0, max: 1 },
     maps: ["Poseidon", "Sanctum", "Overpass", "Vertigo", "Nuke", "Inferno"],
-    sheetsEndpoint: "https://script.google.com/macros/s/AKfycbxXDks2a_SnYOgnMCMBUXaCjoZruIviQoPsRjQpA31ZiejpL_Au8zFHMheHaI6XuPZL/exec",
+    sheetsEndpoint: "https://script.google.com/macros/s/AKfycbyaIDyEwLl7DD_1VS4Rd0QtLE8o9TPUJnrn-uHGZKemnX7x8ncSGEnjJf086F-JTCaF/exec",
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our duo acknowledges that Akros Anti-Cheat must be installed by all players.",
       "COMMUNICATION — All players have joined the Pixel Palace Discord server.",

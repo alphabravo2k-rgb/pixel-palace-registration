@@ -168,6 +168,15 @@
   }
 
   /* PREMIUM LOGO ANIMATION */
+  @keyframes toast-progress {
+    from { transform: scaleX(1); }
+    to { transform: scaleX(0); }
+  }
+
+  .animate-toast-progress {
+    animation: toast-progress linear forwards;
+  }
+
   @keyframes logo-breathe {
     0%, 100% { 
       transform: scale(1); 
