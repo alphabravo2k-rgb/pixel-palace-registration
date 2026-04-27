@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarX, Trophy, Users, Award, Target, History, Globe } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { tournaments } from '../config/tournaments';
 import TournamentFilterTabs from '../components/hub/TournamentFilterTabs';
 import TournamentCard from '../components/hub/TournamentCard';
 import { CountUp } from '../components/ui/CountUp';
+import { Magnetic } from '../components/ui/Magnetic';
 
 export const Home = () => {
   // Check if any live tournaments exist to set intelligent default tab
@@ -44,9 +46,14 @@ export const Home = () => {
           alt="Pixel Palace Logo" 
           className="w-32 h-32 md:w-40 md:h-40 object-contain mb-6 drop-shadow-[0_0_20px_rgba(0,240,255,0.4)] animate-logo-breathe"
         />
-        <h1 className="text-5xl md:text-7xl font-black text-white italic tracking-tighter font-heading uppercase drop-shadow-2xl leading-none">
-          PIXEL <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-white to-neon-cyan">PALACE</span>
-        </h1>
+        <div className="glitch-wrapper mb-6">
+          <h1 
+            className="text-5xl md:text-7xl font-black text-white italic tracking-tighter font-heading uppercase drop-shadow-2xl leading-none glitch"
+            data-text="PIXEL PALACE"
+          >
+            PIXEL PALACE
+          </h1>
+        </div>
         <p className="text-zinc-400 font-body text-sm md:text-base uppercase tracking-[0.3em] mt-4 font-bold">
           The Premier CS2 Tournament Circuit
         </p>
@@ -72,6 +79,16 @@ export const Home = () => {
             <Globe className="w-4 h-4 text-neon-pink" />
             <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={4} /></span> Regions</span>
           </div>
+        </div>
+
+        <div className="mt-12">
+          <Magnetic>
+            <Link to="/tournaments" className="inline-block">
+              <button className="bg-white text-black font-black uppercase tracking-widest px-8 py-3 rounded-sm hover:bg-neon-cyan transition-colors">
+                Explore Circuits
+              </button>
+            </Link>
+          </Magnetic>
         </div>
       </div>
 
