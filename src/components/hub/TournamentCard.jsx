@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Award, Users, Globe, Target, Clock } from 'lucide-react';
+import { Award, Users, Globe, Target, Clock, Trophy } from 'lucide-react';
 import { getTimeStatus } from '../../utils/dateHelper';
 
 export default function TournamentCard({ tournament }) {
@@ -27,9 +27,9 @@ export default function TournamentCard({ tournament }) {
                     : isUpcoming ? 'hover:border-[var(--neon-cyan)] shadow-[0_0_20px_rgba(0,240,255,0)] hover:shadow-[0_0_20px_rgba(0,240,255,0.3)]'
                     : 'border-white/5';
   
-  const opacity = isArchived ? 'opacity-50 grayscale-[50%]' : 'opacity-100';
-  const transformHover = isArchived ? '' : 'hover:-translate-y-1 hover:scale-[1.02]';
-  const targetRoute = isArchived ? '#' : `/register/${tournament.slug}`;
+  const opacity = isArchived ? 'opacity-80 grayscale-[30%]' : 'opacity-100';
+  const transformHover = 'hover:-translate-y-1 hover:scale-[1.02]';
+  const targetRoute = `/register/${tournament.slug}`;
 
   return (
     <Link 
@@ -69,6 +69,17 @@ export default function TournamentCard({ tournament }) {
         <h3 className="font-heading text-3xl text-white leading-none mb-4">
           {tournament.name}
         </h3>
+
+        {/* Winner Display for Archived Tournaments */}
+        {isArchived && tournament.champion && (
+          <div className="mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded p-3 flex items-center gap-3">
+             <Trophy size={20} className="text-yellow-500 shrink-0" />
+             <div className="min-w-0">
+               <div className="text-[9px] text-yellow-500 font-bold tracking-[0.2em] uppercase mb-0.5 font-body">Grand Champions</div>
+               <div className="text-lg font-heading tracking-wider text-white uppercase leading-none truncate">{tournament.champion.name}</div>
+             </div>
+          </div>
+        )}
 
         {/* 2x2 Dense Metadata Grid */}
         <div className="grid grid-cols-2 gap-4 mb-5">

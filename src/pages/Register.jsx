@@ -11,7 +11,11 @@ import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download,
 export const Register = () => {
   const { tournamentSlug } = useParams();
   const tournament = getTournamentBySlug(tournamentSlug);
-  const [activeTab, setActiveTab] = useState('register');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tournament?.status === 'ARCHIVED' && tournament?.bracketsEnabled) return 'brackets';
+    if (tournament?.status === 'ARCHIVED') return 'teams';
+    return 'register';
+  });
   const [slots, setSlots] = useState(null);
   const [teams, setTeams] = useState(null);
   const [bracketData, setBracketData] = useState(null);
