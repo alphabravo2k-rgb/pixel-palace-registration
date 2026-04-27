@@ -73,10 +73,15 @@ export function TeamProfileModal({ team, onClose }) {
             {team.roster?.map((p, i) => (
               <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 blur-[20px] rounded-full group-hover:bg-neon-cyan/10 transition-colors" />
-                <div className="flex items-center gap-3 mb-3 relative z-10">
-                  <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${i === 0 ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
-                  <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
-                    {p.ign || p.discord || 'PLAYER'}
+                <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
+                    <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
+                      {p.ign || p.discord || 'PLAYER'}
+                    </span>
+                  </div>
+                  <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
+                    {p.role || 'Player'}
                   </span>
                 </div>
                 <div className="flex flex-col gap-2 relative z-10">
@@ -88,6 +93,18 @@ export function TeamProfileModal({ team, onClose }) {
                     <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
                     <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'N/A'}</span>
                   </div>
+                  {p.rankBadge && (
+                    <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">CS2 Rank</span>
+                      <span className="text-[10px] text-amber-400 font-bold font-body">{p.rankBadge}</span>
+                    </div>
+                  )}
+                  {p.kd && (
+                    <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Win / KD</span>
+                      <span className="text-[10px] text-green-400 font-bold font-body">{p.winRate || 'N/A'} | {p.kd}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
