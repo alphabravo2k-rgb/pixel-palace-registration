@@ -42,14 +42,14 @@ export const tournaments = [
     champion: { 
       name: "come mid", 
       score: "2-1",
-      players: ["Sparrrow.", "zeee"],
+      players: ["SultaaN--", "-soulM8"],
       matchHistory: [
         { map: "Inferno", score: "5-9", win: false },
         { map: "Poseidon", score: "9-6", win: true },
         { map: "Overpass", score: "9-4", win: true }
       ]
     },
-    runnerUp: { name: "GN3", players: ["g3n3sis", "n3x"] },
+    runnerUp: { name: "GN3", players: ["LaGGer7-", "-vapezflyy"] },
     thirdPlace: { name: "patties" },
     fourthPlace: { name: "Team BackBehind" },
     bracketEmbedUrl: "https://challonge.com/ppwc2026/module",
