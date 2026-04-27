@@ -265,9 +265,53 @@ export const Register = () => {
           <div className="glass-panel p-8 mt-8 border-t-4 border-t-yellow-500 overflow-hidden relative group">
             <div className="absolute top-0 right-0 w-64 h-64 bg-yellow-500/10 blur-[100px] rounded-full point-events-none" />
             <h2 className="text-3xl text-white font-heading tracking-wider leading-none uppercase mb-8 flex items-center gap-3"><Trophy className="w-8 h-8 text-yellow-500" /> TOURNAMENT RESULTS</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 relative z-10">
-              <div className="bg-gradient-to-br from-yellow-900/30 to-black border border-yellow-500/30 p-6 rounded relative"><div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 blur-[30px]" /><div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2"><Trophy className="w-4 h-4" /> Grand Champion</div><div className="flex items-center gap-4"><div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-yellow-500/50 overflow-hidden shrink-0"><img src={tournament.champion?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png"} alt="Champion" className="w-16 h-16 object-contain" /></div><div><div className="text-yellow-500 text-xs font-bold uppercase tracking-widest border border-yellow-500/30 px-2 py-0.5 rounded-sm inline-block mb-1">{tournament.champion?.tag || "WIN"}</div><h3 className="text-3xl text-white font-heading uppercase tracking-widest leading-none drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{tournament.champion?.name || "TBD"}</h3></div></div></div>
-              <div className="bg-gradient-to-br from-zinc-800/30 to-black border border-zinc-500/30 p-6 rounded relative"><div className="absolute top-0 right-0 w-16 h-16 bg-zinc-500/20 blur-[30px]" /><div className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2"><Medal className="w-4 h-4" /> Runner Up</div><div className="flex items-center gap-4"><div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-zinc-600 overflow-hidden shrink-0"><img src={tournament.runnerUp?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png"} alt="Runner Up" className="w-16 h-16 object-contain grayscale opacity-80" /></div><div><div className="text-zinc-400 text-xs font-bold uppercase tracking-widest border border-zinc-600 px-2 py-0.5 rounded-sm inline-block mb-1">{tournament.runnerUp?.tag || "2ND"}</div><h3 className="text-2xl text-zinc-300 font-heading uppercase tracking-widest leading-none">{tournament.runnerUp?.name || "TBD"}</h3></div></div></div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              
+              {/* Champion */}
+              <div className="bg-gradient-to-br from-yellow-900/30 to-black border border-yellow-500/30 p-6 rounded relative lg:col-span-2">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-yellow-500/20 blur-[30px]" />
+                <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center justify-between">
+                  <div className="flex items-center gap-2"><Trophy className="w-4 h-4" /> Grand Champion</div>
+                  {tournament.champion?.score && <span className="bg-yellow-500/20 border border-yellow-500/50 px-2 py-0.5 rounded text-yellow-400">Final Score: {tournament.champion.score}</span>}
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-20 h-20 rounded bg-black flex items-center justify-center border border-yellow-500/50 overflow-hidden shrink-0"><img src={tournament.champion?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png"} alt="Champion" className="w-16 h-16 object-contain" /></div>
+                  <div><div className="text-yellow-500 text-xs font-bold uppercase tracking-widest border border-yellow-500/30 px-2 py-0.5 rounded-sm inline-block mb-1">{tournament.champion?.tag || "1ST PLACE"}</div><h3 className="text-3xl md:text-4xl text-white font-heading uppercase tracking-widest leading-none drop-shadow-[0_0_10px_rgba(234,179,8,0.5)]">{tournament.champion?.name || "TBD"}</h3></div>
+                </div>
+              </div>
+              
+              {/* Runner Up */}
+              <div className="bg-gradient-to-br from-zinc-800/30 to-black border border-zinc-500/30 p-6 rounded relative">
+                <div className="absolute top-0 right-0 w-16 h-16 bg-zinc-500/20 blur-[30px]" />
+                <div className="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2"><Medal className="w-4 h-4" /> Runner Up</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded bg-black flex items-center justify-center border border-zinc-600 overflow-hidden shrink-0"><img src={tournament.runnerUp?.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png"} alt="Runner Up" className="w-12 h-12 object-contain grayscale opacity-80" /></div>
+                  <div><div className="text-zinc-400 text-[10px] font-bold uppercase tracking-widest border border-zinc-600 px-2 py-0.5 rounded-sm inline-block mb-1">{tournament.runnerUp?.tag || "2ND PLACE"}</div><h3 className="text-xl md:text-2xl text-zinc-300 font-heading uppercase tracking-widest leading-none">{tournament.runnerUp?.name || "TBD"}</h3></div>
+                </div>
+              </div>
+
+              {/* Semifinalists */}
+              {(tournament.thirdPlace || tournament.fourthPlace) && (
+                <div className="bg-gradient-to-br from-amber-900/20 to-black border border-amber-700/30 p-6 rounded relative lg:col-span-3">
+                  <div className="absolute top-0 left-0 w-16 h-16 bg-amber-700/10 blur-[30px]" />
+                  <div className="text-[10px] text-amber-600 font-bold uppercase tracking-[0.3em] font-body mb-4 flex items-center gap-2">Semifinalists</div>
+                  <div className="flex flex-col md:flex-row gap-6 md:gap-12">
+                    {tournament.thirdPlace && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-black flex items-center justify-center border border-amber-700/50 overflow-hidden shrink-0"><img src={tournament.thirdPlace.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png"} alt="3rd" className="w-8 h-8 object-contain grayscale opacity-70" /></div>
+                        <div><div className="text-amber-600 text-[9px] font-bold uppercase tracking-widest mb-0.5">3RD PLACE TIE</div><h3 className="text-lg text-amber-500 font-heading uppercase tracking-widest leading-none">{tournament.thirdPlace.name}</h3></div>
+                      </div>
+                    )}
+                    {tournament.fourthPlace && (
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded bg-black flex items-center justify-center border border-amber-700/50 overflow-hidden shrink-0"><img src={tournament.fourthPlace.logo || "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png"} alt="4th" className="w-8 h-8 object-contain grayscale opacity-70" /></div>
+                        <div><div className="text-amber-600 text-[9px] font-bold uppercase tracking-widest mb-0.5">3RD PLACE TIE</div><h3 className="text-lg text-amber-500 font-heading uppercase tracking-widest leading-none">{tournament.fourthPlace.name}</h3></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
             </div>
           </div>
         )}

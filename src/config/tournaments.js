@@ -39,8 +39,10 @@ export const tournaments = [
     
     // Results
     tournamentComplete: true,
-    champion: { name: "come mid" },
+    champion: { name: "come mid", score: "2-1" },
     runnerUp: { name: "GN3" },
+    thirdPlace: { name: "patties" },
+    fourthPlace: { name: "Team BackBehind" },
     bracketEmbedUrl: "https://challonge.com/ppwc2026/module",
   },
 
