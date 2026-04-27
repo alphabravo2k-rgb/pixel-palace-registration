@@ -8,9 +8,12 @@ import { formatEsportsDate } from '../utils/dateHelper';
 import { DiscordGate } from '../components/modals/DiscordGate';
 import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download, Loader2, ShieldCheck, RefreshCw, ChevronLeft, Trophy, Medal, Share2, Check } from 'lucide-react';
 import { TeamProfileModal } from '../components/modals/TeamProfileModal';
+import { Terminal } from '../utils/logger';
+import { useAudio } from '../hooks/useAudio';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
+  const { playHover, playClick } = useAudio();
   const tournament = getTournamentBySlug(tournamentSlug);
   const isArchived = tournament?.status === 'ARCHIVED';
   const [activeTab, setActiveTab] = useState(() => {
@@ -19,6 +22,11 @@ export const Register = () => {
     if (tournament?.status === 'ARCHIVED') return 'teams';
     return 'register';
   });
+
+  useEffect(() => {
+    Terminal.log('UI', 'Register Layout Rendered', { activeTab, isArchived, tournamentSlug });
+  }, [activeTab]);
+
   const [slots, setSlots] = useState(null);
   const [teams, setTeams] = useState(null);
   const [bracketData, setBracketData] = useState(null);
@@ -46,6 +54,7 @@ export const Register = () => {
     
     // Fetch live slots & teams
     const loadData = async () => {
+      Terminal.network('Initiating uplink to Admin Ops Board...', { tournamentId: tournament.id });
       try {
         const [liveSlots, liveTeams, liveBracket] = await Promise.all([
           fetchTournamentSlots(tournament.id),
@@ -55,7 +64,9 @@ export const Register = () => {
         setSlots(liveSlots);
         setTeams(liveTeams?.teams || []);
         if (liveBracket) setBracketData(liveBracket);
+        Terminal.success('Data synchronized successfully.', { teams: liveTeams?.teams?.length || 0 });
       } catch(err) {
+        Terminal.error('SYNC', 'Failed to retrieve live data from uplink.', err);
         setSlots('error');
         setTeams('error');
         setBracketData('error');
@@ -431,7 +442,7 @@ export const Register = () => {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {teams.map((team, idx) => (
-              <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" onClick={() => team.roster?.length > 0 && setSelectedTeam(team)}>
+              <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" onMouseEnter={playHover} onClick={() => { playClick(); if (team.roster?.length > 0) setSelectedTeam(team); }}>
                 <div className="flex items-stretch h-20 bg-black/40 relative">
                   <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
                     <img src={team.logo && team.logo.startsWith('http') ? team.logo : 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'} alt={team.name} className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500" onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }} />

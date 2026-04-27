@@ -3,9 +3,13 @@ import { AlertTriangle, Award, CheckCircle2, Crosshair, Gamepad2, Globe, Image a
 import { getOrCreateSubmissionId, clearSubmissionId } from '../utils/idempotency';
 import { submitToGateway } from '../services/api/client';
 import { submissionReducer, SUBMISSION_STATES } from '../services/state/submissionMachine';
+import { useToast } from '../contexts/ToastContext';
+import { useAudio } from '../hooks/useAudio';
 
 export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }) {
   const [state, dispatch] = useReducer(submissionReducer, { status: SUBMISSION_STATES.IDLE, error: null });
+  const { addToast } = useToast();
+  const { playHover, playClick, playSuccess } = useAudio();
   
   const [formData, setFormData] = useState({
     agreed: false, inviteCode: '', logoLink: '',
@@ -49,8 +53,17 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
     try {
       const res = await fetch(`${API_URL}?validateCode=${encodeURIComponent(formData.inviteCode)}`);
       const data = await res.json();
-      setVipStatus(data.valid ? 'CODE ACCEPTED' : 'INVALID CODE');
-    } catch { setVipStatus('AWAITING INPUT...'); }
+      if (data.valid) {
+        setVipStatus('CODE ACCEPTED');
+        addToast('VIP Access Code accepted.', 'success');
+      } else {
+        setVipStatus('INVALID CODE');
+        addToast('Invalid VIP Access Code.', 'error');
+      }
+    } catch { 
+      setVipStatus('AWAITING INPUT...'); 
+      addToast('Failed to verify VIP code.', 'error');
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -63,11 +76,13 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
       const steam = formData[`p${i}Steam`];
       
       if (faceit && !faceit.includes('faceit.com')) {
-        dispatch({ type: 'ERROR', payload: `Player ${i} FACEIT URL is invalid. Must contain faceit.com.` });
+        dispatch({ type: 'ERROR', payload: `Player ${i} FACEIT URL is invalid.` });
+        addToast(`Player ${i} FACEIT URL is invalid. Must contain faceit.com.`, 'error');
         return;
       }
       if (steam && !steam.includes('steamcommunity.com')) {
-        dispatch({ type: 'ERROR', payload: `Player ${i} Steam URL is invalid. Must contain steamcommunity.com.` });
+        dispatch({ type: 'ERROR', payload: `Player ${i} Steam URL is invalid.` });
+        addToast(`Player ${i} Steam URL is invalid. Must contain steamcommunity.com.`, 'error');
         return;
       }
     }
@@ -110,8 +125,11 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
       await submitToGateway(canonicalPayload, API_URL);
       clearSubmissionId();
       dispatch({ type: 'SUCCESS' });
+      playSuccess();
+      addToast('Registration successful! Check the Live Tracker.', 'success', 6000);
     } catch (err) {
       dispatch({ type: 'ERROR', payload: err.message });
+      addToast(err.message, 'error', 8000);
     }
   };
 
@@ -233,7 +251,7 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
             <div className="bg-[var(--neon-cyan)] px-5 flex items-center justify-center font-bold brand-font text-3xl text-black italic">02</div>
             <h2 className="text-3xl text-white brand-font tracking-wider pl-6 py-4 italic">TEAM ROSTER</h2>
           </div>
-          <div onClick={() => setSubActive(!subActive)} className="flex items-center gap-3 bg-[var(--neon-purple)]/20 px-5 py-3 rounded border border-[var(--neon-purple)]/50 cursor-pointer group transition-all shadow-[0_0_15px_rgba(138,43,226,0.3)] my-auto highlight-toggle">
+          <div onClick={() => { playClick(); setSubActive(!subActive); }} onMouseEnter={playHover} className="flex items-center gap-3 bg-[var(--neon-purple)]/20 px-5 py-3 rounded border border-[var(--neon-purple)]/50 cursor-pointer group transition-all shadow-[0_0_15px_rgba(138,43,226,0.3)] my-auto highlight-toggle">
             <UserPlus size={20} className="text-[var(--neon-pink)]" />
             <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-white data-font drop-shadow-md">Add Substitute</span>
             <div className={`relative w-12 h-6 rounded-full border border-white/20 transition-colors duration-300 ml-2 ${subActive ? 'bg-[var(--neon-cyan)]' : 'bg-black'}`}>
@@ -254,19 +272,13 @@ export default function RegistrationForm({ API_URL, tournamentId, deadlineDate }
         </div>
         <div className="p-8">
           <div className="space-y-4 mb-10 data-font">
-            <label className="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
+            <label onMouseEnter={playHover} className="flex items-center gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-[var(--neon-cyan)] transition-colors group rounded shadow-inner">
               <input type="checkbox" required onChange={(e)=>setFormData(prev => ({...prev, agreed: e.target.checked}))} className="w-5 h-5 accent-[var(--neon-cyan)] rounded-sm flex-shrink-0 cursor-pointer" />
               <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed">I confirm Akros Anti-Cheat will be active, all players are in the Discord, and we consent to data processing.</span>
             </label>
           </div>
-
-          {state.error && (
-            <div className="mb-8 bg-red-950/80 border border-red-500 p-4 text-red-400 text-sm font-bold uppercase tracking-widest text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] data-font flex items-center justify-center gap-3">
-              <AlertTriangle size={20} /> <span>{state.error}</span>
-            </div>
-          )}
           
-          <button type="submit" disabled={state.status === SUBMISSION_STATES.SUBMITTING || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
+          <button onClick={playClick} onMouseEnter={playHover} type="submit" disabled={state.status === SUBMISSION_STATES.SUBMITTING || timeLeft === 'OFFLINE'} className="btn-ignite w-full flex justify-center items-center gap-3">
             {state.status === SUBMISSION_STATES.SUBMITTING ? <><Loader2 className="animate-spin" /> TRANSMITTING...</> : <span>SUBMIT REGISTRATION</span>}
           </button>
         </div>
