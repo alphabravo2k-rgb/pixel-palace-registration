@@ -3,7 +3,7 @@ export const tournaments = [
     id: "chaos-ii",
     name: "Wingman Chaos II (2026)",
     slug: "chaos-ii",
-    status: "LIVE",
+    status: "ARCHIVED",
     format: "2v2",
     gameMode: "CS2 Wingman",
     prizePool: "$400",
@@ -36,6 +36,12 @@ export const tournaments = [
     softBanEnabled: true,
     bracketsEnabled: true,
     supportsLogoUpload: true,
+    
+    // Results
+    tournamentComplete: true,
+    champion: { name: "come mid" },
+    runnerUp: { name: "GN3" },
+    bracketEmbedUrl: "https://challonge.com/ppwc2026/module",
   },
 
 

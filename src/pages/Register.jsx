@@ -276,19 +276,23 @@ export const Register = () => {
       <div className="glass-panel p-8 min-h-[600px]">
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
         <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)] flex items-center gap-3"><Target className="w-8 h-8 text-neon-cyan" /> Tournament Bracket</h2>
-        {!bracketData ? (
+        {!bracketData && !tournament.bracketEmbedUrl ? (
           <div className="text-center py-32 text-zinc-500 flex flex-col items-center justify-center">
             <Loader2 className="w-12 h-12 animate-spin mb-6 text-neon-pink drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]" /><span className="font-bold tracking-[0.3em] uppercase text-sm font-body">Generating Bracket Link...</span>
           </div>
-        ) : bracketData === 'error' ? (
+        ) : (bracketData === 'error' && !tournament.bracketEmbedUrl) ? (
           <div className="text-center py-32 text-red-500 flex flex-col items-center justify-center bg-red-950/10 border border-dashed border-red-500/20 rounded-md">
             <AlertOctagon className="w-12 h-12 mb-6" /><span className="font-heading text-2xl uppercase">BRACKETS OFFLINE</span><p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">Bracket generation failed. Seeding may still be in progress.</p>
           </div>
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
-            <div className="flex-grow bg-black/50 border border-white/10 rounded overflow-hidden min-h-[400px] flex items-center justify-center relative p-8">
-              <p className="absolute top-4 left-4 text-[10px] text-zinc-500 font-bold uppercase font-body tracking-[0.3em]">LIVE FEED // STANDINGS</p>
-              {bracketData.bracketUrl ? <img src={bracketData.bracketUrl} alt="Tournament Bracket" className="max-w-full rounded shadow-[0_0_50px_rgba(0,240,255,0.1)] border border-neon-cyan/20" /> : (
+            <div className="flex-grow bg-black/50 border border-white/10 rounded overflow-hidden min-h-[400px] flex items-center justify-center relative p-1 md:p-8">
+              <p className="absolute top-4 left-4 text-[10px] text-zinc-500 font-bold uppercase font-body tracking-[0.3em] hidden md:block">LIVE FEED // STANDINGS</p>
+              {tournament.bracketEmbedUrl ? (
+                 <iframe src={`${tournament.bracketEmbedUrl}?theme=1&multiplier=1`} width="100%" height="100%" frameBorder="0" scrolling="auto" allowTransparency="true" className="w-full min-h-[500px] md:min-h-[700px] rounded shadow-[0_0_50px_rgba(0,240,255,0.1)] border-none"></iframe>
+              ) : bracketData?.bracketUrl ? (
+                 <img src={bracketData.bracketUrl} alt="Tournament Bracket" className="max-w-full rounded shadow-[0_0_50px_rgba(0,240,255,0.1)] border border-neon-cyan/20" />
+              ) : (
                 <div className="text-center text-zinc-600">
                   <Target className="w-16 h-16 mb-4 mx-auto opacity-20" /><h3 className="font-heading text-xl uppercase tracking-widest">Seeding Phase</h3><p className="text-xs font-body tracking-widest opacity-60 mt-2 uppercase">The bracket will be visible once teams verify check-in.</p>
                 </div>
@@ -298,7 +302,7 @@ export const Register = () => {
               <div className="bg-black/50 border border-white/10 rounded p-6">
                 <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">Schedule</h3>
                 <ul className="space-y-3 font-body text-sm font-bold text-zinc-300">
-                  {bracketData.schedule ? bracketData.schedule.map((item, i) => (<li key={i} className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>{item}</li>)) : <li className="text-zinc-500 opacity-60 font-medium">TBA</li>}
+                  {(bracketData && bracketData.schedule) ? bracketData.schedule.map((item, i) => (<li key={i} className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>{item}</li>)) : <li className="text-zinc-500 opacity-60 font-medium">TBA</li>}
                 </ul>
               </div>
             </div>
