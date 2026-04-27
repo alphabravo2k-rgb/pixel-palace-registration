@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, Users, Globe, Target, Clock, Trophy } from 'lucide-react';
 import { getTimeStatus } from '../../utils/dateHelper';
+import { useAudio } from '../../hooks/useAudio';
 
 export default function TournamentCard({ tournament }) {
   const [timeText, setTimeText] = useState("");
@@ -9,6 +10,7 @@ export default function TournamentCard({ tournament }) {
   const isLive = tournament.status === "LIVE";
   const isUpcoming = tournament.status === "UPCOMING";
   const isArchived = tournament.status === "ARCHIVED";
+  const { playHover, playClick } = useAudio();
 
   useEffect(() => {
     if (isLive) {
@@ -34,8 +36,12 @@ export default function TournamentCard({ tournament }) {
   return (
     <Link 
       to={targetRoute}
-      className={`glass-panel p-0 flex flex-col overflow-hidden transition-all duration-300 cursor-pointer border ${borderHover} ${opacity} ${transformHover}`}
+      onMouseEnter={playHover}
+      onClick={playClick}
+      className={`glass-panel p-0 flex flex-col overflow-hidden transition-all duration-300 cursor-pointer border group ${borderHover} ${opacity} ${transformHover}`}
     >
+      {/* Glare Effect Overlay */}
+      <div className="absolute inset-0 z-20 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-700 bg-gradient-to-tr from-transparent via-white/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out"></div>
       {/* Banner & Badge */}
       <div className="relative h-32 w-full bg-zinc-900 border-b border-white/10 flex items-center justify-center">
         {!imageError ? (

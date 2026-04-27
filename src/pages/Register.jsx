@@ -588,15 +588,20 @@ export const Register = () => {
               <div className="bg-black/50 border border-white/10 rounded p-6">
                 <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">{isArchived ? "Final Stage" : "Schedule"}</h3>
                 <ul className="space-y-3 font-body text-sm font-bold text-zinc-300">
-                  {isArchived ? (
+                  { (bracketData && bracketData.schedule && bracketData.schedule.length > 0) ? (
+                    bracketData.schedule.map((item, i) => (
+                      <li key={i} className="flex gap-2 items-start">
+                        <div className={`w-1.5 h-1.5 ${isArchived ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-neon-pink shadow-neon-pink/50'} rounded-full mt-1.5 shrink-0 shadow-[0_0_5px]`}></div>
+                        <span className={isArchived ? 'text-zinc-400' : 'text-zinc-200'}>{item}</span>
+                      </li>
+                    ))
+                  ) : isArchived ? (
                     <>
-                      <li className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>Grand Final: {tournament.champion?.name || "TBD"} vs {tournament.runnerUp?.name || "TBD"}</li>
-                      {tournament.thirdPlace && <li className="flex gap-2 items-start opacity-70"><div className="w-1.5 h-1.5 bg-amber-600 rounded-full mt-1.5 shrink-0"></div>Semifinalists: {tournament.thirdPlace?.name} / {tournament.fourthPlace?.name}</li>}
+                      <li className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-yellow-500 rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div><span className="text-zinc-400">Grand Final: {tournament.champion?.name || "TBD"} vs {tournament.runnerUp?.name || "TBD"}</span></li>
+                      {tournament.thirdPlace && <li className="flex gap-2 items-start opacity-70"><div className="w-1.5 h-1.5 bg-amber-600 rounded-full mt-1.5 shrink-0"></div><span className="text-zinc-500">Semifinalists: {tournament.thirdPlace?.name} / {tournament.fourthPlace?.name}</span></li>}
                     </>
-                  ) : (bracketData && bracketData.schedule) ? (
-                    bracketData.schedule.map((item, i) => (<li key={i} className="flex gap-2 items-start"><div className="w-1.5 h-1.5 bg-neon-pink rounded-full mt-1.5 shrink-0 shadow-[0_0_5px_rgba(240,0,255,0.5)]"></div>{item}</li>))
                   ) : (
-                    <li className="text-zinc-500 opacity-60 font-medium">TBA</li>
+                    <li className="text-zinc-500 opacity-60 font-medium italic tracking-widest uppercase text-[10px]">Transmission Pending // TBA</li>
                   )}
                 </ul>
               </div>
