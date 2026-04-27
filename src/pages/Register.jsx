@@ -434,7 +434,7 @@ export const Register = () => {
               <div key={`${team.name}-${idx}`} className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" onClick={() => team.roster?.length > 0 && setSelectedTeam(team)}>
                 <div className="flex items-stretch h-20 bg-black/40 relative">
                   <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
-                    <img src={team.logo} alt={team.name} className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500" onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }} />
+                    <img src={team.logo && team.logo.startsWith('http') ? team.logo : 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'} alt={team.name} className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500" onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }} />
                   </div>
                   <div className="flex-grow p-4 flex flex-col justify-center min-w-0 pr-16">
                     <div className="flex items-center gap-2 mb-1">
