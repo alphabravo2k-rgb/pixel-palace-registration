@@ -37,16 +37,19 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
 
     const data = await response.json();
     
-    // Fallbacks if cs2 isn't their primary registered game
+    // Track if we fallback to csgo data
+    const source = data.games?.cs2 ? 'cs2' : (data.games?.csgo ? 'csgo' : 'none');
     const cs2Data = data.games?.cs2 || data.games?.csgo; 
 
     return {
       faceitLevel: cs2Data?.skill_level || 'N/A',
       faceitElo: cs2Data?.faceit_elo || 'N/A',
       cs2RankLabel: cs2Data?.game_skill_level_label || 'Not Linked',
-      steam64: cs2Data?.game_player_id || null, // Valuable since it cross-references Steam64
+      steam64: cs2Data?.game_player_id || null,
       avatar: data.avatar || null,
-      country: data.country || null
+      country: data.country || null,
+      _source: source,
+      _fetchedAt: Date.now()
     };
 
   } catch (error) {

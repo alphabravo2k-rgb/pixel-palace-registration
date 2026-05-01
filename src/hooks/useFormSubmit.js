@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { submitRegistration } from '../services/sheets';
+import { submitRegistration, fetchTournamentSlots } from '../services/sheets';
 import { CanonicalSchema } from '../schemas/canonical';
 import { transformToCanonical } from '../utils/dataFixer';
 import { tournaments } from '../config/tournaments';
+import { checkBanStatus } from '../config/bans';
 
 /**
  * Form submission hook.
@@ -33,6 +34,9 @@ export const useFormSubmit = (tournamentId) => {
       const tournament = tournaments.find((t) => t.id === tournamentId);
       if (!tournament) throw new Error(`Tournament "${tournamentId}" not found.`);
 
+      // ── Save draft in case of failure ──────────────────────────────────
+      sessionStorage.setItem('pp_form_draft', JSON.stringify(formData));
+
       // ── Idempotency: reuse or generate submission_id ───────────────────
       let submissionId = sessionStorage.getItem('pp_idemp_key');
       if (!submissionId) {
@@ -50,13 +54,33 @@ export const useFormSubmit = (tournamentId) => {
         throw new Error(`Validation failed: ${messages}`);
       }
 
+      // ── Bug #9: Soft-Ban Cross-Check ───────────────────────────────────
+      for (const p of formData.players) {
+        const ban = checkBanStatus(p);
+        if (ban) {
+           throw new Error(`PLAYER_BANNED: Player "${p.ign || p.discord}" is restricted from participating. Reason: ${ban.reason}. Please contact support for appeals.`);
+        }
+      }
+
+      // ── Bug #3: Final Race Condition Check ─────────────────────────────
+      try {
+        const liveSlots = await fetchTournamentSlots(tournamentId);
+        if (liveSlots && liveSlots.isFull) {
+           throw new Error('Tournament filled up while you were registering. Verification failed.');
+        }
+      } catch (e) {
+        if (e.message.includes('filled up')) throw e;
+        console.warn("[Gateway] Slot check failed, proceeding with caution", e);
+      }
+
       // ── Submit via gateway ─────────────────────────────────────────────
       await submitRegistration(tournamentId, validation.data);
 
-      // ── Success: clear idempotency key ─────────────────────────────────
+      // ── Success: clear idempotency key & draft ─────────────────────────
       sessionStorage.removeItem('pp_idemp_key');
+      sessionStorage.removeItem('pp_form_draft');
       setIsSuccess(true);
-      return { success: true };
+      return { success: true, submissionId };
     } catch (err) {
       setError(err.message ?? 'An unexpected error occurred. Please retry.');
       return { success: false, error: err.message };

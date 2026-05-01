@@ -66,6 +66,7 @@ export const transformToCanonical = (tournament, formData, submissionId) => {
       region: teamRegion,
       logo_url: logoLink,
       invite_code: inviteCode,
+      wallet_address: formData.walletAddress ?? '',
     },
     roster,
     metadata: {

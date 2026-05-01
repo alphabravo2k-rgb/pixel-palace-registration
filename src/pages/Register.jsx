@@ -10,6 +10,7 @@ import { MessageCircle, Tv, AlertOctagon, Target, ShieldAlert, Layers, Download,
 import { TeamProfileModal } from '../components/modals/TeamProfileModal';
 import { Terminal } from '../utils/logger';
 import { useAudio } from '../hooks/useAudio';
+import { formatLocalTime } from '../utils/timezone';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
@@ -217,7 +218,7 @@ export const Register = () => {
           <div className="glass-panel p-16 text-center text-red-500 flex flex-col items-center">
             <AlertOctagon className="w-24 h-24 mb-6" /><h2 className="text-5xl font-heading font-black uppercase">REGISTRATION OFFLINE</h2><p className="mt-4 font-body uppercase text-sm tracking-widest text-zinc-400">The registration deadline has passed.</p>
           </div>
-        ) : <TournamentForm tournament={tournament} />}
+        ) : <TournamentForm tournament={tournament} slots={slots} />}
       </div>
     </div>
     );
@@ -588,7 +589,25 @@ export const Register = () => {
               <div className="bg-black/50 border border-white/10 rounded p-6">
                 <h3 className="text-xl font-heading text-neon-cyan uppercase mb-4 tracking-widest">{isArchived ? "Final Stage" : "Schedule"}</h3>
                 <ul className="space-y-3 font-body text-sm font-bold text-zinc-300">
-                  { (bracketData && bracketData.schedule && bracketData.schedule.length > 0) ? (
+                  { (tournament.scheduleUtc && tournament.scheduleUtc.length > 0) ? (
+                    tournament.scheduleUtc.map((iso, i) => {
+                      const labels = ["Quarterfinals", "Semifinals", "Grand Finals", "Lower Bracket", "Consolation"];
+                      const label = labels[i] || "Match Stage";
+                      return (
+                        <li key={i} className="flex flex-col gap-1 mb-4 last:mb-0 border-l border-white/5 pl-3 ml-0.5">
+                          <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-500 leading-none">{label}</span>
+                          <span className={`text-sm font-bold tracking-widest leading-none mt-1 ${isArchived ? 'text-zinc-400' : 'text-neon-cyan'}`}>
+                            {formatLocalTime(iso)}
+                          </span>
+                          {!isArchived && (
+                            <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mt-1 opacity-50">
+                              Broadcast: {new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: false })} PKT
+                            </span>
+                          )}
+                        </li>
+                      );
+                    })
+                  ) : (bracketData && bracketData.schedule && bracketData.schedule.length > 0) ? (
                     bracketData.schedule.map((item, i) => (
                       <li key={i} className="flex gap-2 items-start">
                         <div className={`w-1.5 h-1.5 ${isArchived ? 'bg-yellow-500 shadow-yellow-500/50' : 'bg-neon-pink shadow-neon-pink/50'} rounded-full mt-1.5 shrink-0 shadow-[0_0_5px]`}></div>

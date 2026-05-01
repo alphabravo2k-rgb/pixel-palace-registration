@@ -37,6 +37,10 @@ import {
   Globe,
   Image as ImageIcon,
   Zap,
+  Copy,
+  Check,
+  ExternalLink,
+  Activity,
 } from 'lucide-react';
 
 // ─── Dynamic Zod Schema ────────────────────────────────────────────────────────
@@ -106,7 +110,7 @@ const getPlayerMeta = (index, coreCount) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-export const TournamentForm = ({ tournament }) => {
+export const TournamentForm = ({ tournament, slots }) => {
   const [inviteStatus, setInviteStatus] = useState('AWAITING INPUT...');
   const corePlayerCount = tournament.playersPerTeam ?? 5;
   const hasSubs = (tournament.substitutes?.max ?? 0) > 0;
@@ -120,6 +124,7 @@ export const TournamentForm = ({ tournament }) => {
     handleSubmit,
     setValue,
     getValues,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(formSchema),
@@ -133,12 +138,31 @@ export const TournamentForm = ({ tournament }) => {
     },
   });
 
+  const [draftRestored, setDraftRestored] = useState(false);
+
+  // ── Draft Restoration on Mount ──────────────────────────────────────────────
+  useEffect(() => {
+    const draft = sessionStorage.getItem('pp_form_draft');
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        reset(parsed);
+        setDraftRestored(true);
+        Terminal.success('Recovered form draft from previous failed session.');
+      } catch (e) {
+        sessionStorage.removeItem('pp_form_draft');
+      }
+    }
+  }, [reset]);
+
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
 
   // `subActive` is DERIVED — not separate state. Clean.
   const subActive = fields.length > corePlayerCount;
 
   const { submit, isSubmitting, error, isSuccess } = useFormSubmit(tournament.id);
+  const [submissionId, setSubmissionId] = useState(null);
+  const [copiedId, setCopiedId] = useState(false);
 
   // ── Sub toggle ──────────────────────────────────────────────────────────────
   const handleSubToggle = () => {
@@ -168,6 +192,7 @@ export const TournamentForm = ({ tournament }) => {
   // ── Auto-Resolving UI Status Caches ──────────────────────────────────────────
   const [steamStatus, setSteamStatus] = useState({});
   const [faceitStatus, setFaceitStatus] = useState({});
+  const [faceitMeta, setFaceitMeta] = useState({});
 
   const handleSteamBlur = async (index, value) => {
     if (!value) return;
@@ -191,10 +216,14 @@ export const TournamentForm = ({ tournament }) => {
         setValue(`players.${index}.faceitElo`, data.faceitElo?.toString());
         setValue(`players.${index}.cs2RankLabel`, data.cs2RankLabel?.toString());
         
+        setFaceitMeta((prev) => ({ 
+          ...prev, 
+          [index]: { source: data._source, fetchedAt: data._fetchedAt } 
+        }));
+
         // Auto-populate Steam if blank and Faceit provided it
         if (data.steam64 && !getValues(`players.${index}.steam64`)) {
            setValue(`players.${index}.steam64`, data.steam64);
-           // Not overwriting the visible URL input so it won't be weird, just the hidden field
         }
         setFaceitStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
       } else {
@@ -239,24 +268,86 @@ export const TournamentForm = ({ tournament }) => {
 
   // ── Submit (react-hook-form calls this only when schema passes) ─────────────
   const onSubmit = async (formData) => {
-    await submit(formData);
-    // sessionStorage idempotency key is cleaned up inside useFormSubmit on success
+    const res = await submit(formData);
+    if (res?.success) {
+      setSubmissionId(res.submissionId);
+    }
   };
 
   // ─── SUCCESS STATE ────────────────────────────────────────────────────────
   if (isSuccess) {
+    const ticketId = submissionId ? `PP-${submissionId.split('-')[0].toUpperCase()}-${submissionId.split('-')[1].toUpperCase()}` : 'PP-UNKNOWN';
+    
+    const handleCopy = () => {
+      navigator.clipboard.writeText(submissionId || '');
+      setCopiedId(true);
+      setTimeout(() => setCopiedId(false), 2000);
+    };
+
     return (
-      <div className="glass-panel p-16 text-center flex flex-col items-center justify-center min-h-[400px]">
+      <div className="glass-panel p-8 md:p-16 text-center flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden group">
+        <div className="absolute inset-0 bg-gradient-to-b from-neon-cyan/5 to-transparent pointer-events-none" />
+        <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div><div className="hud-crosshair bl"></div><div className="hud-crosshair br"></div>
+        
         <div className="relative mb-8">
-          <div className="absolute inset-0 bg-neon-cyan blur-[40px] opacity-30 rounded-full" />
-          <CheckCircle2 className="w-28 h-28 text-neon-cyan relative z-10 drop-shadow-[0_0_30px_rgba(0,240,255,0.6)]" />
+          <div className="absolute inset-0 bg-neon-cyan blur-[60px] opacity-20 rounded-full animate-pulse" />
+          <CheckCircle2 className="w-24 h-24 text-neon-cyan relative z-10 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" />
         </div>
-        <h2 className="text-7xl font-black text-white mb-4 font-heading drop-shadow-[0_0_20px_rgba(0,240,255,0.4)] uppercase tracking-widest">
-          ROSTER SECURED
-        </h2>
-        <p className="text-zinc-400 text-xl font-body uppercase tracking-widest">
-          Registration confirmed. Check the Live Roster Tracker.
-        </p>
+
+        <div className="space-y-2 mb-10">
+          <h2 className="text-5xl md:text-7xl font-black text-white font-heading uppercase tracking-tighter italic leading-none">
+            ROSTER SECURED
+          </h2>
+          <p className="text-zinc-500 font-body text-sm font-bold uppercase tracking-[0.3em]">
+            Transmission Received // Entry Serialized
+          </p>
+        </div>
+
+        <div className="w-full max-w-md bg-black/60 border border-white/10 rounded-lg p-6 mb-10 relative">
+          <div className="flex flex-col items-center gap-4">
+             <div className="flex flex-col">
+               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">Official Submission ID</span>
+               <div className="flex items-center gap-3 bg-zinc-900 border border-white/5 px-4 py-3 rounded group/id cursor-pointer" onClick={handleCopy}>
+                 <span className="text-xl font-heading text-neon-cyan tracking-[0.2em] font-black">{ticketId}</span>
+                 {copiedId ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-600 group-hover/id:text-white transition-colors" />}
+               </div>
+             </div>
+
+             <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
+                <div className="text-left">
+                  <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Team</span>
+                  <span className="text-sm font-heading text-white uppercase tracking-wider">{getValues('teamName') || 'Squad'}</span>
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Timestamp</span>
+                  <span className="text-sm font-heading text-white uppercase tracking-wider">
+                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+             </div>
+          </div>
+          
+          <div className="mt-6 p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded">
+            <p className="text-[10px] text-neon-cyan font-bold uppercase tracking-widest leading-relaxed font-body">
+              Take a screenshot or save this ID. It is required for check-in and appeals.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+           <button 
+             onClick={() => window.location.reload()} 
+             className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all font-body rounded"
+           >
+             REGISTER ANOTHER TEAM
+           </button>
+           <button 
+             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} // Assumes tab switching logic is handled by parent, this just helps UI feel cohesive
+             className="flex-1 py-4 bg-neon-cyan text-black font-bold uppercase tracking-widest text-xs hover:bg-white transition-all font-body rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2"
+           >
+             VIEW LIVE ROSTER <ExternalLink className="w-3 h-3" />
+           </button>
+        </div>
       </div>
     );
   }
@@ -271,6 +362,12 @@ export const TournamentForm = ({ tournament }) => {
         <h2 className="text-3xl text-white font-heading tracking-wider pl-6 py-4 flex-grow italic uppercase">
           Team Identity
         </h2>
+        <div className="flex items-center px-6 gap-2 border-l border-white/10 bg-white/5">
+           <div className={`w-2 h-2 rounded-full ${!slots ? 'bg-zinc-500 animate-pulse' : slots === 'error' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'}`}></div>
+           <span className="text-[9px] font-black font-body text-zinc-500 uppercase tracking-widest leading-none">
+              {!slots ? 'SYNC...' : slots === 'error' ? 'OFFLINE' : 'ONLINE'}
+           </span>
+        </div>
       </div>
 
       <div className="p-8 space-y-6">
@@ -378,6 +475,31 @@ export const TournamentForm = ({ tournament }) => {
               </p>
             )}
           </div>
+        </div>
+
+        {/* Wallet Address */}
+        <div>
+          <div className="flex justify-between items-end mb-2">
+            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block font-body">
+              Prize Distribution Wallet (Optional)
+            </label>
+            <span className="text-[9px] text-neon-cyan/50 font-bold uppercase tracking-tighter italic">Solana / USDT Supported</span>
+          </div>
+          <div className="input-group">
+            <Globe className="ml-3 w-4 h-4 text-white/30" />
+            <input
+              {...register('walletAddress')}
+              type="text"
+              placeholder="e.g. 7xT... (Public address for payouts)"
+              className="input-ghost"
+            />
+          </div>
+          {errors.walletAddress && (
+            <p className="text-red-400 text-[10px] mt-1 font-body uppercase tracking-widest">
+              {errors.walletAddress.message}
+            </p>
+          )}
+          <p className="text-[9px] text-zinc-600 font-bold uppercase mt-2 pl-1 tracking-widest">Winnings are sent to this address. Ensure it is correct.</p>
         </div>
 
         {/* Logo Upload Component */}
@@ -553,9 +675,10 @@ export const TournamentForm = ({ tournament }) => {
                        const elo = getValues(`players.${index}.faceitElo`);
                        const rank = getValues(`players.${index}.cs2RankLabel`);
                        const state = faceitStatus[index];
+                       const meta = faceitMeta[index];
                        const lvl = lvlField.value;
 
-                       let badgeColor = 'bg-zinc-800 text-zinc-400 border-zinc-700'; // DEFAULT
+                       let badgeColor = 'bg-zinc-800 text-zinc-400 border-zinc-700';
                        if (state === 'FETCHING...') badgeColor = 'bg-cyan-900/30 text-neon-cyan border-neon-cyan animate-pulse';
                        else if (state === 'FAILED') badgeColor = 'bg-yellow-900/30 text-yellow-400 border-yellow-500';
                        else if (state === 'SUCCESS') {
@@ -566,32 +689,51 @@ export const TournamentForm = ({ tournament }) => {
                           else badgeColor = 'bg-red-900/30 text-red-500 border-red-500';
                        }
 
+                       const fetchedAgo = meta ? Math.floor((Date.now() - meta.fetchedAt) / 1000) : 0;
+
                        return (
-                         <div className="bg-black/40 border-t-2 border-white/10 rounded-t p-3 flex gap-2 sm:gap-4 mt-2">
-                           <div className="flex flex-col flex-1">
-                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">FACEIT LVL</span>
-                              <div className={`px-2 py-1.5 flex items-center justify-center font-bold text-xs rounded border ${badgeColor}`}>
-                                 {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'MANUAL INPUT' : (lvl || 'AWAITING URL'))}
-                              </div>
-                              {state === 'FAILED' && (
-                                <select {...lvlField} className="mt-2 bg-black border border-yellow-500 text-yellow-400 text-xs px-2 py-1 outline-none w-full cursor-pointer focus:ring-0">
-                                   <option value="N/A">Select Lvl</option>
-                                   {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
-                                </select>
-                              )}
+                         <div className="bg-black/40 border-t-2 border-white/10 rounded-t p-3 mt-2">
+                           {meta?.source === 'csgo' && (
+                             <div className="mb-3 flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded">
+                               <AlertTriangle className="w-3 h-3 text-yellow-500" />
+                               <span className="text-[9px] font-bold text-yellow-500 uppercase tracking-widest leading-none">
+                                 ELO pulled from CS:GO — may not reflect your CS2 rank.
+                               </span>
+                             </div>
+                           )}
+                           
+                           <div className="flex gap-2 sm:gap-4">
+                             <div className="flex flex-col flex-1">
+                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">FACEIT LVL</span>
+                                <div className={`px-2 py-1.5 flex items-center justify-center font-bold text-xs rounded border ${badgeColor}`}>
+                                   {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'MANUAL INPUT' : (lvl || 'AWAITING URL'))}
+                                </div>
+                                {state === 'FAILED' && (
+                                  <select {...lvlField} className="mt-2 bg-black border border-yellow-500 text-yellow-400 text-xs px-2 py-1 outline-none w-full cursor-pointer focus:ring-0">
+                                     <option value="N/A">Select Lvl</option>
+                                     {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
+                                  </select>
+                                )}
+                             </div>
+                             <div className="flex flex-col flex-1">
+                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">ELO</span>
+                                <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider">
+                                   {state === 'FETCHING...' ? '...' : (elo || 'N/A')}
+                                </div>
+                             </div>
+                             <div className="flex flex-col flex-1">
+                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">CS2 RANK</span>
+                                <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider text-center px-1">
+                                   {state === 'FETCHING...' ? '...' : (rank || 'Not Linked')}
+                                </div>
+                             </div>
                            </div>
-                           <div className="flex flex-col flex-1">
-                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">ELO</span>
-                              <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider">
-                                 {state === 'FETCHING...' ? '...' : (elo || 'N/A')}
-                              </div>
-                           </div>
-                           <div className="flex flex-col flex-1">
-                              <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">CS2 RANK</span>
-                              <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider text-center px-1">
-                                 {state === 'FETCHING...' ? '...' : (rank || 'Not Linked')}
-                              </div>
-                           </div>
+                           
+                           {state === 'SUCCESS' && meta && (
+                             <div className="mt-2 text-[8px] text-zinc-600 font-bold uppercase tracking-[0.2em] text-right">
+                               Linked {fetchedAgo}s ago via Pixel-API
+                             </div>
+                           )}
                          </div>
                        )
                     }}
@@ -674,9 +816,30 @@ export const TournamentForm = ({ tournament }) => {
 
         {/* Error box — shows gateway errors after zod validation passes */}
         {error && (
-          <div className="mb-8 border border-red-500 bg-red-950/80 p-4 text-red-400 text-sm font-bold uppercase tracking-widest text-center shadow-[0_0_20px_rgba(239,68,68,0.3)] font-body flex items-center justify-center gap-3 animate-shake">
-            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0" />
-            <span>{error} — Please retry.</span>
+          <div className={`mb-8 border p-6 flex flex-col items-center gap-4 animate-in zoom-in duration-300 shadow-2xl ${error.includes('PLAYER_BANNED') ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-orange-500/20' : 'bg-red-500/10 border-red-500 text-red-400 shadow-red-500/20'}`}>
+            <div className="flex items-center gap-3">
+               <AlertOctagon className="w-6 h-6 flex-shrink-0" />
+               <span className="text-xs font-black uppercase tracking-[0.2em] leading-none">
+                 {error.includes('PLAYER_BANNED') ? 'ELIGIBILITY RESTRICTED' : 'TRANSMISSION FAILED'}
+               </span>
+            </div>
+            
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-center max-w-sm leading-relaxed opacity-90 font-body">
+              {error.replace('PLAYER_BANNED: ', '')}
+            </p>
+
+            {error.includes('PLAYER_BANNED') ? (
+              <a 
+                href="https://discord.gg/pixelpalace" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="mt-2 px-6 py-3 bg-orange-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
+              >
+                OPEN SUPPORT TICKET (APPEAL) <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest opacity-50">Please verify your connection and try again.</span>
+            )}
           </div>
         )}
 
@@ -702,6 +865,24 @@ export const TournamentForm = ({ tournament }) => {
   // ─── FORM ROOT ────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8 pb-20">
+      {draftRestored && (
+        <div className="glass-panel p-4 bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
+           <div className="flex items-center gap-3">
+              <Zap className="w-5 h-5 text-neon-cyan animate-pulse" />
+              <div className="flex flex-col">
+                 <span className="text-xs font-bold text-neon-cyan uppercase tracking-widest leading-none">DRAFT RECOVERED</span>
+                 <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">We saved your previous attempt. Review and resubmit.</span>
+              </div>
+           </div>
+           <button 
+             type="button" 
+             onClick={() => { sessionStorage.removeItem('pp_form_draft'); setDraftRestored(false); }}
+             className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body p-2"
+           >
+             DISMISS
+           </button>
+        </div>
+      )}
       {TeamIdentity}
       {TeamRoster}
       {FinalVerification}

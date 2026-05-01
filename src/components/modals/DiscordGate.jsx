@@ -10,19 +10,29 @@ export const DiscordGate = ({ tournament }) => {
   const storageKey = `discord-gate-${tournament?.id}`;
 
   useEffect(() => {
-    // Archived tournaments skip the Discord gate entirely — no registration happening
+    // Archived tournaments skip the Discord gate entirely
     if (isArchived) return;
     if (tournament?.discordRequired) {
-      const hasPassed = localStorage.getItem(storageKey);
-      if (!hasPassed) {
-        setIsOpen(true);
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        try {
+          const { passed, timestamp } = JSON.parse(stored);
+          const ONE_DAY = 24 * 60 * 60 * 1000;
+          const isExpired = Date.now() - timestamp > ONE_DAY;
+          
+          if (passed && !isExpired) return;
+        } catch (e) {
+          // malformed data, treat as not passed
+        }
       }
+      setIsOpen(true);
     }
   }, [tournament, storageKey, isArchived]);
 
   const handleProceed = () => {
     if (isChecked) {
-      localStorage.setItem(storageKey, 'true');
+      const payload = { passed: true, timestamp: Date.now() };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
       setIsOpen(false);
     } else {
       setShake(true);

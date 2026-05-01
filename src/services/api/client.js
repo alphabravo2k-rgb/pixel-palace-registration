@@ -71,30 +71,56 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
   // ── Phase 1: Flatten for Google Sheets adapter ─────────────────────────
   const flatPayload = flattenForSheets(canonicalPayload);
 
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30_000);
-
   try {
-    const response = await fetch(tournament.sheetsEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(flatPayload),
-      signal: controller.signal,
-    });
+    let attempt = 0;
+    const maxRetries = 3;
+    const delays = [2000, 5000, 12000];
 
-    clearTimeout(timeoutId);
+    while (attempt <= maxRetries) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
-    if (!response.ok) throw new Error(`Network error: ${response.status}`);
+      try {
+        const response = await fetch(tournament.sheetsEndpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(flatPayload),
+          signal: controller.signal,
+        });
 
-    const data = await response.json();
-    if (data.error) throw new Error(data.error);
+        clearTimeout(timeoutId);
 
-    return { success: true, data };
-  } catch (err) {
-    clearTimeout(timeoutId);
-    if (err.name === 'AbortError') {
-      throw new Error('Connection timed out (30s). Please retry.');
+        if (!response.ok) {
+           // Don't retry on 4xx errors
+           if (response.status >= 400 && response.status < 500) {
+              throw new Error(`Client error: ${response.status}`);
+           }
+           throw new Error(`Server error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+
+        return { success: true, data };
+      } catch (err) {
+        clearTimeout(timeoutId);
+        
+        const isTimeout = err.name === 'AbortError' || err.message.includes('timed out');
+        const isNetwork = err.name === 'TypeError'; // fetch throws TypeError on network failure
+
+        if ((isTimeout || isNetwork) && attempt < maxRetries) {
+          console.warn(`[Gateway] Attempt ${attempt + 1} failed. Retrying in ${delays[attempt]}ms...`, err);
+          await new Promise(r => setTimeout(r, delays[attempt]));
+          attempt++;
+          continue;
+        }
+        
+        // If we're here, we're out of retries or it's a fatal error
+        if (isTimeout) throw new Error('Connection timed out after multiple retries. Please save your work and try later.');
+        throw err;
+      }
     }
+  } catch (err) {
     throw err;
   }
 };

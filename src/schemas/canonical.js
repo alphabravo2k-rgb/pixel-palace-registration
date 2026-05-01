@@ -26,14 +26,20 @@ export const CanonicalSchema = z.object({
   submission_id: z.string().uuid('submission_id must be a valid UUID'),
   tournament_id: z.string().min(1),
   team: z.object({
-    team_name: z.string().min(1, 'Team name is required'),
+    team_name: z
+      .string()
+      .min(2, 'Team name must be at least 2 characters')
+      .max(64, 'Team name must be under 64 characters')
+      .regex(/^[\w\s\-'.!]+$/u, 'Team name contains restricted characters'),
     team_tag: z
       .string()
       .min(1, 'Team tag is required')
+      .max(8, 'Tag must be 8 chars or less')
       .regex(/^[A-Za-z0-9]+$/, 'Tag must be alphanumeric'),
     region: z.string().min(1, 'Region is required'),
     logo_url: z.string().min(1, 'Logo URL is required'),
     invite_code: z.string().optional().default(''),
+    wallet_address: z.string().min(26, "Invalid wallet address").max(64, "Wallet address too long").optional().or(z.literal('')),
   }),
   roster: z.array(RosterPlayerSchema).min(1, 'At least one player is required'),
   metadata: z.object({

@@ -53,6 +53,11 @@ export const tournaments = [
     thirdPlace: { name: "patties" },
     fourthPlace: { name: "Team BackBehind" },
     bracketEmbedUrl: "https://challonge.com/ppwc2026/module",
+    scheduleUtc: [
+      "2026-04-24T21:00:00+05:00", // Quarterfinals
+      "2026-04-25T21:00:00+05:00", // Semifinals
+      "2026-04-26T22:00:00+05:00", // Grand Finals
+    ]
   },
 
 
@@ -222,6 +227,7 @@ const defaultConfig = {
   adminPreviewKey: "pixel-palace-internal-2026",
   
   playerFields: ["ign", "discord", "steam", "faceit"],
+  scheduleUtc: [],
 };
 
 export const getTournamentBySlug = (slug) => {
