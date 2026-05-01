@@ -17,6 +17,11 @@ export const RosterPlayerSchema = z.object({
   faceitLevel: z.string().default('N/A'),
   faceitElo: z.string().default('N/A'),
   cs2RankLabel: z.string().default('Not Linked'),
+  wallet_address: z.string()
+    .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
+    .optional()
+    .or(z.literal(''))
+    .default(''),
 });
 
 // ─── Canonical Submission ─────────────────────────────────────────────────────
@@ -39,7 +44,6 @@ export const CanonicalSchema = z.object({
     region: z.string().min(1, 'Region is required'),
     logo_url: z.string().min(1, 'Logo URL is required'),
     invite_code: z.string().optional().default(''),
-    wallet_address: z.string().min(26, "Invalid wallet address").max(64, "Wallet address too long").optional().or(z.literal('')),
   }),
   roster: z.array(RosterPlayerSchema).min(1, 'At least one player is required'),
   metadata: z.object({
@@ -48,5 +52,8 @@ export const CanonicalSchema = z.object({
     schema_version: z.literal('1.1'),
     sub_included: z.boolean(),
     status: z.string().default('VERIFIED'),
+    payment_status: z.enum(['NOT_REQUIRED', 'PENDING_PAYMENT', 'CONFIRMED', 'REFUNDED']).default('NOT_REQUIRED'),
+    payment_tx_hash: z.string().optional().default(''),
+    payment_confirmed_at: z.string().datetime().optional(),
   }),
 });

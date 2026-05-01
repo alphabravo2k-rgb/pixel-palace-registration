@@ -31,6 +31,36 @@ import { flattenForSheets } from './adapters/googleSheets';
 import { tournaments } from '../../config/tournaments';
 
 /**
+ * Notifies the staff Discord channel about a new registration.
+ * This bridges the trust gap by ensuring admins see submissions in real-time.
+ */
+const notifyStaffWebhook = async (tournament, teamData) => {
+  const webhookUrl = tournament.discordStaffWebhook;
+  if (!webhookUrl) return;
+
+  try {
+    await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        embeds: [{
+          title: "🚀 New Team Registered",
+          description: `**${teamData.team_name}** has joined **${tournament.name}**`,
+          color: 0x00f0ff,
+          fields: [
+            { name: "Region", value: teamData.region, inline: true },
+            { name: "Tag", value: teamData.team_tag, inline: true }
+          ],
+          timestamp: new Date().toISOString()
+        }]
+      })
+    });
+  } catch (e) {
+    console.warn("[Webhook] Failed to notify staff:", e);
+  }
+};
+
+/**
  * Submit a canonical registration payload to the configured storage backend.
  *
  * @param {import('../../schemas/canonical').CanonicalSchema} canonicalPayload
@@ -69,7 +99,10 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
   }
 
   // ── Phase 1: Flatten for Google Sheets adapter ─────────────────────────
-  const flatPayload = flattenForSheets(canonicalPayload);
+  const flatPayload = {
+    ...flattenForSheets(canonicalPayload),
+    _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
+  };
 
   try {
     let attempt = 0;
@@ -100,6 +133,9 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
 
         const data = await response.json();
         if (data.error) throw new Error(data.error);
+
+        // Notify staff via webhook (async/fire-and-forget)
+        notifyStaffWebhook(tournament, canonicalPayload.team);
 
         return { success: true, data };
       } catch (err) {

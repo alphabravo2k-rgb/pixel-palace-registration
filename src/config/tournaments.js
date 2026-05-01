@@ -219,15 +219,18 @@ const defaultConfig = {
   runnerUp: { name: "", tag: "", logo: "" },
   
   // API Keys (empty strings = fallback UI logic is triggered)
-  faceitApiKey: "",       // developers.faceit.com (Required for auto ELO fetch)
-  steamApiKey: "",        // steamcommunity.com/dev/apikey (Required for vanity URL resolving)
-  cloudinaryCloudName: "",
-  cloudinaryUploadPreset: "",
-  discordWebhookUrl: "",  // Integration webhooks 
-  adminPreviewKey: "pixel-palace-internal-2026",
+  // API Keys (Environment Variables)
+  faceitApiKey: import.meta.env.VITE_FACEIT_API_KEY || "",
+  steamApiKey: import.meta.env.VITE_STEAM_API_KEY || "",
+  cloudinaryCloudName: import.meta.env.VITE_CLOUDINARY_CLOUD_NAME || "",
+  cloudinaryUploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "",
+  discordStaffWebhook: import.meta.env.VITE_DISCORD_STAFF_WEBHOOK || "",
+  adminPreviewKey: import.meta.env.VITE_ADMIN_PREVIEW_KEY || "pixel-palace-internal-2026",
   
   playerFields: ["ign", "discord", "steam", "faceit"],
   scheduleUtc: [],
+  entryFee: 0,
+  currency: 'USDT',
 };
 
 export const getTournamentBySlug = (slug) => {

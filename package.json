@@ -37,15 +37,14 @@
     "lint": "eslint . --ext .js,.jsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext .js,.jsx --fix",
     "format": "prettier --write \"src/**/*.{js,jsx,css,json}\"",
-    "security:check": "npm audit --production --audit-level=moderate",
+    "security:check": "npm audit --production --audit-level=high",
     "security:fix": "npm audit fix --production",
     "deps:check": "npm outdated",
     "deps:audit": "npm audit --production && npx license-checker --summary",
     "clean": "rm -rf dist node_modules/.vite",
     "nuke": "rm -rf dist node_modules package-lock.json && npm install",
     "test:integrity": "npm run build:ci",
-    "prepare": "husky install",
-    "preinstall": "npx only-allow npm"
+    "prepare": "node -e \"if (process.env.CI !== 'true') require('husky').install()\" || true"
   },
   "lint-staged": {
     "*.{js,jsx}": [

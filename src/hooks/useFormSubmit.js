@@ -34,14 +34,17 @@ export const useFormSubmit = (tournamentId) => {
       const tournament = tournaments.find((t) => t.id === tournamentId);
       if (!tournament) throw new Error(`Tournament "${tournamentId}" not found.`);
 
+      const idempKey = `pp_idemp_${tournamentId}`;
+      const draftKey = `pp_draft_${tournamentId}`;
+
       // ── Save draft in case of failure ──────────────────────────────────
-      sessionStorage.setItem('pp_form_draft', JSON.stringify(formData));
+      sessionStorage.setItem(draftKey, JSON.stringify(formData));
 
       // ── Idempotency: reuse or generate submission_id ───────────────────
-      let submissionId = sessionStorage.getItem('pp_idemp_key');
+      let submissionId = sessionStorage.getItem(idempKey);
       if (!submissionId) {
         submissionId = crypto.randomUUID();
-        sessionStorage.setItem('pp_idemp_key', submissionId);
+        sessionStorage.setItem(idempKey, submissionId);
       }
 
       // ── Transform form output → canonical structure ────────────────────
@@ -77,11 +80,30 @@ export const useFormSubmit = (tournamentId) => {
       await submitRegistration(tournamentId, validation.data);
 
       // ── Success: clear idempotency key & draft ─────────────────────────
-      sessionStorage.removeItem('pp_idemp_key');
-      sessionStorage.removeItem('pp_form_draft');
+      sessionStorage.removeItem(idempKey);
+      sessionStorage.removeItem(draftKey);
       setIsSuccess(true);
       return { success: true, submissionId };
     } catch (err) {
+      // ── Bug #8: Dead-Letter Queue ──────────────────────────────────────
+      // If we failed after all gateway retries, persist the final
+      // canonical payload for cross-session recovery.
+      const isFatal = err.message.includes('Validation failed') || err.message.includes('not found');
+      if (!isFatal) {
+        try {
+          const tournament = tournaments.find((t) => t.id === tournamentId);
+          const canonicalData = transformToCanonical(tournament, formData, sessionStorage.getItem(idempKey));
+          localStorage.setItem(`pp_dlq_${tournamentId}`, JSON.stringify({
+             payload: canonicalData,
+             formData: formData, // Store original for draft restoration
+             timestamp: new Date().toISOString(),
+             teamName: formData.teamName
+          }));
+        } catch (e) {
+          console.error("Failed to save to Dead-Letter Queue:", e);
+        }
+      }
+
       setError(err.message ?? 'An unexpected error occurred. Please retry.');
       return { success: false, error: err.message };
     } finally {

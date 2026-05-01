@@ -45,17 +45,27 @@ export const transformToCanonical = (tournament, formData, submissionId) => {
   const coreCount = tournament.playersPerTeam ?? 5;
 
   // Generate stable UUIDs for each roster player.
-  // Using crypto.randomUUID() — supported in all modern browsers.
   const roster = players
     .filter((p) => p.discord?.trim() || p.steam?.trim())
-    .map((p, idx) => ({
-      player_id: crypto.randomUUID(),
-      role: deriveRole(idx, coreCount),
-      discord: p.discord?.trim() ?? '',
-      steam: p.steam?.trim() ?? '',
-      faceit: p.faceit?.trim() ?? '',
-      rank: p.rank ?? '5',
-    }));
+    .map((p, idx) => {
+      const role = deriveRole(idx, coreCount);
+      return {
+        player_id: crypto.randomUUID(),
+        role,
+        ign: p.ign?.trim() ?? '',
+        discord: p.discord?.trim() ?? '',
+        steam: p.steam?.trim() ?? '',
+        steam64: p.steam64?.trim() ?? '',
+        faceit: p.faceit?.trim() ?? '',
+        faceitLevel: p.faceitLevel ?? 'N/A',
+        faceitElo: p.faceitElo ?? 'N/A',
+        cs2RankLabel: p.cs2RankLabel ?? 'Not Linked',
+        // Collect wallet address only if provided (typically only for Captain/Role via form)
+        wallet_address: p.walletAddress?.trim() ?? '',
+      };
+    });
+
+  const hasEntryFee = (tournament.entryFee ?? 0) > 0;
 
   return {
     submission_id: submissionId ?? crypto.randomUUID(),
@@ -66,14 +76,17 @@ export const transformToCanonical = (tournament, formData, submissionId) => {
       region: teamRegion,
       logo_url: logoLink,
       invite_code: inviteCode,
-      wallet_address: formData.walletAddress ?? '',
     },
     roster,
     metadata: {
       submitted_at: new Date().toISOString(),
       source: 'portal_v1',
-      schema_version: '1.0',
+      schema_version: '1.1',
       sub_included: players.length > coreCount,
+      status: 'VERIFIED',
+      payment_status: hasEntryFee ? 'PENDING_PAYMENT' : 'NOT_REQUIRED',
+      payment_tx_hash: '',
+      payment_confirmed_at: undefined,
     },
   };
 };

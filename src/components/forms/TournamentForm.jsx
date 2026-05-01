@@ -59,20 +59,30 @@ const buildFormSchema = (tournament) => {
     faceitLevel: z.string().default('N/A'),
     faceitElo: z.string().default('N/A'),
     cs2RankLabel: z.string().default('Not Linked'),
+    walletAddress: z.string()
+      .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
+      .optional()
+      .or(z.literal(''))
+      .default(''),
   });
 
   return z.object({
     inviteCode: z.string().optional().default(''),
-    teamName: z.string().min(1, 'Team name is required'),
+    teamName: z.string().min(1, 'Team name is required').max(30, 'Team name max 30 chars'),
     teamTag: z
       .string()
       .min(1, 'Team tag is required')
-      .regex(/^[A-Za-z0-9]+$/, 'Alphanumeric characters only'),
+      .max(8, 'Tag max 8 chars')
+      .regex(/^[A-Za-z0-9]+$/, 'Alphanumeric letters only'),
     teamRegion: z.string().min(1, 'Select a region'),
     logoLink: z.string().min(1, 'Logo URL is required'),
     players: z
       .array(playerSchema)
       .min(coreCount, `Minimum ${coreCount} players required`),
+    // BUG-003: Mandatory verifications
+    verifications: z.array(z.boolean()).refine((vals) => vals.every(v => v === true), {
+      message: "You must acknowledge all tournament requirements."
+    })
   });
 };
 
@@ -135,6 +145,7 @@ export const TournamentForm = ({ tournament, slots }) => {
       teamRegion: '',
       logoLink: '',
       players: Array.from({ length: corePlayerCount }, blankPlayer),
+      verifications: Array(tournament.customVerification?.length || 0).fill(false)
     },
   });
 
@@ -142,7 +153,19 @@ export const TournamentForm = ({ tournament, slots }) => {
 
   // ── Draft Restoration on Mount ──────────────────────────────────────────────
   useEffect(() => {
-    const draft = sessionStorage.getItem('pp_form_draft');
+    // 1. Check for Dead-Letter Queue (LocalStorage, cross-session)
+    const dlq = localStorage.getItem(`pp_dlq_${tournament.id}`);
+    if (dlq) {
+       try {
+         setDlqItem(JSON.parse(dlq));
+       } catch (e) {
+         localStorage.removeItem(`pp_dlq_${tournament.id}`);
+       }
+    }
+
+    // 2. Check for Session Draft (SessionStorage, single-session failure)
+    const draftKey = `pp_draft_${tournament.id}`;
+    const draft = sessionStorage.getItem(draftKey);
     if (draft) {
       try {
         const parsed = JSON.parse(draft);
@@ -150,10 +173,10 @@ export const TournamentForm = ({ tournament, slots }) => {
         setDraftRestored(true);
         Terminal.success('Recovered form draft from previous failed session.');
       } catch (e) {
-        sessionStorage.removeItem('pp_form_draft');
+        sessionStorage.removeItem(draftKey);
       }
     }
-  }, [reset]);
+  }, [reset, tournament.id]);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
 
@@ -163,6 +186,7 @@ export const TournamentForm = ({ tournament, slots }) => {
   const { submit, isSubmitting, error, isSuccess } = useFormSubmit(tournament.id);
   const [submissionId, setSubmissionId] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [dlqItem, setDlqItem] = useState(null);
 
   // ── Sub toggle ──────────────────────────────────────────────────────────────
   const handleSubToggle = () => {
@@ -271,6 +295,7 @@ export const TournamentForm = ({ tournament, slots }) => {
     const res = await submit(formData);
     if (res?.success) {
       setSubmissionId(res.submissionId);
+      localStorage.removeItem(`pp_dlq_${tournament.id}`); // Clear DLQ on success
     }
   };
 
@@ -477,30 +502,6 @@ export const TournamentForm = ({ tournament, slots }) => {
           </div>
         </div>
 
-        {/* Wallet Address */}
-        <div>
-          <div className="flex justify-between items-end mb-2">
-            <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 block font-body">
-              Prize Distribution Wallet (Optional)
-            </label>
-            <span className="text-[9px] text-neon-cyan/50 font-bold uppercase tracking-tighter italic">Solana / USDT Supported</span>
-          </div>
-          <div className="input-group">
-            <Globe className="ml-3 w-4 h-4 text-white/30" />
-            <input
-              {...register('walletAddress')}
-              type="text"
-              placeholder="e.g. 7xT... (Public address for payouts)"
-              className="input-ghost"
-            />
-          </div>
-          {errors.walletAddress && (
-            <p className="text-red-400 text-[10px] mt-1 font-body uppercase tracking-widest">
-              {errors.walletAddress.message}
-            </p>
-          )}
-          <p className="text-[9px] text-zinc-600 font-bold uppercase mt-2 pl-1 tracking-widest">Winnings are sent to this address. Ensure it is correct.</p>
-        </div>
 
         {/* Logo Upload Component */}
         <LogoUploader
@@ -667,6 +668,33 @@ export const TournamentForm = ({ tournament, slots }) => {
                     </div>
                   </div>
 
+                  {/* Wallet Address (Captain Only - Revenue Tier 1C) */}
+                  {index === 0 && (
+                    <div>
+                      <div className="flex justify-between items-end mb-1.5">
+                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-neon-cyan block font-body">
+                          Payout Wallet (USDT TRC20) <span className="text-red-500">*</span>
+                        </label>
+                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Captain Only</span>
+                      </div>
+                      <div className="input-group border-neon-cyan/30">
+                        <Globe className="ml-3 w-4 h-4 text-neon-cyan/50" />
+                        <input
+                          {...register(`players.${index}.walletAddress`)}
+                          type="text"
+                          placeholder="T-Address (TRC20) required for prize payout"
+                          className="input-ghost text-xs placeholder:text-zinc-700"
+                        />
+                      </div>
+                      {errors.players?.[index]?.walletAddress && (
+                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].walletAddress.message}</p>
+                      )}
+                      <p className="text-[8px] text-zinc-600 font-bold uppercase mt-1.5 tracking-tighter opacity-80">
+                        Required for secure prize distribution. Ensure this is a USDT (TRC20) address.
+                      </p>
+                    </div>
+                  )}
+
                   {/* FACEIT & CS2 Stat Badges */}
                   <Controller
                     control={control}
@@ -796,14 +824,14 @@ export const TournamentForm = ({ tournament, slots }) => {
 
       <div className="p-8">
         <div className="space-y-4 mb-10">
-          {verificationItems.map((item) => (
+          {verificationItems.map((item, i) => (
             <label
               key={item.key}
               className="flex items-start gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-neon-cyan transition-colors group rounded shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]"
             >
               <input
                 type="checkbox"
-                required
+                {...register(`verifications.${i}`)}
                 className="w-5 h-5 flex-shrink-0 accent-neon-cyan rounded-sm cursor-pointer mt-0.5"
               />
               <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed font-body">
@@ -812,6 +840,15 @@ export const TournamentForm = ({ tournament, slots }) => {
               </span>
             </label>
           ))}
+
+          {errors.verifications && (
+            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded flex items-center gap-3 animate-in fade-in slide-in-from-left duration-300">
+               <ShieldAlert className="w-4 h-4 text-red-500" />
+               <span className="text-[10px] font-black text-red-500 uppercase tracking-widest leading-none">
+                 {errors.verifications.message}
+               </span>
+            </div>
+          )}
         </div>
 
         {/* Error box — shows gateway errors after zod validation passes */}
@@ -865,6 +902,36 @@ export const TournamentForm = ({ tournament, slots }) => {
   // ─── FORM ROOT ────────────────────────────────────────────────────────────
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8 pb-20">
+      {dlqItem && !draftRestored && (
+        <div className="glass-panel p-5 bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-700">
+           <div className="flex items-center gap-4">
+              <div className="p-2 bg-orange-500/20 rounded">
+                <ShieldAlert className="w-5 h-5 text-orange-400 animate-pulse" />
+              </div>
+              <div className="flex flex-col">
+                 <span className="text-xs font-black text-orange-400 uppercase tracking-widest leading-none">Unsent Registration Detected</span>
+                 <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">Found unsent data for "{dlqItem.teamName}" from {new Date(dlqItem.timestamp).toLocaleDateString()}.</span>
+              </div>
+           </div>
+           <div className="flex gap-2">
+             <button 
+               type="button" 
+               onClick={() => { localStorage.removeItem(`pp_dlq_${tournament.id}`); setDlqItem(null); }}
+               className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body px-3"
+             >
+               DISCARD
+             </button>
+             <button 
+               type="button" 
+               onClick={() => { reset(dlqItem.formData); setDlqItem(null); setDraftRestored(true); }}
+               className="bg-orange-500 text-black px-4 py-2 text-[9px] font-black uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105"
+             >
+               RESTORE & RETRY
+             </button>
+           </div>
+        </div>
+      )}
+
       {draftRestored && (
         <div className="glass-panel p-4 bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
            <div className="flex items-center gap-3">
