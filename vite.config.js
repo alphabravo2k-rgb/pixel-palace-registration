@@ -132,6 +132,11 @@ export default defineConfig(({ mode }) => {
         "@modules": path.resolve(__dirname, "./src/components/modules"),
         "@ui": path.resolve(__dirname, "./src/components/ui"),
         "@engine": path.resolve(__dirname, "./src/lib/engine"),
+        // Shim: @hookform/resolvers v5 imports zod/v4/core at build time.
+        // Zod v3 has no v4 export. This redirects to installed zod (v3) so the
+        // build resolves. All schemas use Zod v3 API — no silent breakage risk.
+        // TODO: Remove once package-lock.json is regenerated with resolvers@^4.3.3.
+        "zod/v4/core": "zod",
       },
     },
     server: {
