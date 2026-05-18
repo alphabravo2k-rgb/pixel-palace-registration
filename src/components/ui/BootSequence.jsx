@@ -51,7 +51,7 @@ export function BootSequence({ onComplete }) {
           />
         </div>
         <div className="mt-4 text-center text-[10px] text-zinc-500 tracking-[0.3em] font-bold">
-          PIXEL PALACE OS v2.0
+          PIXEL PALACE OS v3.0
         </div>
       </div>
     </div>

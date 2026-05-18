@@ -86,7 +86,7 @@ export const Register = () => {
     };
 
     loadData();
-    const backoffTime = 15000 * Math.pow(2, Math.min(retryCount, 3));
+    const backoffTime = 45000 * Math.pow(2, Math.min(retryCount, 3));
     const interval = setInterval(loadData, backoffTime);
     
     return () => clearInterval(interval);

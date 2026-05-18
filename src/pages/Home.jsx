@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { CalendarX, Trophy, Users, Award, Target, History, Globe } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { tournaments } from '../config/tournaments';
-import TournamentFilterTabs from '../components/hub/TournamentFilterTabs';
-import TournamentCard from '../components/hub/TournamentCard';
+import TournamentFilterTabs from '../components/shared/TournamentFilterTabs';
+import TournamentCard from '../components/shared/TournamentCard';
 import { CountUp } from '../components/ui/CountUp';
 import { Magnetic } from '../components/ui/Magnetic';
 
@@ -83,7 +83,7 @@ export const Home = () => {
 
         <div className="mt-12">
           <Magnetic>
-            <Link to="/tournaments" className="inline-block">
+            <a href="#circuits" className="inline-block">
               <button className="bg-white text-black font-black uppercase tracking-widest px-8 py-3 rounded-sm hover:bg-neon-cyan transition-colors">
                 Explore Circuits
               </button>

@@ -7,20 +7,21 @@ export const DiscordGate = ({ tournament }) => {
   const [shake, setShake] = useState(false);
 
   const isArchived = tournament?.status === 'ARCHIVED';
-  const storageKey = `discord-gate-${tournament?.id}`;
+  const storageKey = `_pp_sys_auth_${tournament?.id}`;
 
   useEffect(() => {
     // Archived tournaments skip the Discord gate entirely
     if (isArchived) return;
     if (tournament?.discordRequired) {
-      const stored = localStorage.getItem(storageKey);
+      const stored = sessionStorage.getItem(storageKey);
       if (stored) {
         try {
-          const { passed, timestamp } = JSON.parse(stored);
+          const { token, timestamp } = JSON.parse(stored);
           const ONE_DAY = 24 * 60 * 60 * 1000;
           const isExpired = Date.now() - timestamp > ONE_DAY;
+          const expectedToken = btoa(`${tournament.id}-verified-auth`);
           
-          if (passed && !isExpired) return;
+          if (token === expectedToken && !isExpired) return;
         } catch (e) {
           // malformed data, treat as not passed
         }
@@ -31,8 +32,9 @@ export const DiscordGate = ({ tournament }) => {
 
   const handleProceed = () => {
     if (isChecked) {
-      const payload = { passed: true, timestamp: Date.now() };
-      localStorage.setItem(storageKey, JSON.stringify(payload));
+      const token = btoa(`${tournament.id}-verified-auth`);
+      const payload = { token, timestamp: Date.now() };
+      sessionStorage.setItem(storageKey, JSON.stringify(payload));
       setIsOpen(false);
     } else {
       setShake(true);

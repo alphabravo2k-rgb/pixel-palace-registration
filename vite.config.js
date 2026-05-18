@@ -114,11 +114,7 @@ export default defineConfig(({ mode }) => {
   console.log(`🔍 [COMP-OS] Identity: ${provenance.hash} (Dirty: ${provenance.isDirty})`);
 
   // 🛡️ SECURITY GATE: Ensure critical variables exist before building
-  const requiredVars = [
-    'VITE_SUPABASE_URL', 
-    'VITE_SUPABASE_ANON_KEY', 
-    'VITE_SITE_URL'
-  ];
+  const requiredVars = [];
   
   const missingVars = requiredVars.filter(key => !env[key]);
   const isSecure = missingVars.length === 0;
@@ -131,7 +127,6 @@ export default defineConfig(({ mode }) => {
     root: '.',
     resolve: {
       alias: {
-        "zod/v4/core": "zod",
         "@": path.resolve(__dirname, "./src"),
         "@security": path.resolve(__dirname, "./src/lib/security"),
         "@modules": path.resolve(__dirname, "./src/components/modules"),

@@ -38,6 +38,7 @@ export const BracketsTab = ({
                   frameBorder="0" 
                   scrolling="auto" 
                   allowTransparency="true" 
+                  sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"
                   className="w-full min-h-[500px] md:min-h-[700px] rounded shadow-[0_0_50px_rgba(0,240,255,0.1)] border-none"
                 ></iframe>
               ) : bracketData?.bracketUrl ? (

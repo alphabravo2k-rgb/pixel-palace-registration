@@ -16,6 +16,7 @@ export const RosterPlayerSchema = z.object({
   faceit: z.string().min(1, 'FACEIT URL is required'),
   faceitLevel: z.string().default('N/A'),
   faceitElo: z.string().default('N/A'),
+  faceit_data_fetched_at: z.string().datetime().optional(),
   cs2RankLabel: z.string().default('Not Linked'),
   wallet_address: z.string()
     .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
@@ -55,5 +56,11 @@ export const CanonicalSchema = z.object({
     payment_status: z.enum(['NOT_REQUIRED', 'PENDING_PAYMENT', 'CONFIRMED', 'REFUNDED']).default('NOT_REQUIRED'),
     payment_tx_hash: z.string().optional().default(''),
     payment_confirmed_at: z.string().datetime().optional(),
+    payment_confirmed_by_steam64: z.string().optional().default(''),
+    discord_verified: z.boolean().default(false),
+    submission_source_ip: z.string().optional(),
+    ban_acknowledged_at: z.string().datetime().optional(),
+    verification_checks: z.array(z.boolean()).optional(),
+    entry_fee_paid: z.boolean().default(false),
   }),
 });

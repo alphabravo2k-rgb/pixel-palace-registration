@@ -74,7 +74,13 @@ export const tournaments = [
     tournamentDate: "2026-03-01T22:30:00Z",
     registrationDeadline: "2026-02-28T23:59:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
-    playersPerTeam: 5
+    playersPerTeam: 5,
+    scheduleUtc: [
+      "2026-03-01T22:30:00Z", // Week 1
+      "2026-03-08T22:30:00Z", // Week 2
+      "2026-03-15T22:30:00Z", // Week 3
+      "2026-03-22T22:30:00Z", // Finals
+    ]
   },
   {
     id: "fc26-tournament-ii",
@@ -145,7 +151,12 @@ export const tournaments = [
     tournamentDate: "2026-01-09T18:00:00Z",
     registrationDeadline: "2026-01-08T23:59:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png",
-    playersPerTeam: 5
+    playersPerTeam: 5,
+    scheduleUtc: [
+      "2026-01-09T18:00:00Z", // Day 1
+      "2026-01-10T18:00:00Z", // Day 2
+      "2026-01-11T18:00:00Z", // Finals
+    ]
   },
   {
     id: "8ball-pool-i",
@@ -159,7 +170,10 @@ export const tournaments = [
     region: "PAK / IND",
     tournamentDate: "2026-01-02T18:00:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
-    playersPerTeam: 1
+    playersPerTeam: 1,
+    scheduleUtc: [
+      "2026-01-02T18:00:00Z"
+    ]
   },
   {
     id: "flying-clowns-i",
@@ -230,7 +244,8 @@ const defaultConfig = {
   playerFields: ["ign", "discord", "steam", "faceit"],
   scheduleUtc: [],
   entryFee: 0,
-  currency: 'USDT',
+  entryFeeAsset: 'USDT',
+  sponsors: [],
 };
 
 export const getTournamentBySlug = (slug) => {

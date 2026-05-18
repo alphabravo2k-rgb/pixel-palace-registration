@@ -30,9 +30,10 @@ export const resolveSteam64 = async (profileUrl, steamApiKey = '') => {
         throw new Error('NO_API_KEY');
       }
 
-      // External API fetch constraint (CORS issues might occur if directly addressing Valve API from browser. 
-      // If so, we might need a proxy or we will let it fail to the manual fallback gracefully.)
-      const response = await fetch(`https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=${steamApiKey}&vanityurl=${encodeURIComponent(vanityName)}`);
+      // External API fetch constraint routed through a robust CORS proxy
+      // to bypass Valve's strict browser restrictions
+      const targetUrl = `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=${steamApiKey}&vanityurl=${encodeURIComponent(vanityName)}`;
+      const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`);
 
       if (!response.ok) {
         throw new Error(`Steam API error: ${response.status}`);

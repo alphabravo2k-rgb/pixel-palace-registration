@@ -68,7 +68,10 @@ const buildFormSchema = (tournament) => {
 
   return z.object({
     inviteCode: z.string().optional().default(''),
-    teamName: z.string().min(1, 'Team name is required').max(30, 'Team name max 30 chars'),
+    teamName: z.string()
+      .min(2, 'Team name must be at least 2 characters')
+      .max(64, 'Team name max 64 chars')
+      .regex(/^[\w\s\-'.!]+$/u, 'No restricted special characters'),
     teamTag: z
       .string()
       .min(1, 'Team tag is required')
@@ -666,6 +669,11 @@ export const TournamentForm = ({ tournament, slots }) => {
                         onBlur={(e) => handleFaceitBlur(index, e.target.value)}
                       />
                     </div>
+                    {faceitMeta[index]?.source === 'csgo' && (
+                       <p className="text-yellow-500 text-[9px] mt-1.5 font-bold uppercase tracking-wider font-body">
+                         ⚠ Legacy CS:GO data detected. Ensure your CS2 profile is linked to avoid seeding errors.
+                       </p>
+                    )}
                   </div>
 
                   {/* Wallet Address (Captain Only - Revenue Tier 1C) */}

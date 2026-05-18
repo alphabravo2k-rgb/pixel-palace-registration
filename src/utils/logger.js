@@ -8,17 +8,17 @@ const baseStyles = 'padding: 2px 6px; border-radius: 4px; font-weight: bold; fon
 export const Terminal = {
   log: (module, message, data = null) => {
     const styles = `${baseStyles} background: #27272a; color: #a1a1aa; border: 1px solid #3f3f46;`;
-    console.log(`%c[${module}]%c ${message}`, styles, 'color: #d4d4d8; font-family: monospace;', data ? data : '');
+    console.info(`%c[${module}]%c ${message}`, styles, 'color: #d4d4d8; font-family: monospace;', data ? data : '');
   },
   
   network: (message, data = null) => {
     const styles = `${baseStyles} background: rgba(0, 240, 255, 0.1); color: #00f0ff; border: 1px solid rgba(0, 240, 255, 0.3); box-shadow: 0 0 10px rgba(0, 240, 255, 0.2);`;
-    console.log(`%c[NETWORK]%c ${message}`, styles, 'color: #00f0ff; font-family: monospace;', data ? data : '');
+    console.info(`%c[NETWORK]%c ${message}`, styles, 'color: #00f0ff; font-family: monospace;', data ? data : '');
   },
 
   success: (message, data = null) => {
     const styles = `${baseStyles} background: rgba(0, 255, 128, 0.1); color: #00ff80; border: 1px solid rgba(0, 255, 128, 0.3); box-shadow: 0 0 10px rgba(0, 255, 128, 0.2);`;
-    console.log(`%c[SUCCESS]%c ${message}`, styles, 'color: #00ff80; font-family: monospace;', data ? data : '');
+    console.info(`%c[SUCCESS]%c ${message}`, styles, 'color: #00ff80; font-family: monospace;', data ? data : '');
   },
 
   warn: (message, data = null) => {
@@ -33,6 +33,6 @@ export const Terminal = {
 
   boot: () => {
     const styles = `${baseStyles} background: #000; color: #fff; border: 1px solid #fff; padding: 4px 12px; font-size: 14px;`;
-    console.log(`%c⚡ PIXEL PALACE OS v3.0 INITIALIZED`, styles);
+    console.info(`%cs PIXEL PALACE OS v3.0 INITIALIZED`, styles);
   }
 };

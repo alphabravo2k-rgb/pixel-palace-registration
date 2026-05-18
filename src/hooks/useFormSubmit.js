@@ -3,7 +3,13 @@ import { submitRegistration, fetchTournamentSlots } from '../services/sheets';
 import { CanonicalSchema } from '../schemas/canonical';
 import { transformToCanonical } from '../utils/dataFixer';
 import { tournaments } from '../config/tournaments';
-import { checkBanStatus } from '../config/bans';
+import {
+  getOrCreateSubmissionId,
+  clearSubmissionId,
+  saveDraft,
+  clearDraft,
+} from '../utils/idempotency';
+// checkBanStatus removed for security.
 
 /**
  * Form submission hook.
@@ -34,18 +40,11 @@ export const useFormSubmit = (tournamentId) => {
       const tournament = tournaments.find((t) => t.id === tournamentId);
       if (!tournament) throw new Error(`Tournament "${tournamentId}" not found.`);
 
-      const idempKey = `pp_idemp_${tournamentId}`;
-      const draftKey = `pp_draft_${tournamentId}`;
-
-      // ── Save draft in case of failure ──────────────────────────────────
-      sessionStorage.setItem(draftKey, JSON.stringify(formData));
+      // ── Save draft in case of failure (via idempotency.js helper) ───────
+      saveDraft(tournamentId, formData);
 
       // ── Idempotency: reuse or generate submission_id ───────────────────
-      let submissionId = sessionStorage.getItem(idempKey);
-      if (!submissionId) {
-        submissionId = crypto.randomUUID();
-        sessionStorage.setItem(idempKey, submissionId);
-      }
+      const submissionId = getOrCreateSubmissionId(tournamentId);
 
       // ── Transform form output → canonical structure ────────────────────
       const canonicalData = transformToCanonical(tournament, formData, submissionId);
@@ -57,13 +56,7 @@ export const useFormSubmit = (tournamentId) => {
         throw new Error(`Validation failed: ${messages}`);
       }
 
-      // ── Bug #9: Soft-Ban Cross-Check ───────────────────────────────────
-      for (const p of formData.players) {
-        const ban = checkBanStatus(p);
-        if (ban) {
-           throw new Error(`PLAYER_BANNED: Player "${p.ign || p.discord}" is restricted from participating. Reason: ${ban.reason}. Please contact support for appeals.`);
-        }
-      }
+      // Soft-ban check is handled server-side now to prevent leaking ban lists.
 
       // ── Bug #3: Final Race Condition Check ─────────────────────────────
       try {
@@ -80,8 +73,8 @@ export const useFormSubmit = (tournamentId) => {
       await submitRegistration(tournamentId, validation.data);
 
       // ── Success: clear idempotency key & draft ─────────────────────────
-      sessionStorage.removeItem(idempKey);
-      sessionStorage.removeItem(draftKey);
+      clearSubmissionId(tournamentId);
+      clearDraft(tournamentId);
       setIsSuccess(true);
       return { success: true, submissionId };
     } catch (err) {
@@ -92,7 +85,7 @@ export const useFormSubmit = (tournamentId) => {
       if (!isFatal) {
         try {
           const tournament = tournaments.find((t) => t.id === tournamentId);
-          const canonicalData = transformToCanonical(tournament, formData, sessionStorage.getItem(idempKey));
+          const canonicalData = transformToCanonical(tournament, formData, getOrCreateSubmissionId(tournamentId));
           localStorage.setItem(`pp_dlq_${tournamentId}`, JSON.stringify({
              payload: canonicalData,
              formData: formData, // Store original for draft restoration
