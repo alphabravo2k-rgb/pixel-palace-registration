@@ -87,7 +87,7 @@ export const Home = () => {
               <button className="bg-white text-black font-black uppercase tracking-widest px-8 py-3 rounded-sm hover:bg-neon-cyan transition-colors">
                 Explore Circuits
               </button>
-            </Link>
+            </a>
           </Magnetic>
         </div>
       </div>
