@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { CalendarX, Trophy, Users, Award, Target, History, Globe } from 'lucide-react';
-import { Link } from 'react-router-dom';
 import { tournaments } from '../config/tournaments';
 import TournamentFilterTabs from '../components/shared/TournamentFilterTabs';
 import TournamentCard from '../components/shared/TournamentCard';
