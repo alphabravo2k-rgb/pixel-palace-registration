@@ -1,227 +1,333 @@
 /**
- * PIXEL PALACE — ADMIN OPERATIONS SCRIPT v2.0 (7-PLAYER FORMAT)
+ * PIXEL PALACE — COMMUNITY CUP 2 ADMIN OPERATIONS SCRIPT v3.0
  *
  * Deployed in: Pixel Palace Community Cup 2 Admin Sheet
- * Spreadsheet URL: https://docs.google.com/spreadsheets/d/1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E/edit?gid=0#gid=0
+ * Sheet ID: 1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E
+ *
+ * ══════════════════════════════════════════════════════════════
+ *  15-COLUMN LAYOUT (Columns A through O)
+ * ══════════════════════════════════════════════════════════════
+ *  A   : S.N               ─── Merged 7 rows (team-level)
+ *  B   : Region             ─── Merged 7 rows (team-level)
+ *  C   : Logo URL           ─── Merged 7 rows (team-level)
+ *  D   : Steam Profile      ─── Per player
+ *  E   : Discord ID         ─── Per player
+ *  F   : Player Name        ─── Per player (Captain ©, Sub tagged)
+ *  G   : Faceit Profile     ─── Per player
+ *  H   : Live ELO           ─── Per player (auto-fetched)
+ *  I   : Joined Discord?    ─── Per player (admin fills)
+ *  J   : Role Issued?       ─── Per player (admin fills)
+ *  K   : Team Name          ─── Merged 7 rows (team-level)
+ *  L   : Average ELO        ─── Merged 7 rows (team-level, auto-calculated)
+ *  M   : Registration Status─── Merged 7 rows (team-level, admin edits)
+ *  N   : Team Seed          ─── Merged 7 rows (team-level, auto-calculated)
+ *  O   : Admin Remarks      ─── Merged 7 rows (team-level)
+ * ══════════════════════════════════════════════════════════════
+ *
+ *  Raw Sheet Column Map (18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc):
+ *  A(0) : Team ID        B(1) : Timestamp     C(2) : Tournament ID
+ *  D(3) : Submission ID  E(4) : Status        F(5) : Team Name
+ *  G(6) : Team Tag       H(7) : Region        I(8) : Logo URL
+ *  J(9) : P1 Discord    K(10): P1 Steam      L(11): P1 Faceit   M(12): P1 Rank
+ *  N(13): P2 Discord    O(14): P2 Steam      P(15): P2 Faceit   Q(16): P2 Rank
+ *  ...and so on (4 cols per player, P1-P7)
  */
 
-const RAW_SHEET_ID = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc"; // ID of the Pixel Palace | Raw Registrations spreadsheet
+const RAW_SHEET_ID   = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc";
 const FACEIT_API_KEY = "a77d0763-5fdd-4bde-a8a5-6e840408de2e";
 
-// ── COLUMN MAP (15-Column Layout) ─────────────────────────────────────────────
-const C = {
-  SN: 1,          // Col A: S.N
-  REGION: 2,      // Col B: Region
-  LOGO: 3,        // Col C: Logo URL
-  STEAM_URL: 4,   // Col D: Steam Profile
-  DISCORD: 5,     // Col E: Discord ID
-  PLAYER_NAME: 6, // Col F: Player Name
-  FACEIT_URL: 7,  // Col G: Faceit Profile
-  LIVE_ELO: 8,    // Col H: Live FACE IT ELO
-  JOINED: 9,      // Col I: Joined Discord
-  ROLE_ISSUED: 10,// Col J: Role Issued
-  TEAM_NAME: 11,  // Col K: Team Name
-  AVG_ELO: 12,    // Col L: AVERAGE ELO
-  REG_STATUS: 13, // Col M: Registration status
-  SEED: 14,       // Col N: Team Seed
-  REMARKS: 15     // Col O: Admin Remarks
+// Column numbers (1-indexed for getRange)
+const COL = {
+  SN          : 1,   // A
+  REGION      : 2,   // B
+  LOGO        : 3,   // C
+  STEAM       : 4,   // D
+  DISCORD     : 5,   // E
+  PLAYER_NAME : 6,   // F
+  FACEIT      : 7,   // G
+  LIVE_ELO    : 8,   // H
+  JOINED      : 9,   // I
+  ROLE_ISSUED : 10,  // J
+  TEAM_NAME   : 11,  // K
+  AVG_ELO     : 12,  // L
+  STATUS      : 13,  // M
+  SEED        : 14,  // N
+  REMARKS     : 15   // O
 };
+
 const TOTAL_COLS = 15;
+const PLAYERS_PER_TEAM = 7;
+const MERGE_COLS = [COL.SN, COL.REGION, COL.LOGO, COL.TEAM_NAME, COL.AVG_ELO, COL.STATUS, COL.SEED, COL.REMARKS];
 
-// Columns that merge across all 7 player rows (team-level data):
-const TEAM_MERGE_COLS = [
-  C.SN, C.REGION, C.LOGO, C.TEAM_NAME, C.AVG_ELO, C.REG_STATUS, C.SEED, C.REMARKS
-];
+function getSeedColor(seed) {
+  const m = { LOW: "#d9d9d9", MID: "#b6d7a8", NORMAL: "#ffe599", AVG: "#f9cb9c", GOOD: "#00ffff", BEST: "#ff00ff" };
+  return m[seed] || "#ffffff";
+}
 
+function eloToSeed(elo) {
+  if (elo <= 1200) return "LOW";
+  if (elo <= 1800) return "MID";
+  if (elo <= 2200) return "NORMAL";
+  if (elo <= 2500) return "AVG";
+  if (elo <= 3000) return "GOOD";
+  return "BEST";
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 function onOpen() {
   SpreadsheetApp.getUi()
-    .createMenu('⚡ Admin Tools')
-    .addItem('📥 Manual Sync & Fetch ELOs', 'syncAndFetch')
+    .createMenu("Admin Tools")
+    .addItem("Manual Sync from Raw Sheet", "syncRawToAdmin")
+    .addItem("Fetch Live ELOs from FACEIT", "updateFaceitElo")
+    .addItem("Full Sync + ELO Fetch", "syncAndFetch")
     .addSeparator()
-    .addItem('⏰ Enable Auto-Sync (Every 30 Mins)', 'createTimeTriggers')
+    .addItem("Setup / Fix Headers (Row 1)", "setupHeaders")
+    .addItem("Enable Auto-Sync (Every 30 Mins)", "createTimeTriggers")
+    .addItem("Remove All Triggers", "removeAllTriggers")
     .addToUi();
 }
 
 function syncAndFetch() {
   syncRawToAdmin();
   updateFaceitElo();
+  SpreadsheetApp.getActiveSpreadsheet().toast("Sync and ELO fetch complete!", "Done", 5);
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 function createTimeTriggers() {
-  const triggers = ScriptApp.getProjectTriggers();
-  for (let i = 0; i < triggers.length; i++) ScriptApp.deleteTrigger(triggers[i]);
-  ScriptApp.newTrigger('syncAndFetch').timeBased().everyMinutes(30).create();
-  SpreadsheetApp.getUi().alert("✅ Auto-sync Enabled (Every 30 Minutes).");
+  removeAllTriggers();
+  ScriptApp.newTrigger("syncAndFetch").timeBased().everyMinutes(30).create();
+  SpreadsheetApp.getUi().alert("Auto-sync enabled every 30 minutes.");
 }
 
+function removeAllTriggers() {
+  ScriptApp.getProjectTriggers().forEach(function(t) { ScriptApp.deleteTrigger(t); });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+function setupHeaders() {
+  var sheet = getAdminSheet_();
+  var headers = [
+    "S.N", "Region", "Logo URL", "Steam Profile", "Discord ID",
+    "Player Name", "Faceit Profile", "Live ELO",
+    "Joined Discord?", "Role Issued?",
+    "Team Name", "Average ELO", "Registration Status", "Team Seed", "Admin Remarks"
+  ];
+  sheet.getRange(1, 1, 1, headers.length)
+    .setValues([headers])
+    .setFontWeight("bold")
+    .setBackground("#263238")
+    .setFontColor("#ffffff");
+  sheet.setFrozenRows(1);
+  SpreadsheetApp.getActiveSpreadsheet().toast("Headers set in Row 1.", "Setup", 4);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+function getAdminSheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  return ss.getSheetByName("Admin_Ops") || ss.getSheets()[0];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SYNC RAW to ADMIN
+// ─────────────────────────────────────────────────────────────────────────────
 function syncRawToAdmin() {
-  const sourceDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
-  const rawSheet = sourceDoc.getSheetByName("Sheet1") || sourceDoc.getSheets()[0];
-  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops") || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  
-  const rawData = rawSheet.getDataRange().getValues();
-  const adminData = adminSheet.getDataRange().getValues();
-  
-  const existingTeams = new Set();
-  for (let i = 1; i < adminData.length; i++) {
-    // Column K (index 10) is the Team Name column
-    if (adminData[i][C.TEAM_NAME - 1]) {
-      existingTeams.add(adminData[i][C.TEAM_NAME - 1].toString().toLowerCase().trim());
+  var rawSheet   = SpreadsheetApp.openById(RAW_SHEET_ID).getSheets()[0];
+  var adminSheet = getAdminSheet_();
+
+  var rawData   = rawSheet.getDataRange().getValues();
+  var adminData = adminSheet.getDataRange().getValues();
+
+  // Build existing team names from Col K (index 10 in 0-based)
+  var existingTeams = {};
+  var teamCount = 0;
+  for (var i = 1; i < adminData.length; i++) {
+    var v = adminData[i][COL.TEAM_NAME - 1];
+    if (v && v.toString().trim()) {
+      existingTeams[v.toString().trim().toLowerCase()] = true;
+      teamCount++;
     }
   }
 
-  let teamsSynced = 0;
-  for (let i = 1; i < rawData.length; i++) {
-    const row = rawData[i];
-    // Check if tournament is community-cup-2
-    const tournamentId = row[2] ? row[2].toString().trim() : "";
-    if (tournamentId !== "community-cup-2") continue;
+  var added = 0;
+  for (var i = 1; i < rawData.length; i++) {
+    var row = rawData[i];
 
-    const teamName = row[5] ? row[5].toString().trim() : ""; // Column F (Team Name)
-    if (!teamName || existingTeams.has(teamName.toLowerCase())) continue;
+    var tid = (row[2] || "").toString().trim();
+    if (tid !== "community-cup-2") continue;
 
-    const sn = "TEAM " + (existingTeams.size + teamsSynced + 1);
-    const startRowIndex = adminSheet.getLastRow() + 1;
-    const rowsToAppend = [];
-    
-    const teamTag = row[6] ? row[6].toString().trim() : "";
-    const region = row[7] ? row[7].toString().trim() : "";
-    const logoUrl = row[8] ? row[8].toString().trim() : "";
+    var teamName = (row[5] || "").toString().trim();
+    if (!teamName || existingTeams[teamName.toLowerCase()]) continue;
 
-    // Loop through all 7 potential players (Captain, 4 Starters, 2 Subs)
-    for (let p = 0; p < 7; p++) {
-      let dataStartCol = 9 + (p * 4); // P1 Discord starts at Column J (index 9)
-      if (dataStartCol >= row.length) break;
+    var region  = (row[7] || "").toString().trim();
+    var logoUrl = (row[8] || "").toString().trim();
+    var startRow = adminSheet.getLastRow() + 1;
+    var sn = "TEAM " + (teamCount + added + 1);
+    var rows = [];
 
-      let discord = row[dataStartCol] || "N/A";
-      let steam = row[dataStartCol + 1] || "N/A";
-      let faceit = row[dataStartCol + 2] || "N/A";
-      
-      let pRole = p === 0 ? " ©" : (p >= 5 ? " (Sub)" : "");
-      let pName = faceit !== "N/A" ? faceit.split('/').filter(Boolean).pop() + pRole : discord + pRole;
+    for (var p = 0; p < PLAYERS_PER_TEAM; p++) {
+      var base    = 9 + p * 4;
+      var discord = (row[base]     || "").toString().trim() || "N/A";
+      var steam   = (row[base + 1] || "").toString().trim() || "N/A";
+      var faceit  = (row[base + 2] || "").toString().trim() || "N/A";
 
-      // Aligned exactly to Columns A through O (15 elements)
-      rowsToAppend.push([
-        p === 0 ? sn : "",                     // Col A: S.N
-        p === 0 ? region : "",                 // Col B: Region
-        p === 0 ? logoUrl : "",                // Col C: Logo URL
-        steam,                                 // Col D: Steam Profile
-        discord,                               // Col E: Discord ID
-        pName,                                 // Col F: Player Name
-        faceit,                                // Col G: Faceit Profile
-        "Fetching...",                         // Col H: Live FACE IT ELO
-        "",                                    // Col I: Joined Discord (Admin fills this)
-        "",                                    // Col J: Role Issued (Admin fills this)
-        p === 0 ? teamName : "",               // Col K: Team Name
-        p === 0 ? "Pending" : "",              // Col L: AVERAGE ELO
-        p === 0 ? "Under Review" : "",         // Col M: Registration status
-        p === 0 ? "TBD" : "",                  // Col N: Team Seed
-        ""                                     // Col O: Admin Remarks
-      ]);
+      var roleTag = p === 0 ? " (C)" : (p >= 5 ? " (Sub)" : "");
+      var pName   = (faceit !== "N/A")
+        ? faceit.replace(/\/$/, "").split("/").pop() + roleTag
+        : discord + roleTag;
+
+      var r = [];
+      for (var x = 0; x < TOTAL_COLS; x++) r.push("");
+      r[COL.SN          - 1] = p === 0 ? sn       : "";
+      r[COL.REGION      - 1] = p === 0 ? region   : "";
+      r[COL.LOGO        - 1] = p === 0 ? logoUrl  : "";
+      r[COL.STEAM       - 1] = steam;
+      r[COL.DISCORD     - 1] = discord;
+      r[COL.PLAYER_NAME - 1] = pName;
+      r[COL.FACEIT      - 1] = faceit;
+      r[COL.LIVE_ELO    - 1] = "Fetching...";
+      r[COL.TEAM_NAME   - 1] = p === 0 ? teamName : "";
+      r[COL.AVG_ELO     - 1] = p === 0 ? "Pending" : "";
+      r[COL.STATUS      - 1] = p === 0 ? "PENDING" : "";
+      r[COL.SEED        - 1] = p === 0 ? "TBD" : "";
+      rows.push(r);
     }
 
-    // Push 7 rows at once
-    adminSheet.getRange(startRowIndex, 1, 7, TOTAL_COLS).setValues(rowsToAppend);
-    
-    // Merge the Team-level cells vertically so it looks clean
-    TEAM_MERGE_COLS.forEach(col => {
-       adminSheet.getRange(startRowIndex, col, 7, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
+    adminSheet.getRange(startRow, 1, PLAYERS_PER_TEAM, TOTAL_COLS).setValues(rows);
+
+    MERGE_COLS.forEach(function(col) {
+      adminSheet.getRange(startRow, col, PLAYERS_PER_TEAM, 1)
+        .merge()
+        .setVerticalAlignment("middle")
+        .setHorizontalAlignment("center");
     });
-    
-    teamsSynced++;
+
+    existingTeams[teamName.toLowerCase()] = true;
+    added++;
+  }
+
+  Logger.log("syncRawToAdmin: added " + added + " team(s).");
+  if (added > 0) {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Synced " + added + " new team(s).", "Sync Done", 5);
+  } else {
+    SpreadsheetApp.getActiveSpreadsheet().toast("No new teams found.", "Sync Done", 3);
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+//  FETCH LIVE ELO
+// ─────────────────────────────────────────────────────────────────────────────
 function updateFaceitElo() {
-  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops") || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
-  const data = adminSheet.getDataRange().getValues();
-  const options = { "method": "get", "headers": { "Authorization": "Bearer " + FACEIT_API_KEY }, "muteHttpExceptions": true };
-  let teamStartIdx = 1, eloSum = 0, count = 0;
+  var adminSheet = getAdminSheet_();
+  var data       = adminSheet.getDataRange().getValues();
 
-  for (let i = 1; i < data.length; i++) {
-    // If we hit a new team name (Column K), finalize the stats for the previous team
-    if (adminSheet.getRange(i + 1, C.TEAM_NAME).getValue() !== "" && i !== 1) {
-      finalizeTeamStats(adminSheet, teamStartIdx, eloSum, count);
-      teamStartIdx = i; 
-      eloSum = 0; 
-      count = 0;
+  var options = {
+    method: "get",
+    headers: { Authorization: "Bearer " + FACEIT_API_KEY },
+    muteHttpExceptions: true
+  };
+
+  // Map: teamName -> { startDataRow (1-indexed), elos[] }
+  var teamMap = {};
+
+  for (var i = 1; i < data.length; i++) {
+    var tName = (data[i][COL.TEAM_NAME - 1] || "").toString().trim();
+    if (tName && !teamMap[tName]) {
+      teamMap[tName] = { dataRow: i + 1, elos: [] };
     }
-    
-    let url = data[i][C.FACEIT_URL - 1]; // Col G (Faceit Profile, index 6)
-    if (url && url.includes("faceit.com")) {
-      try {
-        let res = UrlFetchApp.fetch(`https://open.faceit.com/data/v4/players?nickname=${url.split('/').pop()}`, options);
-        if (res.getResponseCode() === 200) {
-          let json = JSON.parse(res.getContentText());
-          let elo = json.games.cs2 ? json.games.cs2.faceit_elo : (json.games.csgo ? json.games.csgo.faceit_elo : 0);
-          adminSheet.getRange(i + 1, C.LIVE_ELO).setValue(elo); // Col H (Live FACE IT ELO, column 8)
-          eloSum += elo; 
-          count++;
+
+    var faceitUrl = (data[i][COL.FACEIT - 1] || "").toString().trim();
+    if (!faceitUrl || !faceitUrl.includes("faceit.com")) continue;
+
+    var nickname = faceitUrl.replace(/\/$/, "").split("/").pop();
+    if (!nickname || nickname === "N/A" || nickname === "faceit.com") continue;
+
+    try {
+      var resp = UrlFetchApp.fetch(
+        "https://open.faceit.com/data/v4/players?nickname=" + encodeURIComponent(nickname),
+        options
+      );
+      if (resp.getResponseCode() === 200) {
+        var json = JSON.parse(resp.getContentText());
+        var elo  = 0;
+        if (json.games) {
+          elo = json.games.cs2
+            ? json.games.cs2.faceit_elo
+            : (json.games.csgo ? json.games.csgo.faceit_elo : 0);
         }
-      } catch (e) {}
-    }
-  }
-  // Finalize the very last team in the sheet
-  finalizeTeamStats(adminSheet, teamStartIdx, eloSum, count);
-}
+        adminSheet.getRange(i + 1, COL.LIVE_ELO).setValue(elo > 0 ? elo : "N/A");
 
-function finalizeTeamStats(sheet, teamStartIdx, eloSum, count) {
-  if (count === 0) return;
-  let avg = Math.round(eloSum / count);
-  let seed = avg <= 1200 ? "LOW" : avg <= 1800 ? "MID" : avg <= 2200 ? "NORMAL" : avg <= 2500 ? "AVG" : avg <= 3000 ? "GOOD" : "BEST";
-  
-  // Col L (12) - Average ELO
-  sheet.getRange(teamStartIdx + 1, C.AVG_ELO).setValue(avg);
-  
-  // Col N (14) - Team Seed
-  sheet.getRange(teamStartIdx + 1, C.SEED)
-       .setValue(seed)
-       .setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
-       .setFontWeight("bold");
-}
-
-// ── TRIGGERED EVENT SYNC BACK TO RAW REGISTER SHEET ───────────────────────────
-function onEdit(e) {
-  const range = e.range;
-  const sheet = range.getSheet();
-  const sheetName = sheet.getName();
-  
-  if (sheetName === "Admin_Ops" || sheetName === "Sheet1") {
-    const col = range.getColumn();
-    
-    // Column M (Column 13) is the Registration status column
-    if (col === C.REG_STATUS) {
-      const oldValue = e.oldValue ? String(e.oldValue).trim().toUpperCase() : "";
-      const newValue = e.value ? String(e.value).trim().toUpperCase() : "";
-      
-      if (oldValue === newValue) return;
-      
-      // Get the team name from Column K (Column 11)
-      const teamName = sheet.getRange(range.getRow(), C.TEAM_NAME).getValue().toString().trim();
-      if (!teamName) return;
-      
-      syncStatusToRaw(teamName, newValue);
-    }
-  }
-}
-
-function syncStatusToRaw(teamName, newStatus) {
-  try {
-    const rawDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
-    const rawSheet = rawDoc.getSheetByName("Sheet1") || rawDoc.getSheets()[0];
-    const data = rawSheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      const existingTeamName = data[i][5] ? data[i][5].toString().trim() : ""; // Col F (index 5) is Team Name
-      if (existingTeamName.toLowerCase() === teamName.toLowerCase()) {
-        const currentStatus = data[i][4] ? data[i][4].toString().trim() : ""; // Col E (index 4) is Status
-        if (currentStatus.toUpperCase() !== newStatus.toUpperCase()) {
-          rawSheet.getRange(i + 1, 5).setValue(newStatus); // Col E is Column 5
+        // Attribute ELO to current team (search upward for team name)
+        var key = "";
+        for (var k = i; k >= 1; k--) {
+          var candidate = (data[k][COL.TEAM_NAME - 1] || "").toString().trim();
+          if (candidate) { key = candidate; break; }
         }
-        break;
+        if (key && teamMap[key] && elo > 0) teamMap[key].elos.push(elo);
       }
+    } catch (e) {
+      Logger.log("ELO fetch error for " + nickname + ": " + e);
+    }
+  }
+
+  // Update Average ELO and Seed for each team
+  for (var tName in teamMap) {
+    var info = teamMap[tName];
+    if (!info.elos.length) continue;
+    var sum = 0;
+    for (var x = 0; x < info.elos.length; x++) sum += info.elos[x];
+    var avg  = Math.round(sum / info.elos.length);
+    var seed = eloToSeed(avg);
+    adminSheet.getRange(info.dataRow, COL.AVG_ELO).setValue(avg);
+    adminSheet.getRange(info.dataRow, COL.SEED)
+      .setValue(seed)
+      .setBackground(getSeedColor(seed))
+      .setFontWeight("bold");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  ON EDIT — sync status change back to Raw Sheet
+// ─────────────────────────────────────────────────────────────────────────────
+function onEdit(e) {
+  var range = e.range;
+  var sheet = range.getSheet();
+
+  if (range.getColumn() !== COL.STATUS) return;
+
+  var newStatus = e.value ? e.value.toString().trim().toUpperCase() : "";
+  var oldStatus = e.oldValue ? e.oldValue.toString().trim().toUpperCase() : "";
+  if (newStatus === oldStatus) return;
+
+  // Get team name from Col K; merged cells may return "" for sub-rows
+  var teamName = sheet.getRange(range.getRow(), COL.TEAM_NAME).getValue().toString().trim();
+  if (!teamName) {
+    // Search upward
+    for (var r = range.getRow() - 1; r >= 2; r--) {
+      teamName = sheet.getRange(r, COL.TEAM_NAME).getValue().toString().trim();
+      if (teamName) break;
+    }
+  }
+  if (!teamName) return;
+
+  syncStatusToRaw_(teamName, newStatus);
+}
+
+function syncStatusToRaw_(teamName, newStatus) {
+  try {
+    var rawSheet = SpreadsheetApp.openById(RAW_SHEET_ID).getSheets()[0];
+    var data     = rawSheet.getDataRange().getValues();
+
+    for (var i = 1; i < data.length; i++) {
+      var tn = (data[i][5] || "").toString().trim(); // Col F = Team Name
+      if (tn.toLowerCase() !== teamName.toLowerCase()) continue;
+      var existing = (data[i][4] || "").toString().trim().toUpperCase(); // Col E = Status
+      if (existing !== newStatus) {
+        rawSheet.getRange(i + 1, 5).setValue(newStatus);
+      }
+      break;
     }
   } catch (err) {
-    console.error("Failed to sync status to Raw:", err);
+    Logger.log("syncStatusToRaw_ error: " + err);
   }
 }
