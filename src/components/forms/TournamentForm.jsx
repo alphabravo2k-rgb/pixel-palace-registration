@@ -307,6 +307,24 @@ export const TournamentForm = ({ tournament, slots }) => {
     if (res?.success) {
       setSubmissionId(res.submissionId);
       localStorage.removeItem(`pp_dlq_${tournament.id}`); // Clear DLQ on success
+      
+      const activeTeamPayload = {
+        tournamentId: tournament.id,
+        teamName: formData.teamName,
+        teamTag: formData.teamTag,
+        logo: formData.logoUrl || '',
+        submissionId: res.submissionId,
+        registeredAt: new Date().toISOString(),
+        roster: formData.players.map(p => ({ 
+          ign: p.ign, 
+          discord: p.discord, 
+          avatar: p.avatar || '', 
+          role: p.role 
+        }))
+      };
+      
+      localStorage.setItem(`pp_active_team_${tournament.id}`, JSON.stringify(activeTeamPayload));
+      window.dispatchEvent(new CustomEvent('pp-registration-success', { detail: activeTeamPayload }));
     }
   };
 

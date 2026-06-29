@@ -4,7 +4,7 @@ import { getTournamentBySlug } from '../config/tournaments';
 import { fetchTournamentSlots, fetchTournamentTeams, fetchTournamentBracket } from '../services/sheets';
 import { formatEsportsDate } from '../utils/dateHelper';
 import { DiscordGate } from '../components/modals/DiscordGate';
-import { MessageCircle, Tv, Trophy, ShieldCheck, ChevronLeft } from 'lucide-react';
+import { MessageCircle, Tv, Trophy, ShieldCheck, ChevronLeft, Shield, Users, Sparkles, Copy } from 'lucide-react';
 import { TeamProfileModal } from '../components/modals/TeamProfileModal';
 import { Terminal } from '../utils/logger';
 import { useAudio } from '../hooks/useAudio';
@@ -38,6 +38,25 @@ export const Register = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [failedMapImages, setFailedMapImages] = useState(new Set());
+  
+  const [activeTeam, setActiveTeam] = useState(() => {
+    try {
+      const stored = localStorage.getItem(`pp_active_team_${tournament?.id}`);
+      return stored ? JSON.parse(stored) : null;
+    } catch {
+      return null;
+    }
+  });
+  const [showForm, setShowForm] = useState(!activeTeam);
+
+  useEffect(() => {
+    const handleSuccess = (e) => {
+      setActiveTeam(e.detail);
+      setShowForm(false);
+    };
+    window.addEventListener('pp-registration-success', handleSuccess);
+    return () => window.removeEventListener('pp-registration-success', handleSuccess);
+  }, [tournament]);
 
   const handleMapImgError = useCallback((mapName) => {
     setFailedMapImages(prev => new Set([...prev, mapName]));
@@ -130,6 +149,117 @@ export const Register = () => {
     
     return () => clearInterval(timer);
   }, [tournament]);
+
+  const renderCommandDeck = () => {
+    if (!activeTeam) return null;
+
+    const liveTeam = (teams || []).find(t => t.name.toUpperCase() === activeTeam.teamName.toUpperCase());
+    const liveStatus = liveTeam ? liveTeam.status : 'PENDING';
+
+    const statusSteps = [
+      { label: "Submitted", active: true, desc: "Roster details serialized" },
+      { label: "Under Review", active: liveStatus === "UNDER REVIEW" || liveStatus === "APPROVED" || liveStatus === "VERIFIED", desc: "Verification pending" },
+      { label: "Approved", active: liveStatus === "APPROVED" || liveStatus === "VERIFIED", desc: "Roster secured" }
+    ];
+
+    const copyId = () => {
+      navigator.clipboard.writeText(activeTeam.submissionId);
+      Terminal.success("Submission ID copied to clipboard.");
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto animate-in zoom-in duration-500 relative z-10">
+        <div className="glass-panel p-8 border-t-4 border-t-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.1)] relative overflow-hidden bg-gradient-to-b from-yellow-950/10 to-transparent">
+          <div className="hud-crosshair tl opacity-50" />
+          <div className="hud-crosshair tr opacity-50" />
+          <div className="hud-crosshair bl opacity-50" />
+          <div className="hud-crosshair br opacity-50" />
+          
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-5">
+              <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500/30 rounded flex items-center justify-center text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)] shrink-0">
+                <Shield className="w-10 h-10" />
+              </div>
+              <div className="text-left">
+                <div className="text-[10px] text-yellow-500 font-bold uppercase tracking-[0.3em] font-body">Captain's Command Deck</div>
+                <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase mt-1">
+                  {activeTeam.teamName} <span className="text-yellow-500">[{activeTeam.teamTag}]</span>
+                </h2>
+                <p className="text-zinc-500 font-body text-xs uppercase mt-2 tracking-widest font-bold">
+                  WELCOME BACK COMMANDER // ACTIVE PROTOCOL CC2
+                </p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 w-full md:w-auto">
+              <button 
+                onMouseEnter={playHover}
+                onClick={() => { playClick(); copyId(); }}
+                className="flex-grow md:flex-grow-0 bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500 hover:text-black text-yellow-500 text-xs font-bold uppercase tracking-widest py-3 px-6 transition-all duration-300 rounded font-body flex items-center justify-center gap-2"
+              >
+                <Copy className="w-4 h-4" /> Copy Sub ID
+              </button>
+              <button 
+                onMouseEnter={playHover}
+                onClick={() => { playClick(); setShowForm(true); }}
+                className="flex-grow md:flex-grow-0 bg-zinc-900 border border-white/10 hover:border-white/20 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-widest py-3 px-6 transition-all duration-300 rounded font-body"
+              >
+                Reregister Team
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-12 bg-black/40 border border-white/5 p-6 rounded-lg text-left">
+            <h3 className="text-sm font-bold font-body uppercase text-zinc-400 mb-6 tracking-widest">REGISTRATION STATUS STATE</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
+              {statusSteps.map((step, idx) => (
+                <div key={idx} className="relative flex flex-col pl-4 border-l-2 border-l-zinc-800 last:border-0 pb-1 md:pb-0">
+                  <div className={`absolute left-[-5px] top-1.5 w-2 h-2 rounded-full ${step.active ? 'bg-yellow-500 shadow-[0_0_8px_rgba(234,179,8,0.8)]' : 'bg-zinc-800'}`} />
+                  <span className={`text-base font-heading uppercase tracking-widest ${step.active ? 'text-yellow-400 font-bold' : 'text-zinc-500'}`}>
+                    {step.label}
+                  </span>
+                  <span className="text-[10px] text-zinc-600 font-bold uppercase mt-1 tracking-widest">
+                    {step.desc}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-8 flex gap-3 items-start bg-yellow-500/5 border border-yellow-500/10 p-4 rounded text-zinc-400 font-body text-xs text-left leading-relaxed">
+            <Sparkles className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5 animate-pulse" />
+            <div>
+              <strong className="text-white uppercase tracking-wider font-bold">Write Your Legacy</strong>
+              <p className="mt-1">
+                Your squad is booked to compete on the Official CS2 Competitive Map Pool. Review your tactical strategies, coordinate voice channels, and ensure Akros Anti-Cheat is fully verified for all teammates. The community cup awaits.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 border-t border-white/10 pt-8 text-left">
+            <h3 className="text-xl font-heading text-white uppercase mb-4 tracking-widest flex items-center gap-2">
+              <Users className="w-5 h-5 text-yellow-500" /> Declared Squad Roster
+            </h3>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {activeTeam.roster.map((player, idx) => (
+                <div key={idx} className="bg-black/30 border border-white/5 p-4 rounded flex items-center gap-3 relative hover:border-yellow-500/20 transition-all duration-300">
+                  <div className="w-10 h-10 bg-yellow-500/5 rounded-full border border-yellow-500/10 flex items-center justify-center text-xs font-bold text-yellow-500">
+                    {idx + 1}
+                  </div>
+                  <div>
+                    <div className="text-white font-bold font-body text-sm leading-none">{player.ign}</div>
+                    <div className="text-zinc-600 text-[10px] font-bold uppercase tracking-wider mt-1">{player.role.toUpperCase()}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   if (!tournament) {
     return <Navigate to="/404" replace />;
@@ -284,13 +414,17 @@ export const Register = () => {
 
           <div className="tab-content-wrapper mt-8">
             {activeTab === 'register' && (
-              <RegistrationTab 
-                tournament={tournament} 
-                slots={slots} 
-                timeLeft={timeLeft} 
-                failedMapImages={failedMapImages} 
-                handleMapImgError={handleMapImgError} 
-              />
+              activeTeam && !showForm ? (
+                renderCommandDeck()
+              ) : (
+                <RegistrationTab 
+                  tournament={tournament} 
+                  slots={slots} 
+                  timeLeft={timeLeft} 
+                  failedMapImages={failedMapImages} 
+                  handleMapImgError={handleMapImgError} 
+                />
+              )
             )}
 
             {(activeTab === 'tracker' || activeTab === 'teams') && (
