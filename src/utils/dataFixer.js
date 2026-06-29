@@ -60,6 +60,7 @@ export const transformToCanonical = (tournament, formData, submissionId) => {
         faceitLevel: p.faceitLevel !== undefined ? String(p.faceitLevel) : 'N/A',
         faceitElo: p.faceitElo !== undefined ? String(p.faceitElo) : 'N/A',
         cs2RankLabel: p.cs2RankLabel ?? 'Not Linked',
+        avatar: p.avatar?.trim() ?? '',
         // Collect wallet address only if provided (typically only for Captain/Role via form)
         wallet_address: p.walletAddress?.trim() ?? '',
       };

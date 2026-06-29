@@ -61,6 +61,7 @@ const buildFormSchema = (tournament) => {
     faceitLevel: z.string().default('N/A'),
     faceitElo: z.string().default('N/A'),
     cs2RankLabel: z.string().default('Not Linked'),
+    avatar: z.string().optional().default(''),
     walletAddress: z.string()
       .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
       .optional()
@@ -84,15 +85,11 @@ const buildFormSchema = (tournament) => {
     players: z
       .array(playerSchema)
       .min(coreCount, `Minimum ${coreCount} players required`),
-    // BUG-003: Mandatory verifications
-    verifications: z.array(z.boolean()).refine((vals) => vals.every(v => v === true), {
-      message: "You must acknowledge all tournament requirements."
-    })
   });
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
-const blankPlayer = () => ({ ign: '', discord: '', steam: '', steam64: '', faceit: '', faceitLevel: '', faceitElo: '', cs2RankLabel: '' });
+const blankPlayer = () => ({ ign: '', discord: '', steam: '', steam64: '', faceit: '', faceitLevel: '', faceitElo: '', cs2RankLabel: '', avatar: '' });
 
 const getPlayerMeta = (index, coreCount) => {
   if (index === 0)
@@ -149,8 +146,7 @@ export const TournamentForm = ({ tournament, slots }) => {
       teamTag: '',
       teamRegion: '',
       logoLink: '',
-      players: Array.from({ length: corePlayerCount }, blankPlayer),
-      verifications: Array(tournament.customVerification?.length || 0).fill(false)
+      players: Array.from({ length: corePlayerCount }, blankPlayer)
     },
   });
 
@@ -249,6 +245,13 @@ export const TournamentForm = ({ tournament, slots }) => {
         setValue(`players.${index}.faceitLevel`, data.faceitLevel?.toString());
         setValue(`players.${index}.faceitElo`, data.faceitElo?.toString());
         setValue(`players.${index}.cs2RankLabel`, data.cs2RankLabel?.toString());
+        
+        if (data.nickname) {
+          setValue(`players.${index}.ign`, data.nickname, { shouldValidate: true });
+        }
+        if (data.avatar) {
+          setValue(`players.${index}.avatar`, data.avatar);
+        }
         
         setFaceitMeta((prev) => ({ 
           ...prev, 
@@ -580,9 +583,22 @@ export const TournamentForm = ({ tournament, slots }) => {
 
                 {/* Card header */}
                 <div className="flex justify-between items-center mb-5 border-b border-white/10 pb-3">
-                  <span className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 font-body">
-                    Player {String(index + 1).padStart(2, '0')}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    {getValues(`players.${index}.avatar`) ? (
+                      <img 
+                        src={getValues(`players.${index}.avatar`)} 
+                        alt="Player Avatar" 
+                        className="w-8 h-8 rounded-full border border-white/10 object-cover" 
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-zinc-600 font-bold uppercase">
+                        P{index+1}
+                      </div>
+                    )}
+                    <span className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 font-body">
+                      Player {String(index + 1).padStart(2, '0')}
+                    </span>
+                  </div>
                   <div className="flex items-center gap-2">
                     <div className={`w-1.5 h-1.5 rounded-full ${meta.dotClass} animate-pulse`} />
                     <span className={`text-xs font-bold uppercase tracking-widest font-body ${meta.textClass}`}>
@@ -603,8 +619,9 @@ export const TournamentForm = ({ tournament, slots }) => {
                         <input
                           {...register(`players.${index}.ign`)}
                           type="text"
-                          placeholder="What you're called in-game"
-                          className="input-ghost text-xs"
+                          readOnly={faceitStatus[index] === 'SUCCESS'}
+                          placeholder={faceitStatus[index] === 'SUCCESS' ? 'Auto-filled from FACEIT' : "What you're called in-game"}
+                          className={`input-ghost text-xs ${faceitStatus[index] === 'SUCCESS' ? 'text-zinc-400 bg-black/20 border-none select-none pointer-events-none' : ''}`}
                         />
                       </div>
                       {errors.players?.[index]?.ign && (
@@ -751,7 +768,7 @@ export const TournamentForm = ({ tournament, slots }) => {
                              <div className="flex flex-col flex-1">
                                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">FACEIT LVL</span>
                                 <div className={`px-2 py-1.5 flex items-center justify-center font-bold text-xs rounded border ${badgeColor}`}>
-                                   {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'MANUAL INPUT' : (lvl || 'AWAITING URL'))}
+                                   {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'LINK ERROR' : (lvl || 'AWAITING LINK'))}
                                 </div>
                                 {state === 'FAILED' && (
                                   <select {...lvlField} className="mt-2 bg-black border border-yellow-500 text-yellow-400 text-xs px-2 py-1 outline-none w-full cursor-pointer focus:ring-0">
@@ -792,127 +809,50 @@ export const TournamentForm = ({ tournament, slots }) => {
     </div>
   );
 
-  // ─── SECTION 03 — FINAL VERIFICATION ─────────────────────────────────────
-  const duoOrTeam = corePlayerCount === 2 ? 'duo' : 'team';
-  const totalActivePlayers = fields.length;
-
-  const verificationItems = tournament.customVerification
-    ? tournament.customVerification.map((str, i) => {
-        const parts = str.split(' — ');
-        return {
-          key: `custom-${i}`,
-          label: parts[0],
-          body: parts.length > 1 ? parts.slice(1).join(' — ') : ''
-        };
-      })
-    : [
-        {
-          key: 'anticheat',
-          label: 'MANDATORY ANTI-CHEAT',
-          body: `Our ${duoOrTeam} acknowledges that ${tournament.antiCheat ?? 'Akros'} Anti-Cheat must be installed by all ${totalActivePlayers} players.`,
-        },
-        {
-          key: 'discord',
-          label: 'COMMUNICATION',
-          body: `All ${totalActivePlayers} players have joined the Pixel Palace Discord server.`,
-        },
-        {
-          key: 'schedule',
-          label: 'SCHEDULE',
-          body: `We confirm availability for the registration deadline and all tournament dates.`,
-        },
-      ];
-
-  const FinalVerification = (
-    <div className="glass-panel p-0 overflow-hidden group/section">
-      <div className="flex items-stretch bg-black/50 border-b border-white/10">
-        <div className="bg-white px-5 flex items-center justify-center font-bold font-heading text-3xl text-black italic group-hover/section:bg-neon-cyan transition-colors">
-          03
-        </div>
-        <div className="pl-6 py-4 flex flex-col justify-center">
-          <h2 className="text-3xl text-white font-heading tracking-wider italic uppercase leading-none">
-            Final Verification
-          </h2>
-          <span className="text-xs text-neon-pink font-body font-bold uppercase tracking-[0.2em] mt-1">
-            We confirm that:
-          </span>
-        </div>
-      </div>
-
-      <div className="p-8">
-        <div className="space-y-4 mb-10">
-          {verificationItems.map((item, i) => (
-            <label
-              key={item.key}
-              className="flex items-start gap-4 p-5 bg-black/50 border border-white/5 cursor-pointer hover:border-neon-cyan transition-colors group rounded shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]"
-            >
-              <input
-                type="checkbox"
-                {...register(`verifications.${i}`)}
-                className="w-5 h-5 flex-shrink-0 accent-neon-cyan rounded-sm cursor-pointer mt-0.5"
-              />
-              <span className="text-sm text-zinc-400 group-hover:text-white transition-colors leading-relaxed font-body">
-                <strong className="text-white uppercase tracking-wider">{item.label}</strong>
-                {item.body && <>{' '}—{' '}{item.body}</>}
-              </span>
-            </label>
-          ))}
-
-          {errors.verifications && (
-            <div className="p-4 bg-red-500/10 border border-red-500/30 rounded flex items-center gap-3 animate-in fade-in slide-in-from-left duration-300">
-               <ShieldAlert className="w-4 h-4 text-red-500" />
-               <span className="text-[10px] font-black text-red-500 uppercase tracking-widest leading-none">
-                 {errors.verifications.message}
-               </span>
-            </div>
-          )}
-        </div>
-
-        {/* Error box — shows gateway errors after zod validation passes */}
-        {error && (
-          <div className={`mb-8 border p-6 flex flex-col items-center gap-4 animate-in zoom-in duration-300 shadow-2xl ${error.includes('PLAYER_BANNED') ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-orange-500/20' : 'bg-red-500/10 border-red-500 text-red-400 shadow-red-500/20'}`}>
-            <div className="flex items-center gap-3">
-               <AlertOctagon className="w-6 h-6 flex-shrink-0" />
-               <span className="text-xs font-black uppercase tracking-[0.2em] leading-none">
-                 {error.includes('PLAYER_BANNED') ? 'ELIGIBILITY RESTRICTED' : 'TRANSMISSION FAILED'}
-               </span>
-            </div>
-            
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-center max-w-sm leading-relaxed opacity-90 font-body">
-              {error.replace('PLAYER_BANNED: ', '')}
-            </p>
-
-            {error.includes('PLAYER_BANNED') ? (
-              <a 
-                href="https://discord.gg/pixelpalace" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="mt-2 px-6 py-3 bg-orange-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
-              >
-                OPEN SUPPORT TICKET (APPEAL) <ExternalLink className="w-3 h-3" />
-              </a>
-            ) : (
-              <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest opacity-50">Please verify your connection and try again.</span>
-            )}
+  const FormSubmitSection = (
+    <div className="glass-panel p-6 flex flex-col gap-4">
+      {error && (
+        <div className={`border p-6 flex flex-col items-center gap-4 animate-in zoom-in duration-300 shadow-2xl ${error.includes('PLAYER_BANNED') ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-orange-500/20' : 'bg-red-500/10 border-red-500 text-red-400 shadow-red-500/20'}`}>
+          <div className="flex items-center gap-3">
+             <AlertOctagon className="w-6 h-6 flex-shrink-0" />
+             <span className="text-xs font-black uppercase tracking-[0.2em] leading-none">
+               {error.includes('PLAYER_BANNED') ? 'ELIGIBILITY RESTRICTED' : 'TRANSMISSION FAILED'}
+             </span>
           </div>
-        )}
+          
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-center max-w-sm leading-relaxed opacity-90 font-body">
+            {error.replace('PLAYER_BANNED: ', '')}
+          </p>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="btn-ignite w-full flex justify-center items-center h-[72px]"
-        >
-          {isSubmitting ? (
-            <span className="flex items-center gap-3">
-              <Loader2 className="w-6 h-6 animate-spin" />
-              TRANSMITTING...
-            </span>
+          {error.includes('PLAYER_BANNED') ? (
+            <a 
+              href="https://discord.gg/pixelpalace" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="mt-2 px-6 py-3 bg-orange-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
+            >
+              OPEN SUPPORT TICKET (APPEAL) <ExternalLink className="w-3 h-3" />
+            </a>
           ) : (
-            <span>SUBMIT REGISTRATION</span>
+            <span className="text-[8px] font-bold text-zinc-500 uppercase tracking-widest opacity-50">Please verify your connection and try again.</span>
           )}
-        </button>
-      </div>
+        </div>
+      )}
+
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className="btn-ignite w-full flex justify-center items-center h-[72px]"
+      >
+        {isSubmitting ? (
+          <span className="flex items-center gap-3">
+            <Loader2 className="w-6 h-6 animate-spin" />
+            TRANSMITTING...
+          </span>
+        ) : (
+          <span>SUBMIT REGISTRATION</span>
+        )}
+      </button>
     </div>
   );
 
@@ -969,7 +909,7 @@ export const TournamentForm = ({ tournament, slots }) => {
       )}
       {TeamIdentity}
       {TeamRoster}
-      {FinalVerification}
+      {FormSubmitSection}
     </form>
   );
 };

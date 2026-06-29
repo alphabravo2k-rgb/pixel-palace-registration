@@ -56,6 +56,7 @@ export const flattenForSheets = (canonicalPayload) => {
     flat[`p${n}FaceitLevel`]  = player.faceitLevel;
     flat[`p${n}FaceitElo`]    = player.faceitElo;
     flat[`p${n}CS2Rank`]      = player.cs2RankLabel;
+    flat[`p${n}Avatar`]       = player.avatar;
     
     // Legacy support for backend script if it strictly looks for "Rank" instead of "FaceitLevel"
     flat[`p${n}Rank`]         = player.faceitLevel;

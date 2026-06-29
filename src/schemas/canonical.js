@@ -18,6 +18,7 @@ export const RosterPlayerSchema = z.object({
   faceitElo: z.string().default('N/A'),
   faceit_data_fetched_at: z.string().datetime().optional(),
   cs2RankLabel: z.string().default('Not Linked'),
+  avatar: z.string().optional().default(''),
   wallet_address: z.string()
     .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
     .optional()

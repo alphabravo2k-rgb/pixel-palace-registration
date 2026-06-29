@@ -12,19 +12,22 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
       cleanUrl = `https://${cleanUrl}`;
     }
 
-    // Attempt to extract username from URL
-    const nameMatch = cleanUrl.match(/faceit\.com\/en\/players\/([^/?#]+)/);
-    if (!nameMatch) {
-      throw new Error('Could not identify FACEIT username from URL constraint.');
+    // Identify username from URL or use as raw username
+    let username = cleanUrl;
+    if (cleanUrl.includes('faceit.com')) {
+      const nameMatch = cleanUrl.match(/faceit\.com\/(?:[a-z]{2}\/)?players\/([^/?#]+)/i);
+      if (nameMatch) {
+        username = nameMatch[1];
+      } else {
+        throw new Error('Could not identify FACEIT username from URL constraint.');
+      }
     }
-
-    const username = nameMatch[1];
 
     if (!faceitApiKey) {
       throw new Error('NO_API_KEY');
     }
 
-    const response = await fetch(`https://open.faceit.com/data/v4/players?nickname=${username}`, {
+    const response = await fetch(`https://open.faceit.com/data/v4/players?nickname=${encodeURIComponent(username)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${faceitApiKey}`
@@ -42,6 +45,7 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
     const cs2Data = data.games?.cs2 || data.games?.csgo; 
 
     return {
+      nickname: data.nickname || username,
       faceitLevel: cs2Data?.skill_level || 'N/A',
       faceitElo: cs2Data?.faceit_elo || 'N/A',
       cs2RankLabel: cs2Data?.game_skill_level_label || 'Not Linked',
