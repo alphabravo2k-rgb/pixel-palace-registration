@@ -572,8 +572,14 @@ export const TournamentForm = ({ tournament, slots }) => {
             return (
               <div
                 key={field.id}
-                className="bg-gradient-to-b from-gray-900/80 to-black border border-white/5 rounded-md relative overflow-hidden transition-all duration-500 hover:border-white/15 hover:-translate-y-1 shadow-[0_10px_30px_rgba(0,0,0,0.5)] p-6"
+                className="cyber-card p-6 relative overflow-hidden group"
               >
+                {/* HUD Corner Accents */}
+                <div className="hud-crosshair tl opacity-30 group-hover:opacity-100 transition-opacity" />
+                <div className="hud-crosshair tr opacity-30 group-hover:opacity-100 transition-opacity" />
+                <div className="hud-crosshair bl opacity-30 group-hover:opacity-100 transition-opacity" />
+                <div className="hud-crosshair br opacity-30 group-hover:opacity-100 transition-opacity" />
+
                 {/* Accent line */}
                 <div className={`absolute top-0 left-0 w-full h-[3px] opacity-70 ${meta.lineClass}`} />
 

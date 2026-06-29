@@ -44,7 +44,11 @@ export const RegistrationTab = ({
         
         <TournamentInfo tournament={tournament} />
 
-        <div className="glass-panel p-6 border-l-4 border-l-neon-pink group">
+        <div className="glass-panel p-6 border-l-4 border-l-neon-pink group relative overflow-hidden shadow-[0_0_20px_rgba(240,0,255,0.05)] hover:shadow-[0_0_30px_rgba(240,0,255,0.15)] transition-all duration-300">
+          <div className="hud-crosshair tl opacity-30" />
+          <div className="hud-crosshair tr opacity-30" />
+          <div className="hud-crosshair bl opacity-30" />
+          <div className="hud-crosshair br opacity-30" />
           <p className="text-[10px] uppercase tracking-[0.3em] text-neon-pink mb-4 font-bold font-body">Registration Closes In</p>
           <div className="flex items-center gap-3">
             {timeLeft === 'OFFLINE' || timeLeft === 'TBD' ? (
