@@ -198,73 +198,150 @@ function doGet(e) {
     
     const tournamentId = params.tournamentId || "";
     
+    // ── Validate Invite Code ────────────────────────────────────────────────
     if (endpoint === "/api/v1/validateCode") {
-      const codeSheet = doc.getSheetByName("Codes");
+      const codeToCheck = (params.validateCode || "").toString().trim();
       let isValid = false;
-      if (codeSheet) {
-        const codeData = codeSheet.getDataRange().getValues();
-        for (let i = 1; i < codeData.length; i++) {
-          if (codeData[i][0] == params.validateCode && (!codeData[i][1] || codeData[i][1].toString().trim() === "")) {
-            isValid = true; break;
+      let slotType = "OPEN"; // default if not found in either sheet
+
+      // 1. Check new InviteCodes sheet (preferred)
+      const inviteSheet = doc.getSheetByName("InviteCodes");
+      if (inviteSheet && codeToCheck) {
+        const inviteData = inviteSheet.getDataRange().getValues();
+        for (let i = 1; i < inviteData.length; i++) {
+          const code     = (inviteData[i][0] || "").toString().trim();
+          const tid      = (inviteData[i][1] || "").toString().trim();
+          const maxUses  = parseInt(inviteData[i][3] || "999") || 999;
+          const timesUsed = parseInt(inviteData[i][4] || "0") || 0;
+          if (code.toLowerCase() === codeToCheck.toLowerCase() &&
+              (!tid || tid === tournamentId) &&
+              timesUsed < maxUses) {
+            isValid = true;
+            slotType = (inviteData[i][2] || "INVITE").toString().trim();
+            break;
           }
         }
       }
-      return generateResponse({ valid: isValid });
+
+      // 2. Fallback: check legacy "Codes" sheet (unclaimed code = claimed field empty)
+      if (!isValid) {
+        const codeSheet = doc.getSheetByName("Codes");
+        if (codeSheet && codeToCheck) {
+          const codeData = codeSheet.getDataRange().getValues();
+          for (let i = 1; i < codeData.length; i++) {
+            if (codeData[i][0] == codeToCheck && (!codeData[i][1] || codeData[i][1].toString().trim() === "")) {
+              isValid = true;
+              slotType = "INVITE";
+              break;
+            }
+          }
+        }
+      }
+
+      return generateResponse({ valid: isValid, slotType: slotType });
     }
     
+    // ── Get Registered Teams ────────────────────────────────────────────────
     if (endpoint === "/api/v1/getTeams") {
       let rawSheet = doc.getSheetByName("Sheet1");
       if (!rawSheet) return generateResponse({ teams: [] });
       const data = rawSheet.getDataRange().getValues();
+      if (data.length < 1) return generateResponse({ teams: [] });
+
+      // Auto-detect columns from header row
+      const cols = getRawColMap_(data[0]);
+      const firstDataRow = isHeaderRow_(data[0]) ? 1 : 0;
+
       const teams = [];
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][2] && data[i][2].toString().trim() === tournamentId) {
-          const status = data[i][4];
-          if (status !== "APPROVED" && status !== "PENDING") continue;
+      for (let i = firstDataRow; i < data.length; i++) {
+        const row = data[i];
+        const tid = (row[cols.tournament] || "").toString().trim();
+        if (tid !== tournamentId) continue;
 
-          const roster = [];
-          for (let p = 1; p <= 7; p++) {
-            const offset = 9 + (p - 1) * 4;
-            if (offset >= data[i].length) break;
+        const status = (row[cols.status] || "").toString().trim().toUpperCase();
+        // Show PENDING and APPROVED teams on the tracker
+        if (status === "REJECTED" || status === "ELIMINATED" || status === "") continue;
 
-            const discord = data[i][offset] ? data[i][offset].toString().trim() : "";
-            const steam = data[i][offset + 1] ? data[i][offset + 1].toString().trim() : "";
-            const faceit = data[i][offset + 2] ? data[i][offset + 2].toString().trim() : "";
-            const rank = data[i][offset + 3] ? data[i][offset + 3].toString().trim() : "";
+        const teamName = (row[cols.teamName] || "").toString().trim();
+        const teamTag  = (row[cols.teamTag]  || "").toString().trim();
+        const region   = (row[cols.region]   || "").toString().trim();
+        const logoUrl  = (row[cols.logo]     || "").toString().trim();
 
-            if (discord || steam || faceit) {
-              roster.push({
-                role: p === 1 ? "Captain" : p >= 6 ? "Substitute" : "Member",
-                discord: discord,
-                ign: steam || discord.split('#')[0] || ("Player " + p),
-                faceitLevel: rank || "N/A",
-                faceitElo: "N/A"
-              });
-            }
+        const roster = [];
+        for (let p = 0; p < 7; p++) {
+          const base    = cols.playerBase + p * 4;
+          const discord = row[base]     ? row[base].toString().trim()     : "";
+          const steam   = row[base + 1] ? row[base + 1].toString().trim() : "";
+          const faceit  = row[base + 2] ? row[base + 2].toString().trim() : "";
+          const rank    = row[base + 3] ? row[base + 3].toString().trim() : "";
+
+          if (discord || steam || faceit) {
+            roster.push({
+              role: p === 0 ? "Captain" : p >= 5 ? "Substitute" : "Member",
+              discord: discord,
+              ign: (faceit ? faceit.replace(/\/$/, "").split("/").pop() : "") ||
+                   discord.split("#")[0] || ("Player " + (p + 1)),
+              faceitLevel: rank || "N/A",
+              faceitElo: "N/A"
+            });
           }
-
-          teams.push({
-            name: data[i][5] || "Unnamed Team",
-            tag: data[i][6] || "TEAM",
-            logo: data[i][8] || "",
-            status: status === "APPROVED" ? "VERIFIED" : "PENDING REVIEW",
-            region: data[i][7] || "PAK / ME",
-            roster: roster
-          });
         }
+
+        const displayStatus = status === "APPROVED" || status === "ROSTER_LOCKED" || status === "CHECKED_IN" || status === "QUALIFIED" || status === "CHAMPION"
+          ? "VERIFIED" : "PENDING REVIEW";
+
+        teams.push({
+          name:   teamName,
+          tag:    teamTag,
+          logo:   logoUrl,
+          status: displayStatus,
+          region: region,
+          roster: roster
+        });
       }
       return generateResponse({ teams: teams, confirmed: teams.length });
     }
 
+    // ── Get Slot Counts ─────────────────────────────────────────────────────
     if (endpoint === "/api/v1/getSlots") {
       let rawSheet = doc.getSheetByName("Sheet1");
       if (!rawSheet) return generateResponse({ inviteConfirmed: 0, openConfirmed: 0 });
       const data = rawSheet.getDataRange().getValues();
+      if (data.length < 1) return generateResponse({ inviteConfirmed: 0, openConfirmed: 0 });
+
+      const cols = getRawColMap_(data[0]);
+      const firstDataRow = isHeaderRow_(data[0]) ? 1 : 0;
+
       let invite = 0, open = 0;
-      for (let i = 1; i < data.length; i++) {
-        if (data[i][2] && data[i][2].toString().trim() === tournamentId) {
-          // Column 37 (index 36) represents invite code used
-          if (data[i][36]) invite++; else open++;
+      // Also check InviteCodes sheet for valid codes
+      const inviteSheet = doc.getSheetByName("InviteCodes");
+      const validCodes = new Set();
+      if (inviteSheet) {
+        const inviteData = inviteSheet.getDataRange().getValues();
+        for (let i = 1; i < inviteData.length; i++) {
+          const code = (inviteData[i][0] || "").toString().trim();
+          const tid  = (inviteData[i][1] || "").toString().trim();
+          if (code && (!tid || tid === tournamentId)) validCodes.add(code.toLowerCase());
+        }
+      }
+
+      for (let i = firstDataRow; i < data.length; i++) {
+        const row = data[i];
+        const tid    = (row[cols.tournament] || "").toString().trim();
+        const status = (row[cols.status]     || "").toString().trim().toUpperCase();
+        if (tid !== tournamentId) continue;
+        if (status === "REJECTED") continue;
+
+        // Get the invite code used — it's the last column (VIP Code Used)
+        const inviteCode = (row[cols.inviteCode] || "").toString().trim();
+        // Count as invite slot only if the code used was a valid/registered invite code
+        if (inviteCode && validCodes.size > 0 && validCodes.has(inviteCode.toLowerCase())) {
+          invite++;
+        } else if (inviteCode && validCodes.size === 0) {
+          // Fallback: if no InviteCodes sheet, any code = invite slot
+          invite++;
+        } else {
+          open++;
         }
       }
       return generateResponse({ inviteConfirmed: invite, openConfirmed: open });
@@ -276,8 +353,68 @@ function doGet(e) {
   }
 }
 
-function generateResponse(data, statusCode = 200) {
+function generateResponse(data, statusCode) {
   return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * Detects raw sheet column positions from the header row.
+ * Works for both Layout A (with Team ID column) and Layout B (without).
+ */
+function getRawColMap_(headerRow) {
+  var map = {};
+  for (var h = 0; h < headerRow.length; h++) {
+    var k = headerRow[h].toString().trim().toLowerCase()
+              .replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
+    map[k] = h;
+  }
+  var get = function(keys, fallback) {
+    for (var x = 0; x < keys.length; x++) {
+      if (map[keys[x]] !== undefined) return map[keys[x]];
+    }
+    return fallback;
+  };
+  return {
+    teamId:     get(['team_id'],                        0),
+    timestamp:  get(['timestamp'],                      1),
+    tournament: get(['tournament_id', 'tournament'],    2),
+    subId:      get(['submission_id'],                  3),
+    status:     get(['status'],                         4),
+    teamName:   get(['team_name', 'team name'],         5),
+    teamTag:    get(['team_tag', 'team tag'],           6),
+    region:     get(['region'],                         7),
+    logo:       get(['logo_url', 'logo url'],           8),
+    playerBase: get(['p1_discord', 'p1 discord'],       9),
+    inviteCode: get(['vip_code_used', 'vip code used'], 36)
+  };
+}
+
+/**
+ * Returns true if the given row looks like a header row.
+ */
+function isHeaderRow_(row) {
+  var first = (row[0] || "").toString().trim().toLowerCase();
+  return first === "team id" || first === "timestamp" || first === "team_id";
+}
+
+/**
+ * Creates or returns the InviteCodes sheet.
+ * Structure: Code | Tournament ID | Slot Type (INVITE/OPEN) | Max Uses | Times Used | Notes
+ */
+function getOrCreateInviteCodesSheet_(doc) {
+  var sheet = doc.getSheetByName("InviteCodes");
+  if (!sheet) {
+    sheet = doc.insertSheet("InviteCodes");
+    sheet.appendRow(["Code", "Tournament ID", "Slot Type", "Max Uses", "Times Used", "Notes"]);
+    sheet.getRange(1, 1, 1, 6).setFontWeight("bold").setBackground("#1a1a2e").setFontColor("#00f0ff");
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 180);
+    sheet.setColumnWidth(2, 160);
+    sheet.setColumnWidth(3, 120);
+    // Seed with a demo code for community-cup-2
+    sheet.appendRow(["PP-INVITE-DEMO", "community-cup-2", "INVITE", 1, 0, "Demo invite code — replace with real codes"]);
+  }
+  return sheet;
 }
 
 /**
