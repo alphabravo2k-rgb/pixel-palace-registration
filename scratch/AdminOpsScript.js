@@ -31,8 +31,8 @@ function createTimeTriggers() {
 
 function syncRawToAdmin() {
   const sourceDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
-  const rawSheet = sourceDoc.getSheetByName("Sheet1"); // Matches sheet name in the new raw script
-  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops");
+  const rawSheet = sourceDoc.getSheetByName("Sheet1") || sourceDoc.getSheets()[0];
+  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops") || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   
   const rawData = rawSheet.getDataRange().getValues();
   const adminData = adminSheet.getDataRange().getValues();
@@ -99,7 +99,7 @@ function syncRawToAdmin() {
 }
 
 function updateFaceitElo() {
-  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops");
+  const adminSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Admin_Ops") || SpreadsheetApp.getActiveSpreadsheet().getSheets()[0];
   const data = adminSheet.getDataRange().getValues();
   const options = { "method": "get", "headers": { "Authorization": "Bearer " + FACEIT_API_KEY }, "muteHttpExceptions": true };
   let teamStartIdx = 1, eloSum = 0, count = 0;
