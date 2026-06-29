@@ -85,7 +85,7 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
     try {
       const steamIds = canonicalPayload.roster.map(p => p.steam64).filter(Boolean);
       if (steamIds.length > 0) {
-        const banRes = await fetch(`${tournament.sheetsEndpoint}?action=checkBans&steamIds=${encodeURIComponent(steamIds.join(','))}`);
+        const banRes = await fetch(`${tournament.sheetsEndpoint}?endpoint=/api/v1/checkBans&action=checkBans&steamIds=${encodeURIComponent(steamIds.join(','))}`);
         if (banRes.ok) {
            const banData = await banRes.json();
            if (banData.hasBans) {
@@ -101,6 +101,7 @@ export const submitToGateway = async (tournamentId, canonicalPayload) => {
   // ── Phase 1: Flatten for Google Sheets adapter ─────────────────────────
   const flatPayload = {
     ...flattenForSheets(canonicalPayload),
+    endpoint: '/api/v1/register',
     _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
   };
 
@@ -178,7 +179,7 @@ export const validateCode = async (tournamentId, code) => {
   }
 
   const res = await fetch(
-    `${tournament.sheetsEndpoint}?validateCode=${encodeURIComponent(code)}&tournamentId=${encodeURIComponent(tournamentId)}`
+    `${tournament.sheetsEndpoint}?endpoint=/api/v1/validateCode&validateCode=${encodeURIComponent(code)}&tournamentId=${encodeURIComponent(tournamentId)}`
   );
   return res.json();
 };
@@ -203,7 +204,7 @@ export const fetchSlots = async (tournamentId) => {
   }
 
   const res = await fetch(
-    `${tournament.sheetsEndpoint}?action=getSlots&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
+    `${tournament.sheetsEndpoint}?endpoint=/api/v1/getSlots&action=getSlots&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
   );
   return res.json();
 };
@@ -245,7 +246,7 @@ export const fetchTeams = async (tournamentId) => {
 
   try {
     const res = await fetch(
-      `${tournament.sheetsEndpoint}?action=getTeams&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
+      `${tournament.sheetsEndpoint}?endpoint=/api/v1/getTeams&action=getTeams&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`
     );
     if (!res.ok) throw new Error("Tracker offline");
     return res.json();

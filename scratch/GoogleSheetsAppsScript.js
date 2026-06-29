@@ -1,5 +1,5 @@
 /**
- * PIXEL PALACE PORTAL BACKEND — GOOGLE APPS SCRIPT v3.0
+ * PIXEL PALACE PORTAL BACKEND — GOOGLE APPS SCRIPT v4.0
  *
  * INSTRUCTIONS:
  * 1. Open your Google Spreadsheet (e.g. Master Registration Sheet).
@@ -9,7 +9,7 @@
  *    - "InviteCodes" (Columns: Code, TournamentId, Used)
  *    - "BannedPlayers" (Column A: Steam64 ID)
  * 5. Run the `setupAdminSheet()` function once (select it from the toolbar and click Run).
- *    This will create the "Admin_Dashboard" sheet tab with layout, stats, and query formulas.
+ *    This will create the "Admin_Dashboard" and "AuditLog" tabs.
  * 6. Click "Deploy" > "New deployment" > "Web app". Set "Execute as" to "Me", "Who has access" to "Anyone".
  * 7. Copy the Web App URL and paste it into `sheetsEndpoint` in your `src/config/tournaments.js`.
  */
@@ -21,6 +21,16 @@ function doPost(e) {
   try {
     const jsonString = e.postData.contents;
     const data = JSON.parse(jsonString);
+    const endpoint = data.endpoint || "";
+
+    // API Versioning Enforcement
+    if (!endpoint.startsWith("/api/v1/")) {
+      return jsonResponse({ error: "UNSUPPORTED_API_VERSION: Requests must target /api/v1/ endpoints." }, 400);
+    }
+    
+    if (endpoint !== "/api/v1/register") {
+      return jsonResponse({ error: "NOT_FOUND: Endpoint " + endpoint + " not found." }, 404);
+    }
 
     // Optional auth check
     if (ADMIN_SECRET && data._gateway_secret !== ADMIN_SECRET) {
@@ -173,6 +183,9 @@ function doPost(e) {
 
     sheet.appendRow(row);
 
+    // Write audit log entry
+    logAuditEntry(sheetName, rows.length + 1, "REGISTRATION_SUBMITTED", "", "PENDING");
+
     // Auto-update stats and execute audit checks
     updateDashboardStats();
     runValidationChecks(tournamentId);
@@ -187,34 +200,41 @@ function doPost(e) {
 function doGet(e) {
   try {
     const params = e.parameter;
+    const endpoint = params.endpoint || "";
+
+    // API Versioning Enforcement
+    if (!endpoint.startsWith("/api/v1/")) {
+      return jsonResponse({ error: "UNSUPPORTED_API_VERSION: Requests must target /api/v1/ endpoints." }, 400);
+    }
+    
     const tournamentId = params.tournamentId || "community-cup-2";
 
     // 1. Validate Invite Code
-    if (params.validateCode) {
+    if (endpoint === "/api/v1/validateCode") {
       const isValid = checkInviteCode(tournamentId, params.validateCode, false);
       return jsonResponse({ valid: isValid });
     }
 
     // 2. Fetch Live Slot Counters
-    if (params.action === "getSlots") {
+    if (endpoint === "/api/v1/getSlots") {
       const counts = getSlotCounts(tournamentId);
       return jsonResponse(counts);
     }
 
     // 3. Fetch Registered Team Roster
-    if (params.action === "getTeams") {
+    if (endpoint === "/api/v1/getTeams") {
       const teams = getRegisteredTeams(tournamentId);
       return jsonResponse({ teams: teams });
     }
 
     // 4. Soft Ban Check
-    if (params.action === "checkBans") {
+    if (endpoint === "/api/v1/checkBans") {
       const steamIds = (params.steamIds || "").split(",");
       const hasBans = checkPlayerBans(steamIds);
       return jsonResponse({ hasBans: hasBans });
     }
 
-    return jsonResponse({ error: "Invalid action parameter." }, 400);
+    return jsonResponse({ error: "NOT_FOUND: Endpoint " + endpoint + " not found." }, 404);
 
   } catch (err) {
     return jsonResponse({ error: "SYSTEM_ERROR: " + err.toString() }, 500);
@@ -374,7 +394,7 @@ function checkPlayerBans(steamIds) {
 }
 
 /**
- * Triggered on edits to check approvals / rejections and update dashboard
+ * Triggered on edits to check approvals / rejections and enforce state transitions
  */
 function onEdit(e) {
   const range = e.range;
@@ -382,7 +402,46 @@ function onEdit(e) {
   const sheetName = sheet.getName();
   
   if (sheetName.startsWith("Registrations_")) {
-    if (range.getColumn() === 4) { // Column D (Status)
+    const col = range.getColumn();
+    
+    // Column D (index 4) is the Status column
+    if (col === 4) {
+      const oldValue = e.oldValue ? String(e.oldValue).trim().toUpperCase() : "";
+      const newValue = e.value ? String(e.value).trim().toUpperCase() : "";
+      
+      // If oldValue and newValue are identical, do nothing
+      if (oldValue === newValue) return;
+      
+      // Finite State Machine transitions mapping
+      const validTransitions = {
+        "PENDING": ["UNDER_REVIEW", "REJECTED"],
+        "UNDER_REVIEW": ["APPROVED", "REJECTED"],
+        "APPROVED": ["ROSTER_LOCKED", "REJECTED"],
+        "ROSTER_LOCKED": ["CHECKED_IN", "REJECTED"],
+        "CHECKED_IN": ["QUALIFIED", "ELIMINATED"],
+        "QUALIFIED": ["CHAMPION", "ELIMINATED"],
+        "REJECTED": [],
+        "ELIMINATED": [],
+        "CHAMPION": []
+      };
+      
+      const currentOld = oldValue || "PENDING";
+      const allowed = validTransitions[currentOld] || [];
+      
+      if (allowed.indexOf(newValue) === -1 && oldValue !== "") {
+        // Revert invalid cell change
+        range.setValue(e.oldValue);
+        
+        try {
+          const ui = SpreadsheetApp.getUi();
+          ui.alert("⚠️ INVALID STATE TRANSITION\n\nThe status transition from '" + oldValue + "' to '" + newValue + "' is forbidden by the tournament workflow state machine.");
+        } catch (uiErr) {}
+        return;
+      }
+      
+      // Log successful status change
+      logAuditEntry(sheetName, range.getRow(), "STATUS_CHANGE", oldValue, newValue);
+      
       const tournamentId = sheetName.replace("Registrations_", "");
       updateDashboardStats();
       runValidationChecks(tournamentId);
@@ -524,25 +583,23 @@ function runValidationChecks(tournamentId = "community-cup-2") {
   validationRange.setValues(validationValues);
 }
 
-// --- ADMIN MANAGEMENT SHEET SETUP ---
+// --- ADMIN MANAGEMENT SHEET & AUDIT LOG SETUP ---
 
 function setupAdminSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
-  let adminSheet = ss.getSheetByName("Admin_Dashboard");
   
+  // 1. Setup Admin Dashboard
+  let adminSheet = ss.getSheetByName("Admin_Dashboard");
   if (!adminSheet) {
     adminSheet = ss.insertSheet("Admin_Dashboard", 0);
   } else {
     adminSheet.clear();
   }
-  
   adminSheet.setHideGridlines(false);
   
-  // Apply Dashboard Titles & Theme
   adminSheet.getRange("A1:L1").merge().setValue("PIXEL PALACE - TOURNAMENT CONTROL HUB").setFontWeight("bold").setFontSize(16).setBackground("#0b0f19").setFontColor("#00f0ff").setHorizontalAlignment("center");
   adminSheet.setRowHeight(1, 40);
   
-  // SECTION 1: TOURNAMENT DETAILS
   adminSheet.getRange("A3").setValue("TOURNAMENT INFO").setFontWeight("bold").setBackground("#131a26").setFontColor("#ffffff");
   adminSheet.getRange("A4").setValue("Tournament Name");
   adminSheet.getRange("B4").setValue("Pixel Palace Community Cup 2");
@@ -555,7 +612,6 @@ function setupAdminSheet() {
   adminSheet.getRange("A8").setValue("Prize Pool");
   adminSheet.getRange("B8").setValue("1st: $2000 | 2nd: $750");
 
-  // SECTION 2: LIVE METRICS DASHBOARD
   adminSheet.getRange("D3:E3").merge().setValue("REGISTRATION STATS").setFontWeight("bold").setBackground("#131a26").setFontColor("#ffffff");
   adminSheet.getRange("D4").setValue("Total Applications");
   adminSheet.getRange("E4").setFormula("=COUNTA(Registrations_community-cup-2!A:A)-1");
@@ -578,7 +634,6 @@ function setupAdminSheet() {
   adminSheet.getRange("F8").setValue("Progress (%)");
   adminSheet.getRange("G8").setFormula("=E5/G4").setNumberFormat("0.0%");
 
-  // SECTION 3: TEAM MANAGEMENT LISTING
   adminSheet.getRange("A11:L11").merge().setValue("TEAM MANAGEMENT LISTING").setFontWeight("bold").setFontSize(12).setBackground("#0b0f19").setFontColor("#00f0ff").setHorizontalAlignment("left");
   
   const headers = [
@@ -588,15 +643,21 @@ function setupAdminSheet() {
   const headerRange = adminSheet.getRange(12, 1, 1, headers.length);
   headerRange.setValues([headers]).setFontWeight("bold").setBackground("#131a26").setFontColor("#ffffff").setHorizontalAlignment("center");
   
-  // Dynamically populate Team List using a QUERY formula
   adminSheet.getRange(13, 1).setFormula(
     `=IFERROR(QUERY(Registrations_community-cup-2!A:K, "SELECT A, C, E, F, G, M, L, K, I, H, D WHERE A IS NOT NULL", 1), "No registrations recorded.")`
   );
-
   adminSheet.autoResizeColumns(1, headers.length);
   applyFormattingRules(adminSheet);
+
+  // 2. Setup Audit Log
+  let logSheet = ss.getSheetByName("AuditLog");
+  if (!logSheet) {
+    logSheet = ss.insertSheet("AuditLog");
+    logSheet.appendRow(["Timestamp", "Editor", "Target Table", "Record Row", "Action", "Old Value", "New Value"]);
+    logSheet.setFrozenRows(1);
+    logSheet.setHideGridlines(false);
+  }
   
-  // Run initial checks if registrations are already populated
   runValidationChecks("community-cup-2");
 }
 
@@ -636,4 +697,19 @@ function applyFormattingRules(sheet) {
   const rules = sheet.getConditionalFormattingRules();
   rules.push(approvedRule, pendingRule, rejectedRule, warningRule);
   sheet.setConditionalFormattingRules(rules);
+}
+
+function logAuditEntry(sheetName, rowNum, action, oldValue, newValue) {
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let logSheet = ss.getSheetByName("AuditLog");
+    if (!logSheet) {
+      logSheet = ss.insertSheet("AuditLog");
+      logSheet.appendRow(["Timestamp", "Editor", "Target Table", "Record Row", "Action", "Old Value", "New Value"]);
+      logSheet.setFrozenRows(1);
+    }
+    const timestamp = new Date().toISOString();
+    const editor = Session.getActiveUser().getEmail() || "System Admin";
+    logSheet.appendRow([timestamp, editor, sheetName, rowNum, action, oldValue, newValue]);
+  } catch (err) {}
 }
