@@ -1,20 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { RefreshCw, LogOut, X, Map as MapIcon } from 'lucide-react';
+import { SupabaseRepository } from '../../services/api/adapters/SupabaseRepository';
 
-// --- 1. SUPABASE CLIENT INITIALIZATION ---
-// This looks for variables in your Environment (Cloudflare Dashboard)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-// Create Client
-// Note: If keys are missing during build, this might warn, but we handle errors in fetch.
-const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co', 
-  supabaseAnonKey || 'placeholder'
-);
-
-// --- 2. CONFIGURATION ---
+// --- CONFIGURATION ---
 const MAPS = ['ANCIENT', 'DUST2', 'INFERNO', 'MIRAGE', 'NUKE', 'OVERPASS', 'TRAIN'];
 const VETO_FLOW = { 
   "BO1": ["A:BAN","B:BAN","A:BAN","B:BAN","A:BAN","B:BAN"], 
@@ -32,122 +20,117 @@ export default function CommandCenter() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    if (!supabaseUrl) {
-      setErrorMsg("Missing Database Configuration (Env Vars)");
-      setLoading(false);
-      return;
-    }
-
     // Auth Check
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    SupabaseRepository.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if(session?.user) checkUserRole(session.user);
+      if (session?.user) checkUserRole(session.user);
+    }).catch(() => {
+      setErrorMsg("Missing Database Configuration (Env Vars)");
     });
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = SupabaseRepository.onAuthStateChange((_event, session) => {
       setSession(session);
-      if(session?.user) checkUserRole(session.user);
+      if (session?.user) checkUserRole(session.user);
     });
 
     fetchMatches();
 
-    const channel = supabase
-      .channel('public:matches')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, () => fetchMatches())
-      .subscribe();
+    const channel = SupabaseRepository.subscribeToMatches(() => fetchMatches());
 
     return () => {
-      authListener.subscription.unsubscribe();
-      supabase.removeChannel(channel);
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+      SupabaseRepository.unsubscribe(channel);
     };
   }, []);
 
-  const checkUserRole = async (user) => {
+  const checkUserRole = (user) => {
     const admin = user?.app_metadata?.is_admin || false;
     setIsAdmin(admin);
   };
 
   const fetchMatches = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('matches')
-      .select(`
-        id, round, state, score, metadata,
-        player1:player1_id(display_name, user_id),
-        player2:player2_id(display_name, user_id),
-        winner:winner_id(display_name)
-      `)
-      .order('round', { ascending: true });
+    try {
+      const data = await SupabaseRepository.fetchMatches();
+      const groups = { "R32": [], "R16": [], "QF": [], "SF": [], "GF": [] };
+      
+      (data || []).forEach(m => {
+          let label = "R32"; 
+          if(m.round === 1) label = "R32";
+          if(m.round === 2) label = "R16"; 
+          if(m.round === 3) label = "QF";
+          if(m.round === 4) label = "SF";
+          if(m.round === 5) label = "GF";
+          
+          if (!groups[label]) groups[label] = [];
+          
+          const vetoLog = m.metadata?.veto_log || [];
+          const format = m.metadata?.format || 'BO1';
+          const flow = VETO_FLOW[format] || VETO_FLOW['BO1'];
+          
+          let turn = "WAITING";
+          let action = "";
+          
+          if (m.state === 'open' && vetoLog.length < flow.length) {
+              const step = flow[vetoLog.length].split(":");
+              turn = step[0] === "A" ? (m.player1?.display_name || "Team A") : (m.player2?.display_name || "Team B");
+              action = step[1];
+          } else if (m.state === 'open') {
+               turn = "READY";
+          }
 
-    if (error) {
+          groups[label].push({
+              id: m.id,
+              teamA: m.player1?.display_name || 'TBD',
+              teamB: m.player2?.display_name || 'TBD',
+              p1_uid: m.player1?.user_id,
+              p2_uid: m.player2?.user_id,
+              winner: m.winner?.display_name,
+              status: m.state === 'open' ? 'LIVE' : m.state.toUpperCase(),
+              format: format,
+              metadata: m.metadata || {},
+              vetoLog: vetoLog,
+              playerIP: m.metadata?.player_ip || 'HIDDEN',
+              gotvIP: m.metadata?.gotv_ip || 'HIDDEN',
+              turn: turn,
+              action: action,
+              nextSide: flow[vetoLog.length] ? flow[vetoLog.length].split(":")[0] : null
+          });
+      });
+
+      setBracket(groups);
+      
+      if (selectedMatch) {
+        for(const k in groups) {
+          const found = groups[k].find(m => m.id === selectedMatch.id);
+          if(found) setSelectedMatch(found);
+        }
+      }
+    } catch (error) {
       console.error("Fetch Error:", error);
       setErrorMsg("Unable to connect to Tournament Database.");
+    } finally {
       setLoading(false);
-      return;
-    }
-
-    const groups = { "R32": [], "R16": [], "QF": [], "SF": [], "GF": [] };
-    
-    (data || []).forEach(m => {
-        let label = "R32"; 
-        if(m.round === 1) label = "R32";
-        if(m.round === 2) label = "R16"; 
-        if(m.round === 3) label = "QF";
-        if(m.round === 4) label = "SF";
-        if(m.round === 5) label = "GF";
-        
-        if (!groups[label]) groups[label] = [];
-        
-        const vetoLog = m.metadata?.veto_log || [];
-        const format = m.metadata?.format || 'BO1';
-        const flow = VETO_FLOW[format] || VETO_FLOW['BO1'];
-        
-        let turn = "WAITING";
-        let action = "";
-        
-        if (m.state === 'open' && vetoLog.length < flow.length) {
-            const step = flow[vetoLog.length].split(":");
-            turn = step[0] === "A" ? (m.player1?.display_name || "Team A") : (m.player2?.display_name || "Team B");
-            action = step[1];
-        } else if (m.state === 'open') {
-             turn = "READY";
-        }
-
-        groups[label].push({
-            id: m.id,
-            teamA: m.player1?.display_name || 'TBD',
-            teamB: m.player2?.display_name || 'TBD',
-            p1_uid: m.player1?.user_id,
-            p2_uid: m.player2?.user_id,
-            winner: m.winner?.display_name,
-            status: m.state === 'open' ? 'LIVE' : m.state.toUpperCase(),
-            format: format,
-            metadata: m.metadata || {},
-            vetoLog: vetoLog,
-            playerIP: m.metadata?.player_ip || 'HIDDEN',
-            gotvIP: m.metadata?.gotv_ip || 'HIDDEN',
-            turn: turn,
-            action: action,
-            nextSide: flow[vetoLog.length] ? flow[vetoLog.length].split(":")[0] : null
-        });
-    });
-
-    setBracket(groups);
-    setLoading(false);
-    
-    if (selectedMatch) {
-      for(const k in groups) {
-        const found = groups[k].find(m => m.id === selectedMatch.id);
-        if(found) setSelectedMatch(found);
-      }
     }
   };
 
-  const handleLogin = async () => supabase.auth.signInWithOAuth({ 
-    provider: 'discord',
-    options: { redirectTo: window.location.origin }
-  });
-  const handleLogout = async () => supabase.auth.signOut();
+  const handleLogin = async () => {
+    try {
+      await SupabaseRepository.loginViaDiscord();
+    } catch (err) {
+      alert("Login failed: " + err.message);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await SupabaseRepository.logout();
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   // --- ACTIONS ---
   const handleVeto = async (mapName) => {
@@ -166,16 +149,22 @@ export default function CommandCenter() {
       const step = flow[vetoLog.length].split(":");
       const action = step[1]; 
       const newLog = [...vetoLog, `${action} ${mapName}`];
-      const newMeta = { ...selectedMatch.metadata, veto_log: newLog };
       
-      const { error } = await supabase.from('matches').update({ metadata: newMeta }).eq('id', selectedMatch.id);
-      if (error) alert(error.message);
+      try {
+        await SupabaseRepository.updateMatchVeto(selectedMatch.id, newLog, selectedMatch.metadata);
+      } catch (err) {
+        alert(err.message);
+      }
   };
 
   const forceWin = async (winnerName) => {
     if(!isAdmin || !confirm(`Force win for ${winnerName}?`)) return;
-    await supabase.from('matches').update({ state: 'complete', score: '1-0 (Forced)' }).eq('id', selectedMatch.id);
-    setSelectedMatch(null);
+    try {
+      await SupabaseRepository.forceWin(selectedMatch.id);
+      setSelectedMatch(null);
+    } catch (err) {
+      alert(err.message);
+    }
   };
 
   // --- RENDER ---
