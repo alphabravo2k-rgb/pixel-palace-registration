@@ -71,14 +71,15 @@ export const Register = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const [retryCount, setRetryCount] = useState(0);
-
   useEffect(() => {
-    if (!tournament || isArchived) return;
+    if (!tournament?.id || isArchived) return;
     
+    let active = true;
+    let failCount = 0;
+
     const loadData = async () => {
-      if (retryCount >= 4) {
-        Terminal.error('SYNC', 'Uplink lost after multiple retries. Polling stopped.');
+      if (failCount >= 4) {
+        Terminal.error('SYNC', 'Uplink lost after multiple retries. Polling suspended.');
         return;
       }
 
@@ -90,26 +91,30 @@ export const Register = () => {
           tournament.bracketsEnabled ? fetchTournamentBracket(tournament.id) : Promise.resolve(null)
         ]);
         
+        if (!active) return;
         setSlots(liveSlots);
         setTeams(liveTeams?.teams || []);
         if (liveBracket) setBracketData(liveBracket);
-        setRetryCount(0);
+        failCount = 0;
         Terminal.success('Data synchronized successfully.');
       } catch (err) {
+        if (!active) return;
         Terminal.error('SYNC', 'Failed to retrieve live data from uplink.', err);
         setSlots('error');
         setTeams('error');
         setBracketData('error');
-        setRetryCount(prev => prev + 1);
+        failCount++;
       }
     };
 
     loadData();
-    const backoffTime = 45000 * Math.pow(2, Math.min(retryCount, 3));
-    const interval = setInterval(loadData, backoffTime);
+    const interval = setInterval(loadData, 60000); // Check every 60 seconds
     
-    return () => clearInterval(interval);
-  }, [tournament, retryCount, isArchived]);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, [tournament?.id, isArchived]);
 
   const handleManualRefresh = async () => {
     if (isRefreshing) return;
