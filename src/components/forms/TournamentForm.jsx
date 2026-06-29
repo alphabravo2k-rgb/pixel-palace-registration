@@ -62,11 +62,7 @@ const buildFormSchema = (tournament) => {
     faceitElo: z.string().default('N/A'),
     cs2RankLabel: z.string().default('Not Linked'),
     avatar: z.string().optional().default(''),
-    walletAddress: z.string()
-      .regex(/^T[A-Za-z0-9]{33}$/, 'Must be a valid TRC20 wallet address')
-      .optional()
-      .or(z.literal(''))
-      .default(''),
+    walletAddress: z.string().optional().default(''),
   });
 
   return z.object({
@@ -702,32 +698,7 @@ export const TournamentForm = ({ tournament, slots }) => {
                     )}
                   </div>
 
-                  {/* Wallet Address (Captain Only - Revenue Tier 1C) */}
-                  {index === 0 && (
-                    <div>
-                      <div className="flex justify-between items-end mb-1.5">
-                        <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-neon-cyan block font-body">
-                          Payout Wallet (USDT TRC20) <span className="text-red-500">*</span>
-                        </label>
-                        <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Captain Only</span>
-                      </div>
-                      <div className="input-group border-neon-cyan/30">
-                        <Globe className="ml-3 w-4 h-4 text-neon-cyan/50" />
-                        <input
-                          {...register(`players.${index}.walletAddress`)}
-                          type="text"
-                          placeholder="T-Address (TRC20) required for prize payout"
-                          className="input-ghost text-xs placeholder:text-zinc-700"
-                        />
-                      </div>
-                      {errors.players?.[index]?.walletAddress && (
-                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].walletAddress.message}</p>
-                      )}
-                      <p className="text-[8px] text-zinc-600 font-bold uppercase mt-1.5 tracking-tighter opacity-80">
-                        Required for secure prize distribution. Ensure this is a USDT (TRC20) address.
-                      </p>
-                    </div>
-                  )}
+
 
                   {/* FACEIT & CS2 Stat Badges */}
                   <Controller
