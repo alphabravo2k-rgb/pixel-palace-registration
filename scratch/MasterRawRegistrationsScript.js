@@ -75,10 +75,10 @@ function doPost(e) {
     }
 
     for (let i = 1; i < rows.length; i++) {
-      const existingStatus = rows[i][3]; // Column D (Status)
+      const existingStatus = rows[i][4]; // Column E (Status)
       if (existingStatus === "REJECTED") continue;
 
-      const existingTeamName = String(rows[i][3]).trim().toUpperCase(); // Column D (Team Name)
+      const existingTeamName = String(rows[i][5]).trim().toUpperCase(); // Column F (Team Name)
       if (existingTeamName === newTeamName) {
         return generateResponse({ error: "DUPLICATE_TEAM_NAME: A team named '" + payload.team_name + "' is already registered." });
       }
@@ -138,7 +138,10 @@ function doPost(e) {
     if (payload.submission_id) cache.put(payload.submission_id, "processed", 60 * 60 * 24); 
 
     // Log registration in audit sheet
-    logAuditEntry(sheetName, rows.length + 1, "REGISTRATION_SUBMITTED", "", "PENDING");
+    logAuditEntry("Sheet1", rows.length + 1, "REGISTRATION_SUBMITTED", "", "PENDING");
+
+    // Real-time write-through sync to Admin Operations Sheet
+    appendToAdminSheet(payload, teamId);
 
     return generateResponse({ "success": true, "teamId": teamId });
   } catch (error) {
@@ -286,6 +289,12 @@ function onEdit(e) {
       }
       
       logAuditEntry(sheetName, range.getRow(), "STATUS_CHANGE", oldValue, newValue);
+
+      // Real-time status sync back to Admin Operations Sheet
+      const teamName = sheet.getRange(range.getRow(), 6).getValue().toString().trim();
+      if (teamName) {
+        syncStatusToAdmin(teamName, newValue);
+      }
     }
   }
 }
@@ -303,4 +312,114 @@ function logAuditEntry(sheetName, rowNum, action, oldValue, newValue) {
     const editor = Session.getActiveUser().getEmail() || "System Admin";
     logSheet.appendRow([timestamp, editor, sheetName, rowNum, action, oldValue, newValue]);
   } catch (err) {}
+}
+
+/**
+ * Real-time write-through sync to Admin Operations Sheet
+ */
+function appendToAdminSheet(payload, teamId) {
+  const ADMIN_SHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+  try {
+    const adminDoc = SpreadsheetApp.openById(ADMIN_SHEET_ID);
+    const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+    
+    const adminData = adminSheet.getDataRange().getValues();
+    const existingTeams = new Set();
+    for (let i = 1; i < adminData.length; i++) {
+      if (adminData[i][1]) existingTeams.add(adminData[i][1].toString().toLowerCase().trim());
+    }
+    
+    const teamName = payload.team_name ? payload.team_name.trim() : "";
+    if (!teamName || existingTeams.has(teamName.toLowerCase())) return;
+
+    const sn = "TEAM " + (existingTeams.size + 1);
+    const startRowIndex = adminSheet.getLastRow() + 1;
+    const rowsToAppend = [];
+    
+    const teamTag = payload.team_tag ? payload.team_tag.trim() : "";
+    const region = payload.region ? payload.region.trim() : "";
+    const logoUrl = payload.logo_url ? payload.logo_url.trim() : "";
+    
+    let eloSum = 0;
+    let eloCount = 0;
+    for (let p = 1; p <= 7; p++) {
+      const eloVal = parseInt(payload[`p${p}FaceitElo`]);
+      const ign = payload[`p${p}IGN`];
+      if (ign && ign.trim() !== "") {
+        if (!isNaN(eloVal) && eloVal > 0) {
+          eloSum += eloVal;
+          eloCount++;
+        }
+      }
+    }
+    const averageElo = eloCount > 0 ? Math.round(eloSum / eloCount) : 0;
+    let seed = averageElo <= 1200 ? "LOW" : averageElo <= 1800 ? "MID" : averageElo <= 2200 ? "NORMAL" : averageElo <= 2500 ? "AVG" : averageElo <= 3000 ? "GOOD" : "BEST";
+
+    for (let p = 0; p < 7; p++) {
+      const pNum = p + 1;
+      const discord = payload[`p${pNum}Discord`] || "N/A";
+      const steam = payload[`p${pNum}Steam`] || "N/A";
+      const faceit = payload[`p${pNum}Faceit`] || "N/A";
+      
+      const pRole = p === 0 ? " ©" : (p >= 5 ? " (Sub)" : "");
+      const pName = faceit !== "N/A" ? faceit.split('/').filter(Boolean).pop() + pRole : discord + pRole;
+      
+      rowsToAppend.push([
+        p === 0 ? sn : "",                 // Col A: S.N
+        p === 0 ? teamName : "",           // Col B: Team Name
+        p === 0 ? teamTag : "",            // Col C: Team Tag
+        p === 0 ? logoUrl : "",            // Col D: Team Logo Url
+        p === 0 ? region : "",             // Col E: Region
+        pName,                             // Col F: Player Name
+        discord,                           // Col G: Discord ID
+        steam,                             // Col H: Steam Profile
+        "",                                // Col I: Joined Discord
+        "",                                // Col J: Role Issued
+        "",                                // Col K: VC Created
+        faceit,                            // Col L: Faceit Profile
+        payload[`p${pNum}FaceitElo`] || "N/A", // Col M: Live FACE IT ELO
+        p === 0 ? averageElo : "",         // Col N: AVERAGE ELO
+        p === 0 ? "PENDING" : "",          // Col O: Registration status
+        p === 0 ? seed : "",               // Col P: Team Seed
+        ""                                 // Col Q: Admin Remarks
+      ]);
+    }
+    
+    adminSheet.getRange(startRowIndex, 1, 7, 17).setValues(rowsToAppend);
+    [1, 2, 3, 4, 5, 14, 15, 16, 17].forEach(col => {
+       adminSheet.getRange(startRowIndex, col, 7, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
+    });
+    
+    const seedRange = adminSheet.getRange(startRowIndex, 16);
+    seedRange.setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
+             .setFontWeight("bold");
+             
+  } catch (err) {
+    console.error("Failed to append to admin sheet:", err);
+  }
+}
+
+/**
+ * Real-time status sync back to Admin Operations Sheet
+ */
+function syncStatusToAdmin(teamName, newStatus) {
+  const ADMIN_SHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+  try {
+    const adminDoc = SpreadsheetApp.openById(ADMIN_SHEET_ID);
+    const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+    const data = adminSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      const existingTeamName = data[i][1] ? data[i][1].toString().trim() : ""; // Col B (index 1) is Team Name
+      if (existingTeamName.toLowerCase() === teamName.toLowerCase()) {
+        const currentStatus = data[i][14] ? data[i][14].toString().trim() : ""; // Col O (index 14) is Status
+        if (currentStatus.toUpperCase() !== newStatus.toUpperCase()) {
+          adminSheet.getRange(i + 1, 15).setValue(newStatus); // Col O is Column 15
+        }
+        break;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to sync status to Admin:", err);
+  }
 }

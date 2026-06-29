@@ -145,3 +145,55 @@ function finalizeTeamStats(sheet, teamStartIdx, eloSum, count) {
        .setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
        .setFontWeight("bold");
 }
+
+/**
+ * Triggered on edits to sync status changes back to the Raw Registrations spreadsheet
+ */
+function onEdit(e) {
+  const range = e.range;
+  const sheet = range.getSheet();
+  const sheetName = sheet.getName();
+  
+  if (sheetName === "Admin_Ops" || sheetName === "Sheet1") {
+    const col = range.getColumn();
+    
+    // Column O (Column 15) is the Registration status column
+    if (col === 15) {
+      const oldValue = e.oldValue ? String(e.oldValue).trim().toUpperCase() : "";
+      const newValue = e.value ? String(e.value).trim().toUpperCase() : "";
+      
+      if (oldValue === newValue) return;
+      
+      // Get the team name from Column B (Column 2) of the top-left cell of the merged block
+      const teamName = sheet.getRange(range.getRow(), 2).getValue().toString().trim();
+      if (!teamName) return;
+      
+      // Real-time status sync back to Raw Registrations Spreadsheet
+      syncStatusToRaw(teamName, newValue);
+    }
+  }
+}
+
+/**
+ * Real-time status sync back to Raw Registrations Spreadsheet
+ */
+function syncStatusToRaw(teamName, newStatus) {
+  try {
+    const rawDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
+    const rawSheet = rawDoc.getSheetByName("Sheet1") || rawDoc.getSheets()[0];
+    const data = rawSheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      const existingTeamName = data[i][5] ? data[i][5].toString().trim() : ""; // Col F (index 5) is Team Name
+      if (existingTeamName.toLowerCase() === teamName.toLowerCase()) {
+        const currentStatus = data[i][4] ? data[i][4].toString().trim() : ""; // Col E (index 4) is Status
+        if (currentStatus.toUpperCase() !== newStatus.toUpperCase()) {
+          rawSheet.getRange(i + 1, 5).setValue(newStatus); // Col E is Column 5
+        }
+        break;
+      }
+    }
+  } catch (err) {
+    console.error("Failed to sync status to Raw:", err);
+  }
+}

@@ -24,8 +24,13 @@ export const Home = () => {
     let totalTeams = 0;
     tournaments.forEach(t => {
       if (t.prizePool) {
-        const amount = parseInt(t.prizePool.replace(/[^0-9]/g, ''), 10);
-        if (!isNaN(amount)) totalPrize += amount;
+        const matches = t.prizePool.match(/\$[0-9,]+/g);
+        if (matches) {
+          matches.forEach(match => {
+            const amount = parseInt(match.replace(/[^0-9]/g, ''), 10);
+            if (!isNaN(amount)) totalPrize += amount;
+          });
+        }
       }
       if (t.maxTeams) totalTeams += t.maxTeams;
     });
