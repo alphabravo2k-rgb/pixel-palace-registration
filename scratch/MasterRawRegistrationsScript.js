@@ -8,6 +8,11 @@
 const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
 const ADMIN_SECRET = ""; // Optional gateway secret matching VITE_GATEWAY_AUTH_SECRET
 
+// Google Drive folder where team logos are stored.
+// To create: Drive → New Folder → name it "PP_Logos" → share as Anyone with link → Viewer
+// Then paste the folder ID from the URL here:
+const LOGO_FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE";
+
 /**
  * RECEIVE REGISTRATIONS (POST)
  */
@@ -21,6 +26,34 @@ function doPost(e) {
       return generateResponse({ error: "UNSUPPORTED_API_VERSION: Requests must target /api/v1/ endpoints." }, 400);
     }
     
+    // ── Logo Upload Endpoint ──────────────────────────────────────────────────
+    if (endpoint === "/api/v1/uploadLogo") {
+      try {
+        const base64Data = payload.fileData;    // raw base64 string (no data: prefix)
+        const fileName   = payload.fileName || ("logo_" + Date.now() + ".png");
+        const mimeType   = payload.mimeType  || "image/png";
+
+        if (!base64Data) {
+          return generateResponse({ error: "Missing fileData in payload" }, 400);
+        }
+        if (!LOGO_FOLDER_ID || LOGO_FOLDER_ID === "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE") {
+          return generateResponse({ error: "LOGO_FOLDER_ID is not configured on the server." }, 500);
+        }
+
+        const folder = DriveApp.getFolderById(LOGO_FOLDER_ID);
+        const bytes  = Utilities.base64Decode(base64Data);
+        const blob   = Utilities.newBlob(bytes, mimeType, fileName);
+        const file   = folder.createFile(blob);
+        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+        const fileId  = file.getId();
+        const logoUrl = "https://drive.google.com/uc?export=view&id=" + fileId;
+        return generateResponse({ success: true, fileId: fileId, logoUrl: logoUrl });
+      } catch (uploadErr) {
+        return generateResponse({ error: "Logo upload failed: " + uploadErr.toString() }, 500);
+      }
+    }
+
     if (endpoint !== "/api/v1/register") {
       return generateResponse({ error: "NOT_FOUND: Endpoint " + endpoint + " not found." }, 404);
     }
@@ -430,7 +463,7 @@ function appendToAdminSheet(payload, teamId) {
         const r = new Array(15).fill("");
         r[0]  = p === 0 ? sn : "";                     // Col A: S.N
         r[1]  = p === 0 ? region : "";                 // Col B: Region
-        r[2]  = p === 0 ? logoUrl : "";                // Col C: Logo URL
+        r[2]  = p === 0 && logoUrl ? `=IMAGE("${logoUrl}")` : ""; // Col C: Logo URL
         r[3]  = steam || "N/A";                        // Col D: Steam Profile
         r[4]  = discord || "N/A";                      // Col E: Discord ID
         r[5]  = pName;                                 // Col F: Player Name

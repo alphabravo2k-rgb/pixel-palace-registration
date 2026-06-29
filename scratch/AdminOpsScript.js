@@ -82,6 +82,7 @@ function onOpen() {
     .addItem("Full Sync + ELO Fetch", "syncAndFetch")
     .addSeparator()
     .addItem("Setup / Fix Headers (Row 1)", "setupHeaders")
+    .addItem("Fix Merged Cells", "fixMerges")
     .addItem("Enable Auto-Sync (Every 30 Mins)", "createTimeTriggers")
     .addItem("Remove All Triggers", "removeAllTriggers")
     .addToUi();
@@ -230,7 +231,7 @@ function syncRawToAdmin() {
       for (var x = 0; x < TOTAL_COLS; x++) r.push("");
       r[COL.SN          - 1] = p === 0 ? sn       : "";
       r[COL.REGION      - 1] = p === 0 ? region   : "";
-      r[COL.LOGO        - 1] = p === 0 ? logoUrl  : "";
+      r[COL.LOGO        - 1] = (p === 0 && logoUrl) ? '=IMAGE("' + logoUrl + '")' : "";
       r[COL.STEAM       - 1] = steam;
       r[COL.DISCORD     - 1] = discord;
       r[COL.PLAYER_NAME - 1] = pName;
@@ -262,6 +263,56 @@ function syncRawToAdmin() {
   } else {
     SpreadsheetApp.getActiveSpreadsheet().toast("No new teams found.", "Sync Done", 3);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  FIX MERGES — unmerge all data cells then re-merge only team-level columns
+//  Run this if previous script versions incorrectly merged player-level columns.
+// ─────────────────────────────────────────────────────────────────────────────
+function fixMerges() {
+  var adminSheet = getAdminSheet_();
+  var lastRow = adminSheet.getLastRow();
+  if (lastRow < 2) {
+    SpreadsheetApp.getActiveSpreadsheet().toast("No data rows to fix.", "Fix Merges", 3);
+    return;
+  }
+
+  // Step 1: Break ALL existing merges in the data region
+  adminSheet.getRange(2, 1, lastRow - 1, TOTAL_COLS).breakApart();
+
+  // Step 2: Re-read data to find team boundaries (teams identified by Col K = Team Name)
+  var data = adminSheet.getRange(2, 1, lastRow - 1, TOTAL_COLS).getValues();
+  var teamBoundaries = []; // [{startRow (1-indexed), spanCount}]
+
+  for (var i = 0; i < data.length; i++) {
+    var tName = (data[i][COL.TEAM_NAME - 1] || "").toString().trim();
+    if (tName) {
+      // How many rows does this team span? Count until next non-empty team name or end.
+      var span = 1;
+      for (var j = i + 1; j < data.length && j < i + PLAYERS_PER_TEAM; j++) {
+        if ((data[j][COL.TEAM_NAME - 1] || "").toString().trim() === "") span++;
+        else break;
+      }
+      if (span > 1) {
+        teamBoundaries.push({ startRow: i + 2, spanCount: span }); // +2: 1-indexed + header row
+      }
+    }
+  }
+
+  // Step 3: Re-apply merges only for MERGE_COLS columns
+  teamBoundaries.forEach(function(t) {
+    MERGE_COLS.forEach(function(col) {
+      adminSheet.getRange(t.startRow, col, t.spanCount, 1)
+        .merge()
+        .setVerticalAlignment("middle")
+        .setHorizontalAlignment("center");
+    });
+  });
+
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    "Fixed " + teamBoundaries.length + " team blocks. Player columns (D-J) are now unmerged.",
+    "Fix Merges Done", 5
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

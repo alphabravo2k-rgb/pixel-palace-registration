@@ -537,6 +537,7 @@ export const TournamentForm = ({ tournament, slots }) => {
           tournament={tournament}
           formRegister={register}
           errorMessage={errors.logoLink?.message}
+          teamName={getValues('teamName') || 'team'}
           onUploadSuccess={(url) => setValue('logoLink', url, { shouldValidate: true })}
           onUploadRemove={() => setValue('logoLink', '', { shouldValidate: true })}
         />
