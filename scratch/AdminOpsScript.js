@@ -129,6 +129,38 @@ function getAdminSheet_() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+//  DETECT RAW SHEET COLUMN POSITIONS FROM HEADER ROW
+//  Supports two layouts:
+//    Layout A (form-submitted): Team ID | Timestamp | Tournament ID | Submission ID | Status | Team Name | Team Tag | Region | Logo | P1 Discord...
+//    Layout B (manually entered): Timestamp | Tournament ID | Submission ID | Team Name | Team Tag | Region | Logo | P1 Discord...
+// ─────────────────────────────────────────────────────────────────────────────
+function getRawColMap_(headerRow) {
+  var map = {};
+  for (var h = 0; h < headerRow.length; h++) {
+    var k = headerRow[h].toString().trim().toLowerCase()
+              .replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
+    map[k] = h;
+  }
+  // Resolve common aliases
+  var get = function(keys, fallback) {
+    for (var x = 0; x < keys.length; x++) {
+      if (map[keys[x]] !== undefined) return map[keys[x]];
+    }
+    return fallback;
+  };
+  return {
+    tournament: get(['tournament_id', 'tournament'], 2),
+    teamName:   get(['team_name', 'team name'],      5),
+    teamTag:    get(['team_tag', 'team tag'],        6),
+    region:     get(['region'],                      7),
+    logo:       get(['logo_url', 'logo url'],        8),
+    status:     get(['status'],                      4),
+    // P1 Discord starts right after logo — detect dynamically
+    playerBase: get(['p1_discord', 'p1 discord'],   9)
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 //  SYNC RAW to ADMIN
 // ─────────────────────────────────────────────────────────────────────────────
 function syncRawToAdmin() {
@@ -138,7 +170,25 @@ function syncRawToAdmin() {
   var rawData   = rawSheet.getDataRange().getValues();
   var adminData = adminSheet.getDataRange().getValues();
 
-  // Build existing team names from Col K (index 10 in 0-based)
+  if (rawData.length < 1) {
+    Logger.log("syncRawToAdmin: raw sheet is empty.");
+    return;
+  }
+
+  // Auto-detect column positions from header row
+  var cols = getRawColMap_(rawData[0]);
+  Logger.log("Raw column map: " + JSON.stringify(cols));
+
+  // Determine starting data row — skip header if row 0 looks like headers
+  var firstDataRow = 1;
+  var firstCell = rawData[0][0] ? rawData[0][0].toString().trim() : "";
+  // If row 0 col 0 is NOT a header keyword (e.g. it's a date or team ID), start from row 0
+  if (firstCell !== "" && firstCell.toLowerCase() !== "team id" &&
+      firstCell.toLowerCase() !== "timestamp" && !firstCell.startsWith("P")) {
+    firstDataRow = 0; // no header row
+  }
+
+  // Build existing team names from Admin Sheet Col K (0-based index 10)
   var existingTeams = {};
   var teamCount = 0;
   for (var i = 1; i < adminData.length; i++) {
@@ -150,23 +200,23 @@ function syncRawToAdmin() {
   }
 
   var added = 0;
-  for (var i = 1; i < rawData.length; i++) {
+  for (var i = firstDataRow; i < rawData.length; i++) {
     var row = rawData[i];
 
-    var tid = (row[2] || "").toString().trim();
+    var tid = (row[cols.tournament] || "").toString().trim();
     if (tid !== "community-cup-2") continue;
 
-    var teamName = (row[5] || "").toString().trim();
+    var teamName = (row[cols.teamName] || "").toString().trim();
     if (!teamName || existingTeams[teamName.toLowerCase()]) continue;
 
-    var region  = (row[7] || "").toString().trim();
-    var logoUrl = (row[8] || "").toString().trim();
+    var region  = (row[cols.region] || "").toString().trim();
+    var logoUrl = (row[cols.logo]   || "").toString().trim();
     var startRow = adminSheet.getLastRow() + 1;
     var sn = "TEAM " + (teamCount + added + 1);
     var rows = [];
 
     for (var p = 0; p < PLAYERS_PER_TEAM; p++) {
-      var base    = 9 + p * 4;
+      var base    = cols.playerBase + p * 4;
       var discord = (row[base]     || "").toString().trim() || "N/A";
       var steam   = (row[base + 1] || "").toString().trim() || "N/A";
       var faceit  = (row[base + 2] || "").toString().trim() || "N/A";
@@ -290,6 +340,9 @@ function updateFaceitElo() {
 //  ON EDIT — sync status change back to Raw Sheet
 // ─────────────────────────────────────────────────────────────────────────────
 function onEdit(e) {
+  // Guard: e is undefined when run manually from the Apps Script editor
+  if (!e || !e.range) return;
+
   var range = e.range;
   var sheet = range.getSheet();
 
@@ -317,13 +370,23 @@ function syncStatusToRaw_(teamName, newStatus) {
   try {
     var rawSheet = SpreadsheetApp.openById(RAW_SHEET_ID).getSheets()[0];
     var data     = rawSheet.getDataRange().getValues();
+    if (data.length < 1) return;
 
-    for (var i = 1; i < data.length; i++) {
-      var tn = (data[i][5] || "").toString().trim(); // Col F = Team Name
+    // Auto-detect column positions
+    var cols = getRawColMap_(data[0]);
+    var firstDataRow = 1;
+    var firstCell = data[0][0] ? data[0][0].toString().trim() : "";
+    if (firstCell !== "" && firstCell.toLowerCase() !== "team id" &&
+        firstCell.toLowerCase() !== "timestamp") {
+      firstDataRow = 0;
+    }
+
+    for (var i = firstDataRow; i < data.length; i++) {
+      var tn = (data[i][cols.teamName] || "").toString().trim();
       if (tn.toLowerCase() !== teamName.toLowerCase()) continue;
-      var existing = (data[i][4] || "").toString().trim().toUpperCase(); // Col E = Status
-      if (existing !== newStatus) {
-        rawSheet.getRange(i + 1, 5).setValue(newStatus);
+      var existingStatus = (data[i][cols.status] || "").toString().trim().toUpperCase();
+      if (existingStatus !== newStatus) {
+        rawSheet.getRange(i + 1, cols.status + 1).setValue(newStatus);
       }
       break;
     }
