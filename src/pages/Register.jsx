@@ -255,7 +255,7 @@ export const Register = () => {
                   </div>
                   <div>
                     <div className="text-white font-bold font-body text-sm leading-none">{player.ign}</div>
-                    <div className="text-zinc-600 text-[10px] font-bold uppercase tracking-wider mt-1">{player.role.toUpperCase()}</div>
+                    <div className="text-zinc-600 text-[10px] font-bold uppercase tracking-wider mt-1">{(player.role || 'MEMBER').toUpperCase()}</div>
                   </div>
                 </div>
               ))}

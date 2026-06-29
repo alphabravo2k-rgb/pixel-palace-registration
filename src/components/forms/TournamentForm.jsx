@@ -315,11 +315,11 @@ export const TournamentForm = ({ tournament, slots }) => {
         logo: formData.logoUrl || '',
         submissionId: res.submissionId,
         registeredAt: new Date().toISOString(),
-        roster: formData.players.map(p => ({ 
+        roster: formData.players.map((p, idx) => ({ 
           ign: p.ign, 
           discord: p.discord, 
           avatar: p.avatar || '', 
-          role: p.role 
+          role: idx === 0 ? 'CAPTAIN' : (idx >= corePlayerCount ? 'SUBSTITUTE' : 'CORE PLAYER')
         }))
       };
       
