@@ -5,7 +5,7 @@
  * Spreadsheet URL: https://docs.google.com/spreadsheets/d/1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E/edit?gid=0#gid=0
  */
 
-const RAW_SHEET_ID = "1peKx1a0_Tl1vwkoFc7ZcrWQR5T0LfF_7b9nP_B_QCLw"; // ID of the Pixel Palace | Raw Registrations spreadsheet
+const RAW_SHEET_ID = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc"; // ID of the Pixel Palace | Raw Registrations spreadsheet
 const FACEIT_API_KEY = "a77d0763-5fdd-4bde-a8a5-6e840408de2e";
 
 function onOpen() {

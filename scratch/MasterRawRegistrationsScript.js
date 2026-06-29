@@ -318,10 +318,25 @@ function logAuditEntry(sheetName, rowNum, action, oldValue, newValue) {
  * Real-time write-through sync to Admin Operations Sheet
  */
 function appendToAdminSheet(payload, teamId) {
-  const ADMIN_SHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+  const tournamentId = payload.tournament_id || "community-cup-2";
+  let adminSheetId = "";
+  let maxPlayers = 7;
+  let isChaos = false;
+  
+  if (tournamentId === "community-cup-2") {
+    adminSheetId = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+    maxPlayers = 7;
+  } else if (tournamentId === "chaos-ii") {
+    adminSheetId = "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E";
+    maxPlayers = 3;
+    isChaos = true;
+  } else {
+    return; // Fallback or unsupported tournament
+  }
+
   try {
-    const adminDoc = SpreadsheetApp.openById(ADMIN_SHEET_ID);
-    const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+    const adminDoc = SpreadsheetApp.openById(adminSheetId);
+    const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheetByName("Sheet1") || adminDoc.getSheets()[0];
     
     const adminData = adminSheet.getDataRange().getValues();
     const existingTeams = new Set();
@@ -342,7 +357,7 @@ function appendToAdminSheet(payload, teamId) {
     
     let eloSum = 0;
     let eloCount = 0;
-    for (let p = 1; p <= 7; p++) {
+    for (let p = 1; p <= maxPlayers; p++) {
       const eloVal = parseInt(payload[`p${p}FaceitElo`]);
       const ign = payload[`p${p}IGN`];
       if (ign && ign.trim() !== "") {
@@ -353,46 +368,94 @@ function appendToAdminSheet(payload, teamId) {
       }
     }
     const averageElo = eloCount > 0 ? Math.round(eloSum / eloCount) : 0;
-    let seed = averageElo <= 1200 ? "LOW" : averageElo <= 1800 ? "MID" : averageElo <= 2200 ? "NORMAL" : averageElo <= 2500 ? "AVG" : averageElo <= 3000 ? "GOOD" : "BEST";
 
-    for (let p = 0; p < 7; p++) {
-      const pNum = p + 1;
-      const discord = payload[`p${pNum}Discord`] || "N/A";
-      const steam = payload[`p${pNum}Steam`] || "N/A";
-      const faceit = payload[`p${pNum}Faceit`] || "N/A";
+    if (isChaos) {
+      // Chaos II format (33 columns structure)
+      const roleTags = [" ©", " (Partner)", " (Sub)"];
+      const roles = ["Captain", "Partner", "Substitute"];
       
-      const pRole = p === 0 ? " ©" : (p >= 5 ? " (Sub)" : "");
-      const pName = faceit !== "N/A" ? faceit.split('/').filter(Boolean).pop() + pRole : discord + pRole;
+      for (let p = 0; p < 3; p++) {
+        const pNum = p + 1;
+        const discord = payload[`p${pNum}Discord`] || "N/A";
+        const steam = payload[`p${pNum}Steam`] || "N/A";
+        const faceit = payload[`p${pNum}Faceit`] || "N/A";
+        const pName = faceit
+          ? faceit.replace(/\/$/, "").split("/").pop() + roleTags[p]
+          : (discord ? discord + roleTags[p] : "N/A");
+          
+        const r = new Array(33).fill("");
+        r[0]  = p === 0 ? sn : "";                     // Col A (1): S.N
+        r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
+        r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
+        r[3]  = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
+        r[4]  = p === 0 ? region : "";                 // Col E (5): Region
+        r[5]  = pName;                                 // Col F (6): Player Name
+        r[6]  = discord || "N/A";                      // Col G (7): Discord
+        r[7]  = steam || "N/A";                        // Col H (8): Steam URL
+        r[8]  = "";                                    // Col I (9): Joined Discord
+        r[9]  = "";                                    // Col J (10): Role Issued
+        r[10] = "";                                    // Col K (11): Private VC
+        r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
+        r[12] = "⏳";                                  // Col M (13): Live ELO
+        r[13] = p === 0 ? "⏳" : "";                    // Col N (14): Avg ELO
+        r[14] = p === 0 ? "Pending" : "";              // Col O (15): Reg. Status
+        r[15] = p === 0 ? "TBD" : "";                  // Col P (16): Team Seed
+        r[16] = "";                                    // Col Q (17): Remarks
+        r[17] = roles[p];                              // Col R (18): Role
+        r[32] = p === 0 ? "⏳" : "";                    // Col AG (33): Risk Flag
+        
+        rowsToAppend.push(r);
+      }
       
-      rowsToAppend.push([
-        p === 0 ? sn : "",                 // Col A: S.N
-        p === 0 ? teamName : "",           // Col B: Team Name
-        p === 0 ? teamTag : "",            // Col C: Team Tag
-        p === 0 ? logoUrl : "",            // Col D: Team Logo Url
-        p === 0 ? region : "",             // Col E: Region
-        pName,                             // Col F: Player Name
-        discord,                           // Col G: Discord ID
-        steam,                             // Col H: Steam Profile
-        "",                                // Col I: Joined Discord
-        "",                                // Col J: Role Issued
-        "",                                // Col K: VC Created
-        faceit,                            // Col L: Faceit Profile
-        payload[`p${pNum}FaceitElo`] || "N/A", // Col M: Live FACE IT ELO
-        p === 0 ? averageElo : "",         // Col N: AVERAGE ELO
-        p === 0 ? "PENDING" : "",          // Col O: Registration status
-        p === 0 ? seed : "",               // Col P: Team Seed
-        ""                                 // Col Q: Admin Remarks
-      ]);
+      adminSheet.getRange(startRowIndex, 1, 3, 33).setValues(rowsToAppend);
+      [1, 2, 3, 4, 5, 14, 15, 16, 17, 33].forEach(col => {
+         adminSheet.getRange(startRowIndex, col, 3, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
+      });
+      adminSheet.setRowHeightsForced(startRowIndex, 3, 28);
+      
+    } else {
+      // Community Cup 2 format (17 columns structure)
+      let seed = averageElo <= 1200 ? "LOW" : averageElo <= 1800 ? "MID" : averageElo <= 2200 ? "NORMAL" : averageElo <= 2500 ? "AVG" : averageElo <= 3000 ? "GOOD" : "BEST";
+
+      for (let p = 0; p < 7; p++) {
+        const pNum = p + 1;
+        const discord = payload[`p${pNum}Discord`] || "N/A";
+        const steam = payload[`p${pNum}Steam`] || "N/A";
+        const faceit = payload[`p${pNum}Faceit`] || "N/A";
+        
+        const pRole = p === 0 ? " ©" : (p >= 5 ? " (Sub)" : "");
+        const pName = faceit !== "N/A" ? faceit.split('/').filter(Boolean).pop() + pRole : discord + pRole;
+        
+        rowsToAppend.push([
+          p === 0 ? sn : "",                 // Col A: S.N
+          p === 0 ? teamName : "",           // Col B: Team Name
+          p === 0 ? teamTag : "",            // Col C: Team Tag
+          p === 0 ? logoUrl : "",            // Col D: Team Logo Url
+          p === 0 ? region : "",             // Col E: Region
+          pName,                             // Col F: Player Name
+          discord,                           // Col G: Discord ID
+          steam,                             // Col H: Steam Profile
+          "",                                // Col I: Joined Discord
+          "",                                // Col J: Role Issued
+          "",                                // Col K: VC Created
+          faceit,                            // Col L: Faceit Profile
+          payload[`p${pNum}FaceitElo`] || "N/A", // Col M: Live FACE IT ELO
+          p === 0 ? averageElo : "",         // Col N: AVERAGE ELO
+          p === 0 ? "PENDING" : "",          // Col O: Registration status
+          p === 0 ? seed : "",               // Col P: Team Seed
+          ""                                 // Col Q: Admin Remarks
+        ]);
+      }
+      
+      adminSheet.getRange(startRowIndex, 1, 7, 17).setValues(rowsToAppend);
+      [1, 2, 3, 4, 5, 14, 15, 16, 17].forEach(col => {
+         adminSheet.getRange(startRowIndex, col, 7, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
+      });
+      
+      const seedRange = adminSheet.getRange(startRowIndex, 16);
+      seedRange.setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
+               .setFontWeight("bold");
     }
-    
-    adminSheet.getRange(startRowIndex, 1, 7, 17).setValues(rowsToAppend);
-    [1, 2, 3, 4, 5, 14, 15, 16, 17].forEach(col => {
-       adminSheet.getRange(startRowIndex, col, 7, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
-    });
-    
-    const seedRange = adminSheet.getRange(startRowIndex, 16);
-    seedRange.setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
-             .setFontWeight("bold");
              
   } catch (err) {
     console.error("Failed to append to admin sheet:", err);
@@ -403,23 +466,29 @@ function appendToAdminSheet(payload, teamId) {
  * Real-time status sync back to Admin Operations Sheet
  */
 function syncStatusToAdmin(teamName, newStatus) {
-  const ADMIN_SHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
-  try {
-    const adminDoc = SpreadsheetApp.openById(ADMIN_SHEET_ID);
-    const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
-    const data = adminSheet.getDataRange().getValues();
-    
-    for (let i = 1; i < data.length; i++) {
-      const existingTeamName = data[i][1] ? data[i][1].toString().trim() : ""; // Col B (index 1) is Team Name
-      if (existingTeamName.toLowerCase() === teamName.toLowerCase()) {
-        const currentStatus = data[i][14] ? data[i][14].toString().trim() : ""; // Col O (index 14) is Status
-        if (currentStatus.toUpperCase() !== newStatus.toUpperCase()) {
-          adminSheet.getRange(i + 1, 15).setValue(newStatus); // Col O is Column 15
+  const adminSheetIds = [
+    "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E", // CC2
+    "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E"  // Chaos II
+  ];
+  
+  adminSheetIds.forEach(adminSheetId => {
+    try {
+      const adminDoc = SpreadsheetApp.openById(adminSheetId);
+      const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheetByName("Sheet1") || adminDoc.getSheets()[0];
+      const data = adminSheet.getDataRange().getValues();
+      
+      for (let i = 1; i < data.length; i++) {
+        const existingTeamName = data[i][1] ? data[i][1].toString().trim() : ""; // Col B (index 1) is Team Name
+        if (existingTeamName.toLowerCase() === teamName.toLowerCase()) {
+          const currentStatus = data[i][14] ? data[i][14].toString().trim() : ""; // Col O (index 14) is Status
+          if (currentStatus.toUpperCase() !== newStatus.toUpperCase()) {
+            adminSheet.getRange(i + 1, 15).setValue(newStatus); // Col O is Column 15
+          }
+          break;
         }
-        break;
       }
+    } catch (err) {
+      console.error("Failed to sync status to Admin ID " + adminSheetId + ":", err);
     }
-  } catch (err) {
-    console.error("Failed to sync status to Admin:", err);
-  }
+  });
 }
