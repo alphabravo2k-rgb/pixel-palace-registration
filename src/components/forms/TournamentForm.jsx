@@ -41,6 +41,8 @@ import {
   Check,
   ExternalLink,
   Activity,
+  ShieldAlert,
+  AlertOctagon,
 } from 'lucide-react';
 
 // ─── Dynamic Zod Schema ────────────────────────────────────────────────────────
@@ -183,20 +185,25 @@ export const TournamentForm = ({ tournament, slots }) => {
 
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
 
-  // `subActive` is DERIVED — not separate state. Clean.
-  const subActive = fields.length > corePlayerCount;
+  // Substitutes calculations
+  const maxSubs = tournament.substitutes?.max ?? 0;
+  const currentSubs = fields.length - corePlayerCount;
 
   const { submit, isSubmitting, error, isSuccess } = useFormSubmit(tournament.id);
   const [submissionId, setSubmissionId] = useState(null);
   const [copiedId, setCopiedId] = useState(false);
   const [dlqItem, setDlqItem] = useState(null);
 
-  // ── Sub toggle ──────────────────────────────────────────────────────────────
-  const handleSubToggle = () => {
-    if (subActive) {
-      remove(fields.length - 1);
-    } else {
+  // ── Sub handling ────────────────────────────────────────────────────────────
+  const handleAddSub = () => {
+    if (currentSubs < maxSubs) {
       append(blankPlayer());
+    }
+  };
+
+  const handleRemoveSub = () => {
+    if (currentSubs > 0) {
+      remove(fields.length - 1);
     }
   };
 
@@ -274,7 +281,9 @@ export const TournamentForm = ({ tournament, slots }) => {
         { ign: "ZywOo", steam: "https://steamcommunity.com/id/ZywOo_test", faceit: "https://www.faceit.com/en/players/ZywOo", discord: "zywoo_test" },
         { ign: "NiKo", steam: "https://steamcommunity.com/profiles/76561197990449419", faceit: "https://www.faceit.com/en/players/NiKo", discord: "niko_test" },
         { ign: "m0NESY", steam: "https://steamcommunity.com/profiles/76561198428588049", faceit: "https://www.faceit.com/en/players/m0NESY", discord: "m0nesy_test" },
-        { ign: "donk", steam: "https://steamcommunity.com/id/donk_test", faceit: "https://www.faceit.com/en/players/donk", discord: "donk_test" }
+        { ign: "donk", steam: "https://steamcommunity.com/id/donk_test", faceit: "https://www.faceit.com/en/players/donk", discord: "donk_test" },
+        { ign: "Spinx", steam: "https://steamcommunity.com/id/Spinx_test", faceit: "https://www.faceit.com/en/players/Spinx", discord: "spinx_test" },
+        { ign: "apEX", steam: "https://steamcommunity.com/id/apEX_test", faceit: "https://www.faceit.com/en/players/apEX", discord: "apex_test" }
       ];
 
       fields.forEach((_, idx) => {
@@ -532,27 +541,27 @@ export const TournamentForm = ({ tournament, slots }) => {
         </div>
 
         {hasSubs && (
-          <button
-            type="button"
-            onClick={handleSubToggle}
-            className="flex items-center gap-3 bg-neon-purple/20 px-5 py-3 rounded border border-neon-purple/50 cursor-pointer transition-all shadow-[0_0_15px_rgba(138,43,226,0.3)] my-auto hover:bg-neon-purple/40 select-none"
-          >
-            <UsersIcon className="w-5 h-5 text-neon-pink" />
-            <span className="text-[12px] font-bold uppercase tracking-[0.2em] text-white font-body">
-              {subActive ? '1 Sub' : '0 Subs'}
+          <div className="flex items-center gap-2 my-auto select-none bg-neon-purple/10 border border-neon-purple/35 rounded p-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-zinc-400 font-body px-2">
+              Subs ({currentSubs}/{maxSubs})
             </span>
-            <div
-              className={`relative w-10 h-5 rounded-full border border-white/20 transition-colors duration-300 ml-2 ${
-                subActive ? 'bg-neon-cyan' : 'bg-black'
-              }`}
+            <button
+              type="button"
+              disabled={currentSubs === 0}
+              onClick={handleRemoveSub}
+              className="w-8 h-8 flex items-center justify-center bg-black/40 border border-white/10 hover:border-red-500/50 hover:text-red-400 disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-zinc-500 rounded font-bold text-base leading-none transition-colors cursor-pointer select-none"
             >
-              <div
-                className={`absolute left-0.5 top-0.5 w-3.5 h-3.5 rounded-full transition-transform duration-300 ${
-                  subActive ? 'translate-x-[20px] bg-white' : 'bg-zinc-600'
-                }`}
-              />
-            </div>
-          </button>
+              -
+            </button>
+            <button
+              type="button"
+              disabled={currentSubs === maxSubs}
+              onClick={handleAddSub}
+              className="w-8 h-8 flex items-center justify-center bg-black/40 border border-white/10 hover:border-neon-cyan/50 hover:text-neon-cyan disabled:opacity-30 disabled:hover:border-white/10 disabled:hover:text-zinc-500 rounded font-bold text-base leading-none transition-colors cursor-pointer select-none"
+            >
+              +
+            </button>
+          </div>
         )}
       </div>
 

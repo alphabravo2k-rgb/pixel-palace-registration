@@ -1,5 +1,55 @@
 export const tournaments = [
   {
+    id: "community-cup-2",
+    name: "Pixel Palace Community Cup 2 (2026)",
+    slug: "community-cup-2",
+    status: "LIVE",
+    format: "5v5",
+    gameMode: "CS2 Competitive",
+    prizePool: "1st: $2000 | 2nd: $750",
+    maxTeams: 32,
+    openSlots: 26,
+    inviteSlots: 6,
+    region: "PAK / ME",
+    startTime: "18:00 PKT ONWARDS",
+    displayTime: "18:00 (GMT+5) / PAK TIME",
+    serverLocation: "Dubai / Pakistan",
+    displayDate: "JULY 31 TILL AUGUST 03",
+    displayYear: "2026",
+    tournamentDate: "2026-07-31T18:00:00+05:00",
+    registrationDeadline: "2026-07-26T23:59:00+05:00",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png",
+    antiCheat: "Akros",
+    playersPerTeam: 5,
+    substitutes: { min: 0, max: 2 },
+    maps: ["Ancient", "Anubis", "Dust2", "Inferno", "Mirage", "Nuke", "Vertigo"],
+    sheetsEndpoint: "", // Initially empty to trigger dev mock endpoint in client.js
+    customVerification: [
+      "MANDATORY ANTI-CHEAT — Our team acknowledges that Akros Anti-Cheat must be installed by all players.",
+      "COMMUNICATION — All players have joined the Pixel Palace Discord server.",
+      "VOICE COMMS — All players confirm to join Pixel Voice Channels during their matches.",
+      "SCHEDULE — We confirm availability for the registration deadline and all tournament dates."
+    ],
+    
+    // Feature flags
+    discordRequired: true,
+    softBanEnabled: false,
+    bracketsEnabled: false,
+    supportsLogoUpload: true,
+    
+    // Results
+    tournamentComplete: false,
+    champion: { name: "", tag: "", logo: "" },
+    runnerUp: { name: "", tag: "", logo: "" },
+    
+    scheduleUtc: [
+      "2026-07-31T18:00:00+05:00",
+      "2026-08-01T18:00:00+05:00",
+      "2026-08-02T18:00:00+05:00",
+      "2026-08-03T20:00:00+05:00",
+    ]
+  },
+  {
     id: "chaos-ii",
     name: "Wingman Chaos II (2026)",
     slug: "chaos-ii",
