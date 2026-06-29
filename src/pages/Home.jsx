@@ -5,8 +5,10 @@ import TournamentFilterTabs from '../components/shared/TournamentFilterTabs';
 import TournamentCard from '../components/shared/TournamentCard';
 import { CountUp } from '../components/ui/CountUp';
 import { Magnetic } from '../components/ui/Magnetic';
+import { useAudio } from '../hooks/useAudio';
 
 export const Home = () => {
+  const { playHover, playClick } = useAudio();
   // Check if any live tournaments exist to set intelligent default tab
   const hasLive = tournaments.some(t => t.status === "LIVE");
   const [activeTab, setActiveTab] = useState(hasLive ? "LIVE" : "ALL");
@@ -83,8 +85,12 @@ export const Home = () => {
         <div className="mt-12">
           <Magnetic>
             <a href="#circuits" className="inline-block">
-              <button className="bg-white text-black font-black uppercase tracking-widest px-8 py-3 rounded-sm hover:bg-neon-cyan transition-colors">
-                Explore Circuits
+              <button 
+                onMouseEnter={playHover}
+                onClick={playClick}
+                className="btn-ignite flex items-center justify-center"
+              >
+                <span>Explore Circuits</span>
               </button>
             </a>
           </Magnetic>
@@ -120,7 +126,11 @@ export const Home = () => {
         </h3>
         <div className="flex gap-4 overflow-x-auto pb-8 snap-x scrollbar-thin scrollbar-thumb-zinc-700 scrollbar-track-transparent">
           {tournaments.filter(t => t.status === "ARCHIVED").reverse().map((t, i) => (
-            <div key={i} className="min-w-[280px] glass-panel p-5 snap-start shrink-0 hover:border-white/20 transition-colors cursor-default relative overflow-hidden group">
+            <div 
+              key={i} 
+              onMouseEnter={playHover}
+              className="min-w-[280px] glass-panel p-5 snap-start shrink-0 hover:border-white/20 transition-colors cursor-default relative overflow-hidden group"
+            >
               <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 blur-[20px] rounded-full group-hover:bg-neon-cyan/10 transition-colors" />
               <div className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-2">{t.displayYear || new Date(t.tournamentDate).getFullYear()} // {t.gameMode}</div>
               <div className="text-xl font-heading text-white uppercase tracking-widest leading-none mb-4">{t.name}</div>

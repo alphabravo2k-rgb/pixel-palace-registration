@@ -214,25 +214,71 @@ export const Register = () => {
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto relative z-10">
-              <a href="https://discord.gg/y6ZW8jHn2Q" target="_blank" rel="noreferrer" className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-purple/20 transition-all duration-300"><MessageCircle className="w-5 h-5 text-neon-cyan group-hover:text-white transition-colors" /><span className="font-bold text-lg uppercase tracking-widest text-white font-body">JOIN DISCORD SERVER</span></a>
-              <a href="https://www.twitch.tv/pXpLgg" target="_blank" rel="noreferrer" className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20 transition-all duration-300"><Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" /><span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span></a>
+              <a 
+                href="https://discord.gg/y6ZW8jHn2Q" 
+                target="_blank" 
+                rel="noreferrer" 
+                onMouseEnter={playHover}
+                onClick={playClick}
+                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-purple/20 transition-all duration-300"
+              >
+                <MessageCircle className="w-5 h-5 text-neon-cyan group-hover:text-white transition-colors" />
+                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">JOIN DISCORD SERVER</span>
+              </a>
+              <a 
+                href="https://www.twitch.tv/pXpLgg" 
+                target="_blank" 
+                rel="noreferrer" 
+                onMouseEnter={playHover}
+                onClick={playClick}
+                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20 transition-all duration-300"
+              >
+                <Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" />
+                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span>
+              </a>
             </div>
 
             <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0 sticky top-4 z-40 bg-[#050507]/90 backdrop-blur-md pt-4 rounded-t-xl border-t border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
               <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10"></div>
               {tournament.tournamentComplete && (
-                <button onClick={() => setActiveTab('results')} className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400' : 'text-white/40 hover:text-white/80'}`}>
+                <button 
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('results'); }} 
+                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400 font-black' : 'text-white/40 hover:text-white/80'}`}
+                >
                   Results<span className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest">FINAL</span>
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`}></div>
                 </button>
               )}
-              {!isArchived && <button onClick={() => setActiveTab('register')} className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}>Register Team<div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`}></div></button>}
-              <button onClick={() => setActiveTab('teams')} className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'teams' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}>
+              {!isArchived && (
+                <button 
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('register'); }} 
+                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                >
+                  Register Team
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`}></div>
+                </button>
+              )}
+              <button 
+                onMouseEnter={playHover}
+                onClick={() => { playClick(); setActiveTab('teams'); }} 
+                className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'teams' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+              >
                 {isArchived ? 'All Teams' : 'Registered Teams'}
                 {!isArchived && <span className="bg-neon-pink text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span>}
                 <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'teams' ? 'w-full' : 'w-0'}`}></div>
               </button>
-              {tournament.bracketsEnabled && <button onClick={() => setActiveTab('brackets')} className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-white' : 'text-white/40 hover:text-white/80'}`}>Brackets<div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`}></div></button>}
+              {tournament.bracketsEnabled && (
+                <button 
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('brackets'); }} 
+                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                >
+                  Brackets
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`}></div>
+                </button>
+              )}
             </div>
           </header>
 
