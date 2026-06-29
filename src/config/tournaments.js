@@ -23,7 +23,7 @@ export const tournaments = [
     playersPerTeam: 5,
     substitutes: { min: 0, max: 2 },
     maps: ["Ancient", "Anubis", "Dust2", "Inferno", "Mirage", "Nuke", "Vertigo"],
-    sheetsEndpoint: "", // Initially empty to trigger dev mock endpoint in client.js
+    sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec",
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our team acknowledges that Akros Anti-Cheat must be installed by all players.",
       "COMMUNICATION — All players have joined the Pixel Palace Discord server.",
