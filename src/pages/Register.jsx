@@ -1,20 +1,20 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, Navigate, Link } from 'react-router-dom';
-import { getTournamentBySlug } from '../config/tournaments';
-import { fetchTournamentSlots, fetchTournamentTeams, fetchTournamentBracket } from '../services/sheets';
-import { formatEsportsDate } from '../utils/dateHelper';
-import { DiscordGate } from '../components/modals/DiscordGate';
-import { MessageCircle, Tv, Trophy, ShieldCheck, ChevronLeft, Shield, Users, Sparkles, Copy } from 'lucide-react';
-import { TeamProfileModal } from '../components/modals/TeamProfileModal';
-import { Terminal } from '../utils/logger';
-import { useAudio } from '../hooks/useAudio';
-import { formatLocalTime } from '../utils/timezone';
+import { ChevronLeft, Copy,MessageCircle, Shield, ShieldCheck, Sparkles, Trophy, Tv, Users } from 'lucide-react';
+import React, { useCallback,useEffect, useState } from 'react';
+import { Link,Navigate, useParams } from 'react-router-dom';
 
+import { DiscordGate } from '../components/modals/DiscordGate';
+import { TeamProfileModal } from '../components/modals/TeamProfileModal';
+import { BracketsTab } from '../components/registration/BracketsTab';
 // Decomposed Tab Components
 import { RegistrationTab } from '../components/registration/RegistrationTab';
-import { TrackerTab } from '../components/registration/TrackerTab';
-import { BracketsTab } from '../components/registration/BracketsTab';
 import { ResultsTab } from '../components/registration/ResultsTab';
+import { TrackerTab } from '../components/registration/TrackerTab';
+import { getTournamentBySlug } from '../config/tournaments';
+import { useAudio } from '../hooks/useAudio';
+import { fetchTournamentBracket,fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
+import { formatEsportsDate } from '../utils/dateHelper';
+import { Terminal } from '../utils/logger';
+import { formatLocalTime } from '../utils/timezone';
 
 export const Register = () => {
   const { tournamentSlug } = useParams();
@@ -48,6 +48,7 @@ export const Register = () => {
     }
   });
   const [showForm, setShowForm] = useState(!activeTeam);
+  const [isRulesAccepted, setIsRulesAccepted] = useState(false);
 
   useEffect(() => {
     const handleSuccess = (e) => {
@@ -206,7 +207,7 @@ export const Register = () => {
               </button>
               <button 
                 onMouseEnter={playHover}
-                onClick={() => { playClick(); setShowForm(true); }}
+                onClick={() => { playClick(); setIsRulesAccepted(false); setShowForm(true); }}
                 className="flex-grow md:flex-grow-0 bg-zinc-900 border border-white/10 hover:border-white/20 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-widest py-3 px-6 transition-all duration-300 rounded font-body"
               >
                 Reregister Team
@@ -272,12 +273,14 @@ export const Register = () => {
 
   return (
     <>
-      <DiscordGate tournament={tournament} />
+      {activeTab === 'register' && showForm && !isRulesAccepted && !isArchived && (
+        <DiscordGate tournament={tournament} onAccept={() => setIsRulesAccepted(true)} />
+      )}
       {selectedTeam && <TeamProfileModal team={selectedTeam} isOpen={!!selectedTeam} onClose={() => setSelectedTeam(null)} />}
       
       <div className="min-h-screen bg-[#050507] text-white selection:bg-neon-cyan/30 flex flex-col relative overflow-x-hidden">
-        <div className="app-bg-void"></div>
-        <div className="app-bg-scanlines"></div>
+        <div className="app-bg-void" />
+        <div className="app-bg-scanlines" />
 
         <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 md:py-12 flex-grow">
           <nav className="absolute top-0 left-4 md:left-8 z-50 pt-6 animate-in fade-in duration-1000">
@@ -291,7 +294,7 @@ export const Register = () => {
             <span className="absolute top-0 left-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">INIT_SEQ // 0x4F9A</span>
             <span className="absolute top-0 right-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">SYS_STATUS // ONLINE</span>
             <Link to="/" className="relative group block cursor-pointer mb-2">
-              <div className="absolute inset-0 bg-neon-pink/20 blur-[60px] rounded-full scale-150 opacity-40 group-hover:opacity-80 transition-opacity duration-700 animate-pulse-fast"></div>
+              <div className="absolute inset-0 bg-neon-pink/20 blur-[60px] rounded-full scale-150 opacity-40 group-hover:opacity-80 transition-opacity duration-700 animate-pulse-fast" />
               <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" alt="Pixel Palace Logo" className="w-40 h-40 md:w-56 md:h-56 object-contain relative z-20 transition-all duration-500 hover:scale-105 animate-logo-breathe hover:drop-shadow-[0_0_30px_rgba(240,0,255,0.8)]" />
             </Link>
             <h1 className="text-5xl sm:text-[5rem] md:text-[6.5rem] font-black text-white italic tracking-tighter font-heading leading-none relative z-10 drop-shadow-2xl uppercase">
@@ -313,14 +316,14 @@ export const Register = () => {
               ) : tournament.displayTime ? (
                 <div className="flex flex-col items-center gap-1">
                   <div className="text-neon-cyan font-heading text-2xl tracking-[0.2em] font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)] uppercase">{tournament.displayTime}</div>
-                  <div className="flex items-center gap-4 w-full"><div className="h-[1px] bg-white/10 flex-grow"></div><div className="font-heading text-4xl text-white italic tracking-tighter uppercase whitespace-nowrap px-2">{tournament.displayDate}</div><div className="h-[1px] bg-white/10 flex-grow"></div></div>
+                  <div className="flex items-center gap-4 w-full"><div className="h-[1px] bg-white/10 flex-grow" /><div className="font-heading text-4xl text-white italic tracking-tighter uppercase whitespace-nowrap px-2">{tournament.displayDate}</div><div className="h-[1px] bg-white/10 flex-grow" /></div>
                   <div className="text-zinc-500 font-body text-xl font-bold tracking-[0.5em] uppercase">{tournament.displayYear}</div>
                 </div>
-              ) : <div className="flex items-center gap-6 w-full opacity-80"><div className="h-[1px] bg-zinc-500 flex-grow"></div><div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">{formatEsportsDate(tournament.tournamentDate)}</div><div className="h-[1px] bg-zinc-500 flex-grow"></div></div>}
+              ) : <div className="flex items-center gap-6 w-full opacity-80"><div className="h-[1px] bg-zinc-500 flex-grow" /><div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">{formatEsportsDate(tournament.tournamentDate)}</div><div className="h-[1px] bg-zinc-500 flex-grow" /></div>}
             </div>
 
             <div className="w-full max-w-4xl mx-auto mt-6 relative z-20">
-              <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div><div className="hud-crosshair bl"></div><div className="hud-crosshair br"></div>
+              <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
               <div className="glass-panel p-2 grid grid-cols-2 md:grid-cols-4 gap-1">
                 {isArchived ? (
                   <div className="bg-yellow-500/10 border-r border-yellow-500/20 p-4 text-center flex flex-col items-center justify-center">
@@ -374,7 +377,7 @@ export const Register = () => {
             </div>
 
             <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0 sticky top-4 z-40 bg-[#050507]/90 backdrop-blur-md pt-4 rounded-t-xl border-t border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
-              <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10"></div>
+              <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10" />
               {tournament.tournamentComplete && (
                 <button 
                   onMouseEnter={playHover}
@@ -382,7 +385,7 @@ export const Register = () => {
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400 font-black' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Results<span className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest">FINAL</span>
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`}></div>
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
               {!isArchived && (
@@ -392,7 +395,7 @@ export const Register = () => {
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Register Team
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`}></div>
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
               <button 
@@ -402,7 +405,7 @@ export const Register = () => {
               >
                 {isArchived ? 'All Teams' : 'Registered Teams'}
                 {!isArchived && <span className="bg-neon-pink text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span>}
-                <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'teams' ? 'w-full' : 'w-0'}`}></div>
+                <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'teams' ? 'w-full' : 'w-0'}`} />
               </button>
               {tournament.bracketsEnabled && (
                 <button 
@@ -411,7 +414,7 @@ export const Register = () => {
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Brackets
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`}></div>
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
             </div>
