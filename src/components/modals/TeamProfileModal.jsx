@@ -1,8 +1,9 @@
+import { Crosshair, X } from 'lucide-react';
 import React from 'react';
-import { X, ShieldAlert, Crosshair, Trophy } from 'lucide-react';
+
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
-export function TeamProfileModal({ team, onClose }) {
+export const TeamProfileModal = ({ team, onClose }) => {
   useKeyboardShortcut('Escape', onClose);
   if (!team) return null;
 
@@ -71,46 +72,52 @@ export function TeamProfileModal({ team, onClose }) {
             <Crosshair className="w-5 h-5 text-neon-cyan" /> Registered Roster
           </h3>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {team.roster?.map((p, i) => (
-              <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 blur-[20px] rounded-full group-hover:bg-neon-cyan/10 transition-colors" />
-                <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
-                    <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
-                      {p.ign || p.discord || 'PLAYER'}
+          {!team.roster || team.roster.length === 0 ? (
+            <div className="text-center py-12 text-zinc-500 font-body text-xs uppercase tracking-widest bg-black/40 border border-dashed border-white/5 rounded-lg">
+              Roster details are currently unavailable or pending verification.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {team.roster.map((p, i) => (
+                <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 blur-[20px] rounded-full group-hover:bg-neon-cyan/10 transition-colors" />
+                  <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
+                      <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
+                        {p.ign || p.discord || 'PLAYER'}
+                      </span>
+                    </div>
+                    <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
+                      {p.role || 'Player'}
                     </span>
                   </div>
-                  <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
-                    {p.role || 'Player'}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2 relative z-10">
-                  <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
-                    <span className="text-[10px] text-zinc-300 font-bold font-body">{p.faceitLevel || '?'}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
-                    <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'N/A'}</span>
-                  </div>
-                  {p.rankBadge && (
+                  <div className="flex flex-col gap-2 relative z-10">
                     <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">CS2 Rank</span>
-                      <span className="text-[10px] text-amber-400 font-bold font-body">{p.rankBadge}</span>
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
+                      <span className="text-[10px] text-zinc-300 font-bold font-body">{p.faceitLevel || '?'}</span>
                     </div>
-                  )}
-                  {p.kd && (
                     <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Win / KD</span>
-                      <span className="text-[10px] text-green-400 font-bold font-body">{p.winRate || 'N/A'} | {p.kd}</span>
+                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
+                      <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'N/A'}</span>
                     </div>
-                  )}
+                    {p.rankBadge && (
+                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">CS2 Rank</span>
+                        <span className="text-[10px] text-amber-400 font-bold font-body">{p.rankBadge}</span>
+                      </div>
+                    )}
+                    {p.kd && (
+                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Win / KD</span>
+                        <span className="text-[10px] text-green-400 font-bold font-body">{p.winRate || 'N/A'} | {p.kd}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

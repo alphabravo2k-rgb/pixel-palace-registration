@@ -1,5 +1,5 @@
+import { AlertOctagon, Layers,RefreshCw } from 'lucide-react';
 import React from 'react';
-import { RefreshCw, AlertOctagon, Layers } from 'lucide-react';
 
 export const TrackerTab = ({
   isArchived,
@@ -8,13 +8,12 @@ export const TrackerTab = ({
   teams,
   playHover,
   playClick,
-  setSelectedTeam,
-  tournament
+  setSelectedTeam
 }) => {
   return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-panel p-8 min-h-[600px]">
-        <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div>
+        <div className="hud-crosshair tl" /><div className="hud-crosshair tr" />
         <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
           <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase">{isArchived ? 'All Teams' : 'Registered Teams'}</h2>
           {!isArchived && (
@@ -34,19 +33,19 @@ export const TrackerTab = ({
               <div key={idx} className="glass-panel p-0 overflow-hidden border-white/5 animate-pulse">
                 <div className="flex items-stretch h-20 bg-black/40 relative">
                   <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5">
-                    <div className="w-12 h-12 rounded-full bg-white/5"></div>
+                    <div className="w-12 h-12 rounded-full bg-white/5" />
                   </div>
                   <div className="flex-grow p-4 flex flex-col justify-center">
                     <div className="flex gap-2 mb-2">
-                      <div className="h-3 w-12 bg-neon-cyan/20 rounded"></div>
-                      <div className="h-3 w-8 bg-white/10 rounded"></div>
+                      <div className="h-3 w-12 bg-neon-cyan/20 rounded" />
+                      <div className="h-3 w-8 bg-white/10 rounded" />
                     </div>
-                    <div className="h-5 w-48 bg-white/10 rounded"></div>
+                    <div className="h-5 w-48 bg-white/10 rounded" />
                   </div>
                 </div>
                 <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
-                  <div className="h-2 w-24 bg-white/10 rounded"></div>
-                  <div className="h-2 w-16 bg-white/10 rounded"></div>
+                  <div className="h-2 w-24 bg-white/10 rounded" />
+                  <div className="h-2 w-16 bg-white/10 rounded" />
                 </div>
               </div>
             ))}
@@ -70,7 +69,7 @@ export const TrackerTab = ({
                 key={`${team.name}-${idx}`} 
                 className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" 
                 onMouseEnter={playHover} 
-                onClick={() => { playClick(); if (team.roster?.length > 0) setSelectedTeam(team); }}
+                onClick={() => { playClick(); setSelectedTeam(team); }}
               >
                 <div className="flex items-stretch h-20 bg-black/40 relative">
                   <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
@@ -96,7 +95,7 @@ export const TrackerTab = ({
                   </div>
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">
                     {team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}
-                    {team.roster?.length > 0 && <span className="text-zinc-600">| CLICK FOR ROSTER</span>}
+                    <span className="text-zinc-600">| CLICK FOR DETAILS</span>
                   </span>
                 </div>
               </div>

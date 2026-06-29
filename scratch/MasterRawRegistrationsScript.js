@@ -183,11 +183,37 @@ function doGet(e) {
       const teams = [];
       for (let i = 1; i < data.length; i++) {
         if (data[i][2] && data[i][2].toString().trim() === tournamentId) {
+          const status = data[i][4];
+          if (status !== "APPROVED" && status !== "PENDING") continue;
+
+          const roster = [];
+          for (let p = 1; p <= 7; p++) {
+            const offset = 9 + (p - 1) * 4;
+            if (offset >= data[i].length) break;
+
+            const discord = data[i][offset] ? data[i][offset].toString().trim() : "";
+            const steam = data[i][offset + 1] ? data[i][offset + 1].toString().trim() : "";
+            const faceit = data[i][offset + 2] ? data[i][offset + 2].toString().trim() : "";
+            const rank = data[i][offset + 3] ? data[i][offset + 3].toString().trim() : "";
+
+            if (discord || steam || faceit) {
+              roster.push({
+                role: p === 1 ? "Captain" : p >= 6 ? "Substitute" : "Member",
+                discord: discord,
+                ign: steam || discord.split('#')[0] || ("Player " + p),
+                faceitLevel: rank || "N/A",
+                faceitElo: "N/A"
+              });
+            }
+          }
+
           teams.push({
             name: data[i][5] || "Unnamed Team",
             tag: data[i][6] || "TEAM",
             logo: data[i][8] || "",
-            status: data[i][4] === "APPROVED" ? "VERIFIED" : "PENDING REVIEW"
+            status: status === "APPROVED" ? "VERIFIED" : "PENDING REVIEW",
+            region: data[i][7] || "PAK / ME",
+            roster: roster
           });
         }
       }
