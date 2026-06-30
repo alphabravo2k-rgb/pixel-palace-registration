@@ -4,6 +4,42 @@ import React, { useState } from 'react';
 
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
+const getFaceitLevelStyle = (lvlStr) => {
+  const lvl = parseInt(lvlStr);
+  if (isNaN(lvl) || lvl <= 0) return { bg: 'bg-zinc-800 text-zinc-500', text: 'text-zinc-500', label: '-' };
+  
+  if (lvl === 1) {
+    return { bg: 'bg-[#4D5356] text-white', text: 'text-[#4D5356]', label: '1' };
+  }
+  if (lvl === 2 || lvl === 3) {
+    return { bg: 'bg-[#00E65A] text-black font-extrabold', text: 'text-[#00E65A]', label: String(lvl) };
+  }
+  if (lvl >= 4 && lvl <= 7) {
+    return { bg: 'bg-[#FFC800] text-black font-extrabold', text: 'text-[#FFC800]', label: String(lvl) };
+  }
+  if (lvl === 8 || lvl === 9) {
+    return { bg: 'bg-[#FF5E00] text-white font-extrabold', text: 'text-[#FF5E00]', label: String(lvl) };
+  }
+  if (lvl === 10) {
+    return { bg: 'bg-[#FF1E27] text-white font-extrabold shadow-[0_0_10px_rgba(255,30,39,0.5)] border border-[#FF1E27]/30', text: 'text-[#FF1E27]', label: '10' };
+  }
+  return { bg: 'bg-zinc-800 text-zinc-300', text: 'text-zinc-300', label: String(lvl) };
+};
+
+const getSeedStyle = (seedName) => {
+  const seed = (seedName || '').toString().trim().toUpperCase();
+  const SEEDS_MAP = {
+    'IRON':     { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30', glow: 'shadow-[#607D8B]/20' },
+    'BRONZE':   { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30', glow: 'shadow-[#A0522D]/20' },
+    'SILVER':   { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30', glow: 'shadow-[#9E9E9E]/20' },
+    'GOLD':     { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30', glow: 'shadow-[#FFC107]/20' },
+    'PLATINUM': { bg: 'bg-[#00ACC1]/10 text-[#00ACC1] border-[#00ACC1]/30', glow: 'shadow-[#00ACC1]/20' },
+    'DIAMOND':  { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30', glow: 'shadow-[#7B1FA2]/20' },
+    'ELITE':    { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30', glow: 'shadow-[#E91E63]/20' },
+  };
+  return SEEDS_MAP[seed] || { bg: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/40', glow: '' };
+};
+
 export const TeamProfileModal = ({ team, onClose }) => {
   useKeyboardShortcut('Escape', onClose);
   const [logoFailed, setLogoFailed] = useState(false);
@@ -73,6 +109,14 @@ export const TeamProfileModal = ({ team, onClose }) => {
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Average ELO</span>
                 <span className="text-xl font-heading text-neon-cyan tracking-widest">{team.averageElo || 'N/A'}</span>
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1 font-semibold">Team Seed</span>
+                <div className="flex items-center">
+                  <span className={`text-[11px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded border leading-none font-body ${getSeedStyle(team.seed).bg} ${getSeedStyle(team.seed).glow}`}>
+                    {team.seed || 'TBD'}
+                  </span>
+                </div>
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Active Roster</span>
@@ -147,7 +191,9 @@ export const TeamProfileModal = ({ team, onClose }) => {
                   <div className="flex flex-col gap-2 relative z-10">
                     <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
                       <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
-                      <span className="text-[10px] text-zinc-300 font-bold font-body">{p.faceitLevel || '?'}</span>
+                      <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black leading-none ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
+                        {getFaceitLevelStyle(p.faceitLevel).label}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
                       <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>

@@ -2,6 +2,20 @@ import { AlertOctagon, Layers, RefreshCw } from 'lucide-react';
 import React, { useState } from 'react';
 
 
+const getSeedStyle = (seedName) => {
+  const seed = (seedName || '').toString().trim().toUpperCase();
+  const SEEDS_MAP = {
+    'IRON':     { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30' },
+    'BRONZE':   { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30' },
+    'SILVER':   { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30' },
+    'GOLD':     { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30' },
+    'PLATINUM': { bg: 'bg-[#00ACC1]/10 text-[#00ACC1] border-[#00ACC1]/30' },
+    'DIAMOND':  { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30' },
+    'ELITE':    { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30' },
+  };
+  return SEEDS_MAP[seed] || { bg: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/40' };
+};
+
 export const TrackerTab = ({
   isArchived,
   handleManualRefresh,
@@ -120,7 +134,12 @@ export const TrackerTab = ({
                       {team.status === 'OBJECTION' ? '⚠ ACTION REQUIRED' : `STATUS: ${team.status || 'PENDING REVIEW'}`}
                     </span>
                   </div>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">
+                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex items-center gap-2.5">
+                    {team.seed && team.seed !== 'TBD' && (
+                      <span className={`px-1.5 py-0.5 rounded border text-[8px] font-extrabold tracking-wider leading-none ${getSeedStyle(team.seed).bg}`}>
+                        {team.seed}
+                      </span>
+                    )}
                     {team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}
                     <span className="text-zinc-600">| CLICK FOR DETAILS</span>
                   </span>

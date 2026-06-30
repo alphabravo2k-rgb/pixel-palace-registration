@@ -646,13 +646,16 @@ function finalizeTeamStats(sheet, teamStartIdx, teamElos) {
   var avgElo = Math.round(sum / teamElos.length);
 
   var SEEDS = [
-    { max: 800,       label: "IRON",     bg: "#607D8B", fg: "#fff" },
-    { max: 1200,      label: "BRONZE",   bg: "#A0522D", fg: "#fff" },
-    { max: 1600,      label: "SILVER",   bg: "#9E9E9E", fg: "#fff" },
-    { max: 2000,      label: "GOLD",     bg: "#FFC107", fg: "#333" },
-    { max: 2400,      label: "PLATINUM", bg: "#00ACC1", fg: "#fff" },
-    { max: 2800,      label: "DIAMOND",  bg: "#7B1FA2", fg: "#fff" },
-    { max: 999999999, label: "ELITE",    bg: "#E91E63", fg: "#fff" }
+    { max: 500,        label: "LEVEL 1",  bg: "#4D5356", fg: "#fff" },
+    { max: 750,        label: "LEVEL 2",  bg: "#00E65A", fg: "#000" },
+    { max: 900,        label: "LEVEL 3",  bg: "#00E65A", fg: "#000" },
+    { max: 1050,       label: "LEVEL 4",  bg: "#FFC800", fg: "#000" },
+    { max: 1200,       label: "LEVEL 5",  bg: "#FFC800", fg: "#000" },
+    { max: 1350,       label: "LEVEL 6",  bg: "#FFC800", fg: "#000" },
+    { max: 1530,       label: "LEVEL 7",  bg: "#FFC800", fg: "#000" },
+    { max: 1750,       label: "LEVEL 8",  bg: "#FF5E00", fg: "#fff" },
+    { max: 2000,       label: "LEVEL 9",  bg: "#FF5E00", fg: "#fff" },
+    { max: 999999999,  label: "LEVEL 10", bg: "#FF1E27", fg: "#fff" }
   ];
 
   var seed = SEEDS[SEEDS.length - 1];
@@ -775,7 +778,7 @@ function buildSummarySheet() {
     ["== SEED DISTRIBUTION ==", ""]
   ];
 
-  var seedOrder = ["IRON","BRONZE","SILVER","GOLD","PLATINUM","DIAMOND","ELITE","TBD"];
+  var seedOrder = ["LEVEL 1","LEVEL 2","LEVEL 3","LEVEL 4","LEVEL 5","LEVEL 6","LEVEL 7","LEVEL 8","LEVEL 9","LEVEL 10","TBD"];
   var seedKeys  = Object.keys(seeds).sort(function(a, b) {
     return seedOrder.indexOf(a) - seedOrder.indexOf(b);
   });
@@ -940,10 +943,11 @@ function colorSkillCell(range, level) {
   var lvl = parseInt(level);
   if (isNaN(lvl) || lvl === 0) return;
   var bg = "#ffffff", fg = "#000000";
-  if      (lvl <= 3)  { bg = "#e8eaed"; fg = "#5f6368"; }
-  else if (lvl <= 7)  { bg = "#ffe599"; fg = "#7f6000"; }
-  else if (lvl <= 9)  { bg = "#c9daf8"; fg = "#1155cc"; }
-  else if (lvl >= 10) { bg = "#f4cccc"; fg = "#cc0000"; }
+  if      (lvl === 1) { bg = "#4D5356"; fg = "#ffffff"; }
+  else if (lvl <= 3)  { bg = "#00E65A"; fg = "#000000"; }
+  else if (lvl <= 7)  { bg = "#FFC800"; fg = "#000000"; }
+  else if (lvl <= 9)  { bg = "#FF5E00"; fg = "#ffffff"; }
+  else if (lvl >= 10) { bg = "#FF1E27"; fg = "#ffffff"; }
   range.setBackground(bg).setFontColor(fg).setFontWeight("bold").setHorizontalAlignment("center");
 }
 
