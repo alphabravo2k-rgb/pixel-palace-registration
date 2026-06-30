@@ -14,7 +14,7 @@ export function TournamentInfo({ tournament }) {
       <div className="space-y-5 font-body">
         <div>
           <p className="text-[10px] text-zinc-500 font-bold tracking-[0.2em] uppercase">01 // TOURNAMENT DATE</p>
-          <p className="text-xl font-bold text-[#00f0ff] mt-1 uppercase">
+          <p className="text-xl font-bold text-[#00f0ff] mt-1">
             {tournament.displayDate ? `${tournament.displayDate}, ${tournament.displayYear}` : `DATE: ${formatEsportsDate(tournament.tournamentDate)}`}
           </p>
         </div>

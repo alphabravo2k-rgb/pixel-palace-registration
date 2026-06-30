@@ -72,7 +72,11 @@ export const BracketsTab = ({
                           </span>
                           {!isArchived && (
                             <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mt-1 opacity-50">
-                              Broadcast: {new Date(iso).toLocaleTimeString('en-US', { timeZone: 'Asia/Karachi', hour: '2-digit', minute: '2-digit', hour12: false })} PKT
+                              Broadcast: {(() => {
+                                const date = new Date(iso);
+                                const formatTime = (tz, label) => date.toLocaleTimeString('en-US', { timeZone: tz, hour: 'numeric', minute: '2-digit', hour12: true }).replace(' ', '') + ' ' + label;
+                                return `${formatTime('Asia/Karachi', 'PAK')} / ${formatTime('Asia/Kolkata', 'IND')} / ${formatTime('Asia/Dubai', 'UAE')}`;
+                              })()}
                             </span>
                           )}
                         </li>

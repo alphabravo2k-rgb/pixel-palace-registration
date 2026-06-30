@@ -822,7 +822,7 @@ export const TournamentForm = ({ tournament, slots }) => {
 
           {error.includes('PLAYER_BANNED') ? (
             <a 
-              href="https://discord.gg/pixelpalace" 
+              href="https://discord.com/invite/pixelpalacee" 
               target="_blank" 
               rel="noopener noreferrer"
               className="mt-2 px-6 py-3 bg-orange-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"

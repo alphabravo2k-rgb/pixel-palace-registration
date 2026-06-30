@@ -94,21 +94,24 @@ export const RegistrationTab = ({
               <Layers className="w-5 h-5 text-zinc-400" /> {tournament.gameMode} Map Pool
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {tournament.maps.map((mapName, i) => (
-                <div key={mapName} className={`map-card ${mapAccentClasses[i % mapAccentClasses.length]}`}>
-                  {!failedMapImages.has(mapName) ? (
-                    <div 
-                      className="map-card-img" 
-                      style={{ backgroundImage: `url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapName.toLowerCase()}.png')` }} 
-                      onError={() => handleMapImgError(mapName)} 
-                    />
-                  ) : <div className="absolute inset-0 bg-black/80 z-10" />}
-                  <div className="map-card-overlay" />
-                  <div className="map-card-content justify-center w-full">
-                    <span className="text-sm font-bold uppercase font-heading tracking-widest">{mapName}</span>
+              {tournament.maps.map((mapName, i) => {
+                const mapNameLower = mapName.toLowerCase() === 'd2' ? 'dust2' : mapName.toLowerCase();
+                return (
+                  <div key={mapName} className={`map-card ${mapAccentClasses[i % mapAccentClasses.length]}`}>
+                    {!failedMapImages.has(mapName) ? (
+                      <div 
+                        className="map-card-img" 
+                        style={{ backgroundImage: `url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapNameLower}.png')` }} 
+                        onError={() => handleMapImgError(mapName)} 
+                      />
+                    ) : <div className="absolute inset-0 bg-black/80 z-10" />}
+                    <div className="map-card-overlay" />
+                    <div className="map-card-content justify-center w-full">
+                      <span className="text-sm font-bold uppercase font-heading tracking-widest">{mapName}</span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

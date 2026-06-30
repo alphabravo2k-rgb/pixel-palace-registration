@@ -10,19 +10,19 @@ export const tournaments = [
     maxTeams: 32,
     openSlots: 26,
     inviteSlots: 6,
-    region: "PAK / ME",
-    startTime: "18:00 PKT ONWARDS",
-    displayTime: "18:00 (GMT+5) / PAK TIME",
-    serverLocation: "Dubai / Pakistan",
-    displayDate: "JULY 31 TILL AUGUST 03",
+    region: "PAK / IND / ME",
+    startTime: "20:00 PKT ONWARDS",
+    displayTime: "8PM Pakistan | 8:30PM India | 7PM UAE",
+    serverLocation: "Dubai (DXB)",
+    displayDate: "July 31 - August 03",
     displayYear: "2026",
-    tournamentDate: "2026-07-31T18:00:00+05:00",
+    tournamentDate: "2026-07-31T20:00:00+05:00",
     registrationDeadline: "2026-07-26T23:59:00+05:00",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png",
     antiCheat: "Akros",
     playersPerTeam: 5,
     substitutes: { min: 0, max: 2 },
-    maps: ["Ancient", "Anubis", "Dust2", "Inferno", "Mirage", "Nuke", "Vertigo"],
+    maps: ["Ancient", "Anubis", "Cache", "D2", "Inferno", "Mirage", "Nuke"],
     sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec",
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our team acknowledges that Akros Anti-Cheat must be installed by all players.",
@@ -43,9 +43,9 @@ export const tournaments = [
     runnerUp: { name: "", tag: "", logo: "" },
     
     scheduleUtc: [
-      "2026-07-31T18:00:00+05:00",
-      "2026-08-01T18:00:00+05:00",
-      "2026-08-02T18:00:00+05:00",
+      "2026-07-31T20:00:00+05:00",
+      "2026-08-01T20:00:00+05:00",
+      "2026-08-02T20:00:00+05:00",
       "2026-08-03T20:00:00+05:00",
     ]
   },
@@ -273,7 +273,7 @@ export const tournaments = [
 // Fallback configuration for old tournaments so nothing breaks
 const defaultConfig = {
   discordRequired: false,
-  discordInviteUrl: "https://discord.gg/y6ZW8jHn2Q",
+  discordInviteUrl: "https://discord.com/invite/pixelpalacee",
   sheetsEndpoint: "https://script.google.com/macros/s/AKfycbyaIDyEwLl7DD_1VS4Rd0QtLE8o9TPUJnrn-uHGZKemnX7x8ncSGEnjJf086F-JTCaF/exec",
   softBanEnabled: false,
   bracketsEnabled: false,

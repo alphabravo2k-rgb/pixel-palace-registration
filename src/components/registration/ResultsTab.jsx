@@ -24,7 +24,7 @@ export const ResultsTab = ({
           </button>
         </div>
         <div className="relative z-10 p-8 md:p-12">
-          <div className="text-[10px] text-yellow-500/70 font-bold uppercase tracking-[0.4em] font-body mb-4 flex items-center gap-2">
+          <div className="text-[10px] text-yellow-500/70 font-bold tracking-[0.4em] font-body mb-4 flex items-center gap-2">
             <Trophy className="w-3 h-3" /> Grand Final // {tournament.displayDate} {tournament.displayYear}
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-center">
@@ -131,10 +131,12 @@ export const ResultsTab = ({
               const playedMatch = tournament.champion?.matchHistory?.find(m => m.map.toLowerCase() === mapName.toLowerCase());
               const isPlayed = !!playedMatch;
               
+              const mapNameLower = mapName.toLowerCase() === 'd2' ? 'dust2' : mapName.toLowerCase();
+              
               return (
                 <div key={mapName} className={`relative overflow-hidden rounded border transition-all ${isPlayed ? 'border-neon-cyan shadow-[0_0_15px_rgba(0,240,255,0.2)]' : 'border-white/5 opacity-40 grayscale hover:opacity-80 hover:grayscale-0'}`}>
                   <div className="absolute inset-0 bg-black/60 z-10" />
-                  <img src={`https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapName.toLowerCase()}.png`} alt={mapName} className="w-full h-16 object-cover" onError={(e) => { e.target.style.display='none'; }} />
+                  <img src={`https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapNameLower}.png`} alt={mapName} className="w-full h-16 object-cover" onError={(e) => { e.target.style.display='none'; }} />
                   <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-2">
                     <span className="text-sm font-bold uppercase font-heading tracking-widest text-white drop-shadow-md">{mapName}</span>
                     {isPlayed ? (

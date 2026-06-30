@@ -1,4 +1,4 @@
-import { ChevronLeft, Copy,MessageCircle, Shield, ShieldCheck, Sparkles, Trophy, Tv, Users } from 'lucide-react';
+import { ChevronLeft, Copy, Instagram, MessageCircle, Shield, ShieldCheck, Sparkles, Trophy, Tv, Users } from 'lucide-react';
 import React, { useCallback,useEffect, useState } from 'react';
 import { Link,Navigate, useParams } from 'react-router-dom';
 
@@ -305,7 +305,7 @@ export const Register = () => {
             <div className="flex items-center justify-center w-full max-w-2xl mx-auto mt-2 mb-8 relative z-20">
               {isArchived && tournament.champion ? (
                 <div className="flex flex-col items-center gap-3 w-full">
-                  <div className="text-[10px] text-yellow-500/70 font-bold uppercase tracking-[0.4em] font-body">Winner Declared // {tournament.displayDate} {tournament.displayYear}</div>
+                  <div className="text-[10px] text-yellow-500/70 font-bold tracking-[0.4em] font-body">Winner Declared // {tournament.displayDate} {tournament.displayYear}</div>
                   <div className="flex items-center gap-4">
                     <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] shrink-0" />
                     <div className="text-4xl md:text-6xl font-heading uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 drop-shadow-[0_0_20px_rgba(234,179,8,0.5)] shimmer-effect">{tournament.champion.name}</div>
@@ -316,7 +316,7 @@ export const Register = () => {
               ) : tournament.displayTime ? (
                 <div className="flex flex-col items-center gap-1">
                   <div className="text-neon-cyan font-heading text-2xl tracking-[0.2em] font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)] uppercase">{tournament.displayTime}</div>
-                  <div className="flex items-center gap-4 w-full"><div className="h-[1px] bg-white/10 flex-grow" /><div className="font-heading text-4xl text-white italic tracking-tighter uppercase whitespace-nowrap px-2">{tournament.displayDate}</div><div className="h-[1px] bg-white/10 flex-grow" /></div>
+                  <div className="flex items-center gap-4 w-full"><div className="h-[1px] bg-white/10 flex-grow" /><div className="font-heading text-4xl text-white italic tracking-tighter whitespace-nowrap px-2">{tournament.displayDate}</div><div className="h-[1px] bg-white/10 flex-grow" /></div>
                   <div className="text-zinc-500 font-body text-xl font-bold tracking-[0.5em] uppercase">{tournament.displayYear}</div>
                 </div>
               ) : <div className="flex items-center gap-6 w-full opacity-80"><div className="h-[1px] bg-zinc-500 flex-grow" /><div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">{formatEsportsDate(tournament.tournamentDate)}</div><div className="h-[1px] bg-zinc-500 flex-grow" /></div>}
@@ -353,7 +353,7 @@ export const Register = () => {
 
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto relative z-10">
               <a 
-                href="https://discord.gg/y6ZW8jHn2Q" 
+                href="https://discord.com/invite/pixelpalacee" 
                 target="_blank" 
                 rel="noreferrer" 
                 onMouseEnter={playHover}
@@ -373,6 +373,17 @@ export const Register = () => {
               >
                 <Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" />
                 <span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span>
+              </a>
+              <a 
+                href="https://www.instagram.com/pixelpalace.gg" 
+                target="_blank" 
+                rel="noreferrer" 
+                onMouseEnter={playHover}
+                onClick={playClick}
+                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-pink/20 transition-all duration-300"
+              >
+                <Instagram className="w-5 h-5 text-neon-pink group-hover:text-white transition-colors" />
+                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">FOLLOW INSTAGRAM</span>
               </a>
             </div>
 

@@ -94,8 +94,9 @@ export const DiscordGate = ({ tournament, onAccept }) => {
         <h2 className="text-2xl md:text-3xl font-heading text-white text-center uppercase tracking-[0.15em] leading-tight mb-1">
           TOURNAMENT GATEWAY
         </h2>
-        <p className="text-zinc-500 text-xs text-center font-body uppercase tracking-[0.2em] mb-8">
-          Pixel Palace Community Cup 2 // Rules & Agreements
+        <p className="text-zinc-500 text-xs text-center font-body tracking-[0.2em] mb-8">
+          <span className="block uppercase">Pixel Palace Community Cup 2</span>
+          <span className="block mt-2 font-bold text-neon-cyan">Rules & Agreements</span>
         </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
@@ -128,7 +129,7 @@ export const DiscordGate = ({ tournament, onAccept }) => {
                   </div>
                   <div>
                     <div className="text-[8px] text-zinc-500 font-bold uppercase tracking-wider font-body">TOURNAMENT DATES</div>
-                    <div className="text-xs text-white font-bold uppercase font-body">
+                    <div className="text-xs text-white font-bold font-body">
                       {tournament.displayDate ? `${tournament.displayDate}, ${tournament.displayYear}` : formatEsportsDate(tournament.tournamentDate)}
                     </div>
                   </div>
@@ -213,7 +214,7 @@ export const DiscordGate = ({ tournament, onAccept }) => {
                   Match lobbies, check-ins, and direct admin coordination will be managed strictly on our Discord server. All players must be present inside the server.
                 </p>
                 <a 
-                  href={tournament?.discordInviteUrl || "https://discord.gg/y6ZW8jHn2Q"} 
+                  href={tournament?.discordInviteUrl || "https://discord.com/invite/pixelpalacee"} 
                   target="_blank" 
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors shadow-lg font-body"
