@@ -17,8 +17,9 @@ const LOGO_FOLDER_ID = "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e";
  * RECEIVE REGISTRATIONS (POST)
  */
 function doPost(e) {
-  ensureInviteCodesSheet();
   try {
+    const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
+    ensureInviteCodesSheet(doc);
     const payload = JSON.parse(e.postData.contents);
     const endpoint = payload.endpoint || "";
 
@@ -63,8 +64,6 @@ function doPost(e) {
       return generateResponse({ error: "Unauthorized: Invalid gateway secret." }, 401);
     }
 
-    const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
-    
     // 1. IDEMPOTENCY CHECK
     const cache = CacheService.getScriptCache();
     if (payload.submission_id && cache.get(payload.submission_id)) {
@@ -187,9 +186,9 @@ function doPost(e) {
  * READ QUERIES (GET)
  */
 function doGet(e) {
-  ensureInviteCodesSheet();
   try {
     const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
+    ensureInviteCodesSheet(doc);
     const params = e.parameter;
     const endpoint = params.endpoint || "";
 
@@ -782,10 +781,11 @@ function syncStatusToAdmin(teamName, newStatus) {
  * Generates a set of invite codes and appends them to the InviteCodes sheet.
  * Each code follows the pattern PP-CCII-XXXX where XXXX is a random 4‑character alphanumeric string.
  *
+ * @param {object} doc - Spreadsheet object.
  * @param {number} count - Number of codes to generate (e.g., 6).
  */
-function generateInviteCodes(count) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('InviteCodes');
+function generateInviteCodes(doc, count) {
+  const sheet = doc.getSheetByName('InviteCodes');
   if (!sheet) return;
   const prefix = 'PP-CCII-';
   const codes = [];
@@ -800,23 +800,27 @@ function generateInviteCodes(count) {
 /**
  * If the InviteCodes sheet has only the header row, generate 6 initial codes.
  */
-function ensureInviteCodes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('InviteCodes');
+function ensureInviteCodes(doc) {
+  const sheet = doc.getSheetByName('InviteCodes');
   if (!sheet) return;
   const data = sheet.getDataRange().getValues();
   if (data.length <= 1) { // only header
-    generateInviteCodes(6);
+    generateInviteCodes(doc, 6);
   }
 }
 
-function ensureInviteCodesSheet() {
-  const doc = SpreadsheetApp.getActiveSpreadsheet();
+function ensureInviteCodesSheet(doc) {
   getOrCreateInviteCodesSheet_(doc);
-  ensureInviteCodes();
+  ensureInviteCodes(doc);
 }
 
 // Ensure codes exist on script load
-ensureInviteCodesSheet();
+try {
+  const doc = SpreadsheetApp.getActiveSpreadsheet();
+  if (doc) ensureInviteCodesSheet(doc);
+} catch (e) {
+  console.warn("Global ensureInviteCodesSheet skipped outside spreadsheet bound context:", e);
+}
 
 function getLevelFromElo_(elo) {
   if (!elo || elo === "N/A" || elo === "Fetching...") return "N/A";
@@ -845,6 +849,7 @@ function getRawTagMap_(doc) {
   let teamNameCol = 5;
   let teamTagCol = 6;
   for (let h = 0; h < header.length; h++) {
+    if (header[h] === undefined || header[h] === null) continue;
     const val = header[h].toString().trim().toLowerCase();
     if (val === "team name") teamNameCol = h;
     if (val === "team tag") teamTagCol = h;
