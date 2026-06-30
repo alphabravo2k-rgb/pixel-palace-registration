@@ -412,6 +412,7 @@ function doGet(e) {
         
         return generateResponse({ teams: teams, confirmed: teams.length });
       } catch (err) {
+        console.error("[getTeams] ADMIN_OPS_SYNC_ERROR:", err.toString(), err.stack || "");
         return generateResponse({ error: "ADMIN_OPS_SYNC_ERROR: " + err.toString() }, 500);
       }
     }
@@ -809,6 +810,16 @@ function ensureInviteCodes(doc) {
   }
 }
 
+function getOrCreateInviteCodesSheet_(doc) {
+  let sheet = doc.getSheetByName('InviteCodes');
+  if (!sheet) {
+    sheet = doc.insertSheet('InviteCodes');
+    sheet.appendRow(['Code', 'TournamentId', 'SlotType', 'MaxUses', 'TimesUsed', 'AllocatedTo']);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
 function ensureInviteCodesSheet(doc) {
   getOrCreateInviteCodesSheet_(doc);
   ensureInviteCodes(doc);
@@ -826,14 +837,14 @@ function getLevelFromElo_(elo) {
   if (!elo || elo === "N/A" || elo === "Fetching...") return "N/A";
   const val = parseInt(elo);
   if (isNaN(val) || val <= 0) return "N/A";
-  if (val <= 500) return "1";
-  if (val <= 750) return "2";
-  if (val <= 1000) return "3";
-  if (val <= 1150) return "4";
-  if (val <= 1350) return "5";
-  if (val <= 1530) return "6";
-  if (val <= 1720) return "7";
-  if (val <= 1910) return "8";
+  if (val <= 500)  return "1";
+  if (val <= 750)  return "2";
+  if (val <= 900)  return "3";
+  if (val <= 1050) return "4";
+  if (val <= 1200) return "5";
+  if (val <= 1350) return "6";
+  if (val <= 1530) return "7";
+  if (val <= 1750) return "8";
   if (val <= 2000) return "9";
   return "10";
 }
