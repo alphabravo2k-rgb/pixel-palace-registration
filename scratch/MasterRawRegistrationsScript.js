@@ -245,63 +245,176 @@ function doGet(e) {
     
     // ── Get Registered Teams ────────────────────────────────────────────────
     if (endpoint === "/api/v1/getTeams") {
-      let rawSheet = doc.getSheetByName("Sheet1");
-      if (!rawSheet) return generateResponse({ teams: [] });
-      const data = rawSheet.getDataRange().getValues();
-      if (data.length < 1) return generateResponse({ teams: [] });
+      try {
+        let adminDocId = "";
+        if (tournamentId === "community-cup-2") {
+          adminDocId = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+        } else if (tournamentId === "chaos-ii") {
+          adminDocId = "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E";
+        }
+        
+        if (!adminDocId) {
+          // Fallback to legacy raw Sheet1 reading if no Admin sheet config is present
+          let rawSheet = doc.getSheetByName("Sheet1");
+          if (!rawSheet) return generateResponse({ teams: [] });
+          const data = rawSheet.getDataRange().getValues();
+          if (data.length < 1) return generateResponse({ teams: [] });
 
-      // Auto-detect columns from header row
-      const cols = getRawColMap_(data[0]);
-      const firstDataRow = isHeaderRow_(data[0]) ? 1 : 0;
+          const cols = getRawColMap_(data[0]);
+          const firstDataRow = isHeaderRow_(data[0]) ? 1 : 0;
 
-      const teams = [];
-      for (let i = firstDataRow; i < data.length; i++) {
-        const row = data[i];
-        const tid = (row[cols.tournament] || "").toString().trim();
-        if (tid !== tournamentId) continue;
+          const teams = [];
+          for (let i = firstDataRow; i < data.length; i++) {
+            const row = data[i];
+            const tid = (row[cols.tournament] || "").toString().trim();
+            if (tid !== tournamentId) continue;
 
-        const status = (row[cols.status] || "").toString().trim().toUpperCase();
-        // Show PENDING and APPROVED teams on the tracker
-        if (status === "REJECTED" || status === "ELIMINATED" || status === "") continue;
+            const status = (row[cols.status] || "").toString().trim().toUpperCase();
+            if (status === "REJECTED" || status === "ELIMINATED" || status === "") continue;
 
-        const teamName = (row[cols.teamName] || "").toString().trim();
-        const teamTag  = (row[cols.teamTag]  || "").toString().trim();
-        const region   = (row[cols.region]   || "").toString().trim();
-        const logoUrl  = (row[cols.logo]     || "").toString().trim();
+            const teamName = (row[cols.teamName] || "").toString().trim();
+            const teamTag  = (row[cols.teamTag]  || "").toString().trim();
+            const region   = (row[cols.region]   || "").toString().trim();
+            const logoUrl  = (row[cols.logo]     || "").toString().trim();
 
-        const roster = [];
-        for (let p = 0; p < 7; p++) {
-          const base    = cols.playerBase + p * 4;
-          const discord = row[base]     ? row[base].toString().trim()     : "";
-          const steam   = row[base + 1] ? row[base + 1].toString().trim() : "";
-          const faceit  = row[base + 2] ? row[base + 2].toString().trim() : "";
-          const rank    = row[base + 3] ? row[base + 3].toString().trim() : "";
+            const roster = [];
+            for (let p = 0; p < 7; p++) {
+              const base    = cols.playerBase + p * 4;
+              const discord = row[base]     ? row[base].toString().trim()     : "";
+              const steam   = row[base + 1] ? row[base + 1].toString().trim() : "";
+              const faceit  = row[base + 2] ? row[base + 2].toString().trim() : "";
+              const rank    = row[base + 3] ? row[base + 3].toString().trim() : "";
 
-          if (discord || steam || faceit) {
-            roster.push({
-              role: p === 0 ? "Captain" : p >= 5 ? "Substitute" : "Member",
-              discord: discord,
-              ign: (faceit ? faceit.replace(/\/$/, "").split("/").pop() : "") ||
-                   discord.split("#")[0] || ("Player " + (p + 1)),
-              faceitLevel: rank || "N/A",
-              faceitElo: "N/A"
+              if (discord || steam || faceit) {
+                roster.push({
+                  role: p === 0 ? "Captain" : p >= 5 ? "Substitute" : "Member",
+                  discord: discord,
+                  ign: (faceit ? faceit.replace(/\/$/, "").split("/").pop() : "") ||
+                       discord.split("#")[0] || ("Player " + (p + 1)),
+                  faceitLevel: rank || "N/A",
+                  faceitElo: "N/A"
+                });
+              }
+            }
+
+            const displayStatus = status === "APPROVED" || status === "ROSTER_LOCKED" || status === "CHECKED_IN" || status === "QUALIFIED" || status === "CHAMPION"
+              ? "VERIFIED" : "PENDING REVIEW";
+
+            teams.push({
+              name:   teamName,
+              tag:    teamTag,
+              logo:   logoUrl,
+              status: displayStatus,
+              region: region,
+              roster: roster
             });
           }
+          return generateResponse({ teams: teams, confirmed: teams.length });
         }
 
-        const displayStatus = status === "APPROVED" || status === "ROSTER_LOCKED" || status === "CHECKED_IN" || status === "QUALIFIED" || status === "CHAMPION"
-          ? "VERIFIED" : "PENDING REVIEW";
-
-        teams.push({
-          name:   teamName,
-          tag:    teamTag,
-          logo:   logoUrl,
-          status: displayStatus,
-          region: region,
-          roster: roster
-        });
+        // Open Admin Sheet and read Admin_Ops
+        const adminDoc = SpreadsheetApp.openById(adminDocId);
+        const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+        const data = adminSheet.getDataRange().getValues();
+        
+        const rawTagMap = getRawTagMap_(doc);
+        const teams = [];
+        
+        // Loop through rows in blocks of 7 (each team starts on a row and spans 7 rows)
+        for (let i = 1; i < data.length; i += 7) {
+          const teamName = (data[i][10] || "").toString().trim(); // Column K
+          if (!teamName || teamName === "Team Name") continue;
+          
+          const status = (data[i][12] || "").toString().trim().toUpperCase(); // Column M
+          if (status === "REJECTED" || status === "ELIMINATED" || status === "") continue;
+          
+          const region = (data[i][1] || "").toString().trim(); // Column B
+          
+          // Logo URL in Column C. If it has a formula (=IMAGE("url")), extract it
+          let logoUrl = "";
+          try {
+            const logoFormula = adminSheet.getRange(i + 1, 3).getFormula();
+            if (logoFormula) {
+              const match = logoFormula.match(/=IMAGE\("([^"]+)"\)/i);
+              if (match) logoUrl = match[1];
+            }
+          } catch(e) {}
+          if (!logoUrl) {
+            logoUrl = (data[i][2] || "").toString().trim();
+          }
+          
+          const averageElo = parseInt(data[i][11]) || 0; // Column L
+          const seed = (data[i][13] || "").toString().trim(); // Column N
+          
+          const roster = [];
+          for (let p = 0; p < 7; p++) {
+            const rowIdx = i + p;
+            if (rowIdx >= data.length) break;
+            
+            const pName = (data[rowIdx][5] || "").toString().trim(); // Column F
+            const discord = (data[rowIdx][4] || "").toString().trim(); // Column E
+            const steam = (data[rowIdx][3] || "").toString().trim(); // Column D
+            const faceit = (data[rowIdx][6] || "").toString().trim(); // Column G
+            const liveEloVal = data[rowIdx][7]; // Column H
+            
+            let liveElo = "N/A";
+            if (liveEloVal !== "" && liveEloVal !== undefined && liveEloVal !== null) {
+              const parsedElo = parseInt(liveEloVal);
+              if (!isNaN(parsedElo) && parsedElo > 0) {
+                liveElo = parsedElo.toString();
+              } else if (liveEloVal.toString().trim() === "Fetching...") {
+                liveElo = "Fetching...";
+              }
+            }
+            
+            if (pName && pName !== "" && pName !== "N/A") {
+              let role = "Member";
+              let cleanName = pName;
+              if (pName.endsWith(" (C)")) {
+                role = "Captain";
+                cleanName = pName.replace(" (C)", "");
+              } else if (pName.endsWith(" (Sub)")) {
+                role = "Substitute";
+                cleanName = pName.replace(" (Sub)", "");
+              } else if (p === 0) {
+                role = "Captain";
+              } else if (p >= 5) {
+                role = "Substitute";
+              }
+              
+              roster.push({
+                role: role,
+                discord: discord === "N/A" ? "" : discord,
+                ign: cleanName,
+                steam: steam === "N/A" ? "" : steam,
+                faceit: faceit === "N/A" ? "" : faceit,
+                faceitElo: liveElo,
+                faceitLevel: getLevelFromElo_(liveElo)
+              });
+            }
+          }
+          
+          const displayStatus = status === "APPROVED" || status === "ROSTER_LOCKED" || status === "CHECKED_IN" || status === "QUALIFIED" || status === "CHAMPION"
+            ? "VERIFIED" : "PENDING REVIEW";
+            
+          const tag = rawTagMap[teamName.toLowerCase()] || teamName.substring(0, 4).toUpperCase();
+          
+          teams.push({
+            name: teamName,
+            tag: tag,
+            logo: logoUrl,
+            status: displayStatus,
+            region: region,
+            averageElo: averageElo ? averageElo.toString() : "N/A",
+            seed: seed || "TBD",
+            roster: roster
+          });
+        }
+        
+        return generateResponse({ teams: teams, confirmed: teams.length });
+      } catch (err) {
+        return generateResponse({ error: "ADMIN_OPS_SYNC_ERROR: " + err.toString() }, 500);
       }
-      return generateResponse({ teams: teams, confirmed: teams.length });
     }
 
     // ── Get Slot Counts ─────────────────────────────────────────────────────
@@ -700,3 +813,45 @@ function ensureInviteCodes() {
 }
 // Ensure codes exist on script load
 ensureInviteCodes();
+
+function getLevelFromElo_(elo) {
+  if (!elo || elo === "N/A" || elo === "Fetching...") return "N/A";
+  const val = parseInt(elo);
+  if (isNaN(val) || val <= 0) return "N/A";
+  if (val <= 500) return "1";
+  if (val <= 750) return "2";
+  if (val <= 1000) return "3";
+  if (val <= 1150) return "4";
+  if (val <= 1350) return "5";
+  if (val <= 1530) return "6";
+  if (val <= 1720) return "7";
+  if (val <= 1910) return "8";
+  if (val <= 2000) return "9";
+  return "10";
+}
+
+function getRawTagMap_(doc) {
+  const map = {};
+  const rawSheet = doc.getSheetByName("Sheet1");
+  if (!rawSheet) return map;
+  const data = rawSheet.getDataRange().getValues();
+  if (data.length < 2) return map;
+  
+  const header = data[0];
+  let teamNameCol = 5;
+  let teamTagCol = 6;
+  for (let h = 0; h < header.length; h++) {
+    const val = header[h].toString().trim().toLowerCase();
+    if (val === "team name") teamNameCol = h;
+    if (val === "team tag") teamTagCol = h;
+  }
+  
+  for (let i = 1; i < data.length; i++) {
+    const name = (data[i][teamNameCol] || "").toString().trim().toLowerCase();
+    const tag = (data[i][teamTagCol] || "").toString().trim();
+    if (name) {
+      map[name] = tag;
+    }
+  }
+  return map;
+}
