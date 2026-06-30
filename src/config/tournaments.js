@@ -34,7 +34,7 @@ export const tournaments = [
     // Feature flags
     discordRequired: true,
     softBanEnabled: false,
-    bracketsEnabled: false,
+    bracketsEnabled: true,
     supportsLogoUpload: true,
 
     // Results

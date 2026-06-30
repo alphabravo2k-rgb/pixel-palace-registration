@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --neon-cyan: #00f0ff;
+      --neon-pink: #ff007f;
+      --bg-dark: #0a0a0f;
+      --panel-dark: #12121e;
+      --border-color: rgba(0, 240, 255, 0.2);
+    }
+    
+    body {
+      background-color: var(--bg-dark);
+      color: #e2e8f0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 16px;
+      box-sizing: border-box;
+    }
+    
+    .panel {
+      background-color: var(--panel-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    h3 {
+      color: #fff;
+      font-size: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-top: 0;
+      margin-bottom: 12px;
+      border-b: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .match-tag {
+      font-size: 10px;
+      background-color: rgba(0, 240, 255, 0.1);
+      color: var(--neon-cyan);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .vs-info {
+      font-size: 12px;
+      color: #94a3b8;
+      margin-bottom: 16px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    label {
+      display: block;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #94a3b8;
+      margin-bottom: 6px;
+      font-weight: bold;
+    }
+    
+    .custom-input {
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border-color);
+      color: #fff;
+      padding: 10px;
+      border-radius: 6px;
+      box-sizing: border-box;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+    
+    .custom-input:focus {
+      border-color: var(--neon-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.2);
+    }
+    
+    select.custom-input option {
+      background-color: var(--panel-dark);
+      color: #fff;
+    }
+    
+    .btn {
+      width: 100%;
+      background: linear-gradient(135deg, #00f0ff 0%, #0072ff 100%);
+      color: #000;
+      border: none;
+      padding: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      box-shadow: 0 4px 14px rgba(0, 240, 255, 0.3);
+      transition: all 0.3s;
+    }
+    
+    .btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(0, 240, 255, 0.5);
+    }
+    
+    .btn:active {
+      transform: translateY(1px);
+    }
+    
+    .status-msg {
+      font-size: 11px;
+      text-align: center;
+      margin-top: 12px;
+      color: #10b981;
+      font-weight: bold;
+      display: none;
+    }
+    
+    .loader {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border: 2px solid #000;
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 0.6s linear infinite;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="panel">
+    <h3>
+      <span>Match Scheduler</span>
+      <span id="matchIdVal" class="match-tag">M00</span>
+    </h3>
+    
+    <div id="vsInfoVal" class="vs-info">Loading active match...</div>
+    
+    <div class="form-group">
+      <label for="dateInput">Select Date</label>
+      <input type="date" id="dateInput" class="custom-input">
+    </div>
+    
+    <div class="form-group">
+      <label for="timeInput">Select Time</label>
+      <input type="time" id="timeInput" class="custom-input">
+    </div>
+    
+    <div class="form-group">
+      <label for="offsetSelect">Timezone Offset</label>
+      <select id="offsetSelect" class="custom-input">
+        <option value="+5">GMT+5 (PAK / Pakistan)</option>
+        <option value="+5.5">GMT+5.5 (IND / India)</option>
+        <option value="+4">GMT+4 (UAE / Dubai)</option>
+        <option value="+3">GMT+3 (KSA / Saudi)</option>
+        <option value="+0">GMT+0 (UTC / London)</option>
+      </select>
+    </div>
+    
+    <button id="saveBtn" class="btn" onclick="saveSchedule()">Save Schedule</button>
+    <div id="statusMsg" class="status-msg">Schedule saved successfully!</div>
+  </div>
+
+  <script>
+    // Automatically load match info on launch
+    document.addEventListener("DOMContentLoaded", function() {
+      google.script.run
+        .withSuccessHandler(onMatchLoaded)
+        .withFailureHandler(onMatchLoadFailed)
+        .getActiveMatchDetails();
+    });
+    
+    function onMatchLoaded(match) {
+      if (match.error) {
+        document.getElementById("vsInfoVal").innerText = match.error;
+        document.getElementById("saveBtn").disabled = true;
+        return;
+      }
+      
+      document.getElementById("matchIdVal").innerText = match.id;
+      document.getElementById("vsInfoVal").innerText = match.team1 + " VS " + match.team2;
+      
+      // If we have an existing date, prefill
+      if (match.date) {
+        document.getElementById("dateInput").value = match.date;
+      } else {
+        // Set default to today
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById("dateInput").value = today;
+      }
+      
+      if (match.time) {
+        document.getElementById("timeInput").value = match.time;
+      } else {
+        document.getElementById("timeInput").value = "20:00";
+      }
+      
+      if (match.offset) {
+        document.getElementById("offsetSelect").value = match.offset;
+      }
+    }
+    
+    function onMatchLoadFailed(err) {
+      document.getElementById("vsInfoVal").innerText = "Failed to link active row: " + err;
+      document.getElementById("saveBtn").disabled = true;
+    }
+    
+    function saveSchedule() {
+      const date = document.getElementById("dateInput").value;
+      const time = document.getElementById("timeInput").value;
+      const offset = document.getElementById("offsetSelect").value;
+      const saveBtn = document.getElementById("saveBtn");
+      
+      if (!date || !time) {
+        alert("Please select both Date and Time.");
+        return;
+      }
+      
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<span class="loader"></span>Saving...';
+      
+      google.script.run
+        .withSuccessHandler(function() {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = 'Save Schedule';
+          
+          const status = document.getElementById("statusMsg");
+          status.style.display = "block";
+          setTimeout(function() {
+            status.style.display = "none";
+          }, 3000);
+        })
+        .withFailureHandler(function(err) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = 'Save Schedule';
+          alert("Failed to save schedule: " + err);
+        })
+        .saveMatchTime(date, time, offset);
+    }
+  </script>
+
+</body>
+</html>

@@ -465,6 +465,7 @@ export const Register = () => {
                 tournament={tournament}
                 isArchived={isArchived}
                 formatLocalTime={formatLocalTime}
+                teams={teams}
               />
             )}
             

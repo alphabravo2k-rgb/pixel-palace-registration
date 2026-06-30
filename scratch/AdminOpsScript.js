@@ -121,6 +121,8 @@ function onOpen() {
     .addItem("Rebuild Summary Sheet",        "buildSummarySheet")
     .addItem("Fix Merged Cells",             "fixMerges")
     .addItem("Setup Status Dropdown",        "setupValidation")
+    .addItem("Setup Brackets Sheet",         "setupBracketsSheet")
+    .addItem("Schedule Match Time",          "showTimeScheduler")
     .addSeparator()
     .addItem("Enable Auto-Sync (30 min)",    "setupTrigger")
     .addItem("Disable Auto-Sync",            "removeTrigger")
@@ -1044,3 +1046,352 @@ function autoAlignRawSheet_(rawSheet) {
 
 // -- END OF FILE --------------------------------------------------------------
 
+// =============================================================================
+//  TOURNAMENT BRACKETS ENGINE
+// =============================================================================
+
+/**
+ * Initializes the Brackets sheet tab and builds a 32-team single elimination structure
+ */
+function setupBracketsSheet() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Brackets");
+  if (!sheet) {
+    sheet = ss.insertSheet("Brackets");
+  }
+  
+  var headers = [
+    "Match ID", "Round", "Team 1", "Team 2", "Status", "Winner", "Score", "Time (e.g. 20:00 +5 GMT)", "Stream Link", "Source Match 1", "Source Match 2"
+  ];
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers])
+       .setFontWeight("bold")
+       .setBackground("#1D4ED8")
+       .setFontColor("white")
+       .setHorizontalAlignment("center")
+       .setVerticalAlignment("middle");
+       
+  sheet.setFrozenRows(1);
+  
+  // Populate matches if sheet is empty (only has header row)
+  if (sheet.getLastRow() <= 1) {
+    var matches = [];
+    
+    // Round of 32 (M01 to M16)
+    for (var i = 1; i <= 16; i++) {
+      var id = "M" + String(i).padStart(2, "0");
+      matches.push([id, "Round of 32", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "SEEDED", "SEEDED"]);
+    }
+    
+    // Round of 16 (M17 to M24)
+    for (var i = 17; i <= 24; i++) {
+      var id = "M" + String(i).padStart(2, "0");
+      var src1Idx = (i - 17) * 2 + 1;
+      var src2Idx = src1Idx + 1;
+      var src1 = "M" + String(src1Idx).padStart(2, "0");
+      var src2 = "M" + String(src2Idx).padStart(2, "0");
+      matches.push([id, "Round of 16", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+    }
+    
+    // Quarterfinals (M25 to M28)
+    for (var i = 25; i <= 28; i++) {
+      var id = "M" + String(i).padStart(2, "0");
+      var src1Idx = 17 + (i - 25) * 2;
+      var src2Idx = src1Idx + 1;
+      var src1 = "M" + String(src1Idx).padStart(2, "0");
+      var src2 = "M" + String(src2Idx).padStart(2, "0");
+      matches.push([id, "Quarterfinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+    }
+    
+    // Semifinals (M29 to M30)
+    for (var i = 29; i <= 30; i++) {
+      var id = "M" + String(i).padStart(2, "0");
+      var src1Idx = 25 + (i - 29) * 2;
+      var src2Idx = src1Idx + 1;
+      var src1 = "M" + String(src1Idx).padStart(2, "0");
+      var src2 = "M" + String(src2Idx).padStart(2, "0");
+      matches.push([id, "Semifinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+    }
+    
+    // Grand Finals (M31)
+    matches.push(["M31", "Grand Finals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "M29", "M30"]);
+    
+    sheet.getRange(2, 1, matches.length, headers.length).setValues(matches);
+  }
+  
+  // Status column validation (Col E / index 5)
+  var statusRange = sheet.getRange(2, 5, sheet.getMaxRows() - 1, 1);
+  var statusRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["SCHEDULED", "LIVE", "ON HOLD", "COMPLETED", "BYE"], true)
+    .setAllowInvalid(false)
+    .build();
+  statusRange.setDataValidation(statusRule);
+  
+  // Apply team dropdown validations
+  updateBracketDropdowns();
+  
+  ss.toast("Brackets sheet setup complete!", "Admin Ops", 5);
+}
+
+/**
+ * Dynamically updates dropdown validations for Team 1, Team 2, and Winner columns.
+ * Prevents selecting the same team twice in Round 1, and limits subsequent rounds to predecessor match teams.
+ */
+function updateBracketDropdowns() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var bracketsSheet = ss.getSheetByName("Brackets");
+  if (!bracketsSheet) return;
+  
+  var adminSheet = getAdminSheet_();
+  var adminData = adminSheet.getDataRange().getValues();
+  
+  // 1. Get list of all approved / registered teams
+  var registeredTeams = [];
+  for (var i = 1; i < adminData.length; i += PLAYERS_PER_TEAM) {
+    var tName = (adminData[i][C.TEAM_NAME - 1] || "").toString().trim();
+    var tStatus = (adminData[i][C.REG_STATUS - 1] || "").toString().trim().toUpperCase();
+    if (tName && tName !== "Team Name" && tStatus !== "REJECTED" && tStatus !== "DISQUALIFIED") {
+      registeredTeams.push(tName);
+    }
+  }
+  
+  var totalRows = bracketsSheet.getLastRow();
+  if (totalRows <= 1) return;
+  
+  var matchData = bracketsSheet.getRange(1, 1, totalRows, 11).getValues();
+  
+  // 2. Scan Round 1 matches (M01 - M16, rows 2 to 17) to find all currently selected teams
+  var selectedTeams = new Set();
+  for (var r = 1; r <= 16; r++) {
+    if (r >= matchData.length) break;
+    var t1 = (matchData[r][2] || "").toString().trim();
+    var t2 = (matchData[r][3] || "").toString().trim();
+    if (t1 && t1.toLowerCase() !== "bye") selectedTeams.add(t1.toLowerCase());
+    if (t2 && t2.toLowerCase() !== "bye") selectedTeams.add(t2.toLowerCase());
+  }
+  
+  // Helper to build dropdown values
+  var applyValidation = function(rowNum, colNum, options, currentVal) {
+    var list = [];
+    options.forEach(function(o) {
+      if (o && list.indexOf(o) === -1) list.push(o);
+    });
+    // Ensure current value is included to avoid validation error warnings
+    if (currentVal && list.indexOf(currentVal) === -1) {
+      list.push(currentVal);
+    }
+    
+    var rule = SpreadsheetApp.newDataValidation()
+      .requireValueInList(list, true)
+      .setAllowInvalid(false)
+      .build();
+    bracketsSheet.getRange(rowNum, colNum).setDataValidation(rule);
+  };
+  
+  // 3. Apply validations for Round 1 (rows 2 to 17)
+  for (var r = 2; r <= 17; r++) {
+    if (r > totalRows) break;
+    
+    var t1Val = (matchData[r - 1][2] || "").toString().trim();
+    var t2Val = (matchData[r - 1][3] || "").toString().trim();
+    
+    // Team 1 dropdown: Registered teams minus teams chosen in other matches
+    var t1Options = ["BYE"];
+    registeredTeams.forEach(function(team) {
+      if (!selectedTeams.has(team.toLowerCase()) || team.toLowerCase() === t1Val.toLowerCase()) {
+        t1Options.push(team);
+      }
+    });
+    applyValidation(r, 3, t1Options, t1Val);
+    
+    // Team 2 dropdown: Registered teams minus teams chosen in other matches
+    var t2Options = ["BYE"];
+    registeredTeams.forEach(function(team) {
+      if (!selectedTeams.has(team.toLowerCase()) || team.toLowerCase() === t2Val.toLowerCase()) {
+        t2Options.push(team);
+      }
+    });
+    applyValidation(r, 4, t2Options, t2Val);
+    
+    // Winner dropdown: Team 1 name, Team 2 name, or TBD
+    var wOptions = ["TBD"];
+    if (t1Val) wOptions.push(t1Val);
+    if (t2Val) wOptions.push(t2Val);
+    applyValidation(r, 6, wOptions, (matchData[r - 1][5] || "").toString().trim());
+  }
+  
+  // 4. Apply validations for subsequent rounds (rows 18 to 32)
+  for (var r = 18; r <= totalRows; r++) {
+    var t1Val = (matchData[r - 1][2] || "").toString().trim();
+    var t2Val = (matchData[r - 1][3] || "").toString().trim();
+    var src1 = (matchData[r - 1][9] || "").toString().trim(); // Source Match 1 ID (e.g. M01)
+    var src2 = (matchData[r - 1][10] || "").toString().trim(); // Source Match 2 ID (e.g. M02)
+    
+    // Resolve Team 1 choices (from Source Match 1 winner, or predecessor team choices)
+    var t1Options = ["TBD", "BYE"];
+    if (src1) {
+      var src1Row = parseInt(src1.replace("M", ""), 10) + 1;
+      if (src1Row > 1 && src1Row < r) {
+        var s1T1 = (matchData[src1Row - 1][2] || "").toString().trim();
+        var s1T2 = (matchData[src1Row - 1][3] || "").toString().trim();
+        var s1Win = (matchData[src1Row - 1][5] || "").toString().trim();
+        if (s1T1 && s1T1 !== "BYE") t1Options.push(s1T1);
+        if (s1T2 && s1T2 !== "BYE") t1Options.push(s1T2);
+        if (s1Win && s1Win !== "TBD" && s1Win !== "BYE") t1Options.push(s1Win);
+      }
+    }
+    applyValidation(r, 3, t1Options, t1Val);
+    
+    // Resolve Team 2 choices (from Source Match 2 winner, or predecessor team choices)
+    var t2Options = ["TBD", "BYE"];
+    if (src2) {
+      var src2Row = parseInt(src2.replace("M", ""), 10) + 1;
+      if (src2Row > 1 && src2Row < r) {
+        var s2T1 = (matchData[src2Row - 1][2] || "").toString().trim();
+        var s2T2 = (matchData[src2Row - 1][3] || "").toString().trim();
+        var s2Win = (matchData[src2Row - 1][5] || "").toString().trim();
+        if (s2T1 && s2T1 !== "BYE") t2Options.push(s2T1);
+        if (s2T2 && s2T2 !== "BYE") t2Options.push(s2T2);
+        if (s2Win && s2Win !== "TBD" && s2Win !== "BYE") t2Options.push(s2Win);
+      }
+    }
+    applyValidation(r, 4, t2Options, t2Val);
+    
+    // Winner dropdown: Team 1, Team 2, or TBD
+    var wOptions = ["TBD"];
+    if (t1Val && t1Val !== "TBD") wOptions.push(t1Val);
+    if (t2Val && t2Val !== "TBD") wOptions.push(t2Val);
+    applyValidation(r, 6, wOptions, (matchData[r - 1][5] || "").toString().trim());
+  }
+}
+
+/**
+ * Spreadsheet-level edit listener to trigger real-time dropdown updates on selection changes.
+ */
+function onEdit(e) {
+  if (!e) return;
+  var range = e.range;
+  var sheet = range.getSheet();
+  var sheetName = sheet.getName();
+  
+  // Real-time dynamic validation updates for brackets selections
+  if (sheetName === "Brackets") {
+    var col = range.getColumn();
+    // Col 3 is Team 1, Col 4 is Team 2, Col 6 is Winner
+    if (col === 3 || col === 4 || col === 6) {
+      updateBracketDropdowns();
+    }
+  }
+}
+
+// =============================================================================
+//  MATCH TIME SCHEDULER SIDEBAR
+// =============================================================================
+
+/**
+ * Opens the HTML Match Scheduler sidebar panel.
+ */
+function showTimeScheduler() {
+  var html = HtmlService.createHtmlOutputFromFile('TimeScheduler')
+      .setTitle('Match Scheduler')
+      .setWidth(350);
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Retrieves details (Match ID, Team names, current date/time) for the selected row in "Brackets"
+ */
+function getActiveMatchDetails() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheet = ss.getActiveSheet();
+    if (sheet.getName() !== "Brackets") {
+      return { error: "Please open and select a row in the 'Brackets' sheet first." };
+    }
+    
+    var activeCell = sheet.getActiveCell();
+    var rowIdx = activeCell.getRow();
+    if (rowIdx <= 1) {
+      return { error: "Please select a valid Match row (Row 2 or below)." };
+    }
+    
+    var rowData = sheet.getRange(rowIdx, 1, 1, 11).getValues()[0];
+    var matchId = (rowData[0] || "").toString().trim();
+    var team1 = (rowData[2] || "").toString().trim();
+    var team2 = (rowData[3] || "").toString().trim();
+    var timeStr = (rowData[7] || "").toString().trim(); // Column H (8)
+    
+    if (!matchId) {
+      return { error: "Selected row does not contain a valid Match ID." };
+    }
+    
+    // Parse existing ISO date-time (e.g. 2026-07-31T20:00:00+05:00)
+    var dateVal = "";
+    var timeVal = "";
+    var offsetVal = "+5"; // Default
+    
+    if (timeStr && timeStr.includes("T")) {
+      var parts = timeStr.split("T");
+      dateVal = parts[0];
+      
+      var timeParts = parts[1].split(/[+-]/);
+      if (timeParts[0]) {
+        timeVal = timeParts[0].substring(0, 5); // HH:MM
+      }
+      
+      var hasPlus = parts[1].includes("+");
+      var hasMinus = parts[1].includes("-");
+      if (hasPlus || hasMinus) {
+        var sign = hasPlus ? "+" : "-";
+        var offsetStr = parts[1].substring(parts[1].indexOf(sign));
+        // Convert "+05:30" back to "+5.5"
+        var offsetParts = offsetStr.split(":");
+        var hrs = parseInt(offsetParts[0], 10);
+        var mins = offsetParts[1] ? parseInt(offsetParts[1], 10) : 0;
+        var val = hrs + (mins / 60) * (hrs >= 0 ? 1 : -1);
+        offsetVal = String(val);
+      }
+    }
+    
+    return {
+      id: matchId,
+      team1: team1 || "TBD",
+      team2: team2 || "TBD",
+      date: dateVal,
+      time: timeVal,
+      offset: offsetVal
+    };
+  } catch (e) {
+    return { error: e.toString() };
+  }
+}
+
+/**
+ * Saves a formatted ISO 8601 date-time string to the active row's Time column (H)
+ */
+function saveMatchTime(dateVal, timeVal, offsetVal) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getActiveSheet();
+  if (sheet.getName() !== "Brackets") {
+    throw new Error("Please open the 'Brackets' sheet first.");
+  }
+  
+  var activeCell = sheet.getActiveCell();
+  var rowIdx = activeCell.getRow();
+  if (rowIdx <= 1) {
+    throw new Error("Please select a valid Match row.");
+  }
+  
+  // Format offset float into +/-HH:MM (e.g. +5.5 -> +05:30)
+  var val = parseFloat(offsetVal);
+  var sign = val >= 0 ? "+" : "-";
+  var absVal = Math.abs(val);
+  var hrs = Math.floor(absVal);
+  var mins = Math.round((absVal - hrs) * 60);
+  var offsetFormatted = sign + String(hrs).padStart(2, "0") + ":" + String(mins).padStart(2, "0");
+  
+  // Construct standard ISO 8601: YYYY-MM-DDTHH:MM:00+HH:MM
+  var timestamp = dateVal + "T" + timeVal + ":00" + offsetFormatted;
+  
+  // Write to Column H (8)
+  sheet.getRange(rowIdx, 8).setValue(timestamp);
+}

@@ -559,6 +559,7 @@ function doGet(e) {
       const settingsSheet = doc.getSheetByName("Settings");
       let bracketUrl = "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png";
       let schedule = ["Quarterfinals: 18:00 GST", "Semifinals: 20:00 GST", "Grand Finals: 22:00 GST"];
+      let bracketMode = "IMAGE"; // IMAGE, BETA, or LIVE
 
       if (settingsSheet) {
         const sData = settingsSheet.getDataRange().getValues();
@@ -566,13 +567,106 @@ function doGet(e) {
           const key = (sData[i][0] || "").toString().trim().toLowerCase();
           const val = (sData[i][1] || "").toString().trim();
           if (key === "bracket_url" && val) bracketUrl = val;
+          if (key === "bracket_mode" && val) bracketMode = val.toString().trim().toUpperCase();
           if (key === "schedule" && val) {
             schedule = val.split(',').map(s => s.trim());
           }
         }
       }
 
-      return generateResponse({ bracketUrl: bracketUrl, schedule: schedule });
+      // 1. BETA MODE: Renders a pre-configured sample 16-team bracket for demonstration
+      if (bracketMode === "BETA") {
+        const mockMatches = [
+          { id: "M01", round: "Round of 16", team1: "BSV", team2: "Matrix Gaming", status: "COMPLETED", winner: "BSV", score: "2-0", time: "20:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M02", round: "Round of 16", team1: "Dubai Duos", team2: "Pakistan Active", status: "COMPLETED", winner: "Dubai Duos", score: "2-1", time: "20:30 +4 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M03", round: "Round of 16", team1: "Natus Vincere", team2: "FaZe Clan", status: "COMPLETED", winner: "Natus Vincere", score: "2-0", time: "21:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M04", round: "Round of 16", team1: "G2 Esports", team2: "Team Vitality", status: "COMPLETED", winner: "G2 Esports", score: "2-1", time: "21:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M05", round: "Round of 16", team1: "Team Spirit", team2: "MOUZ", status: "LIVE", winner: "TBD", score: "1-1", time: "22:00 +5 GMT", stream: "https://twitch.tv/pixelpalace", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M06", round: "Round of 16", team1: "Astralis", team2: "Virtus.pro", status: "ON HOLD", winner: "TBD", score: "0-0", time: "22:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M07", round: "Round of 16", team1: "Team Liquid", team2: "Complexity", status: "SCHEDULED", winner: "TBD", score: "", time: "23:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M08", round: "Round of 16", team1: "HEROIC", team2: "BYE", status: "BYE", winner: "HEROIC", score: "", time: "23:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          
+          { id: "M09", round: "Quarterfinals", team1: "BSV", team2: "Dubai Duos", status: "SCHEDULED", winner: "TBD", score: "", time: "18:00 +5 GMT", stream: "", source1: "M01", source2: "M02" },
+          { id: "M10", round: "Quarterfinals", team1: "Natus Vincere", team2: "G2 Esports", status: "SCHEDULED", winner: "TBD", score: "", time: "19:00 +5 GMT", stream: "", source1: "M03", source2: "M04" },
+          { id: "M11", round: "Quarterfinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "20:00 +5 GMT", stream: "", source1: "M05", source2: "M06" },
+          { id: "M12", round: "Quarterfinals", team1: "TBD", team2: "HEROIC", status: "SCHEDULED", winner: "TBD", score: "", time: "21:00 +5 GMT", stream: "", source1: "M07", source2: "M08" },
+          
+          { id: "M13", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "20:00 +5 GMT", stream: "", source1: "M09", source2: "M10" },
+          { id: "M14", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "21:00 +5 GMT", stream: "", source1: "M11", source2: "M12" },
+          
+          { id: "M15", round: "Grand Finals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "22:00 +5 GMT", stream: "", source1: "M13", source2: "M14" }
+        ];
+        return generateResponse({
+          type: "live",
+          matches: mockMatches,
+          schedule: schedule,
+          bracketUrl: bracketUrl
+        });
+      }
+
+      // 2. LIVE SPREADSHEET MODE: Reads real-time data from the "Brackets" sheet
+      if (bracketMode === "LIVE") {
+        try {
+          let adminDocId = "";
+          if (tournamentId === "community-cup-2") {
+            adminDocId = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+          } else if (tournamentId === "chaos-ii") {
+            adminDocId = "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E";
+          }
+          
+          if (adminDocId) {
+            const adminDoc = SpreadsheetApp.openById(adminDocId);
+            const bracketsSheet = adminDoc.getSheetByName("Brackets");
+            if (bracketsSheet) {
+              const bData = bracketsSheet.getDataRange().getValues();
+              const matches = [];
+              
+              for (let i = 1; i < bData.length; i++) {
+                const row = bData[i];
+                const id = (row[0] || "").toString().trim();
+                const round = (row[1] || "").toString().trim();
+                const team1 = (row[2] || "").toString().trim();
+                const team2 = (row[3] || "").toString().trim();
+                const status = (row[4] || "").toString().trim().toUpperCase();
+                const winner = (row[5] || "").toString().trim();
+                const score = (row[6] || "").toString().trim();
+                const time = (row[7] || "").toString().trim();
+                const stream = (row[8] || "").toString().trim();
+                const source1 = (row[9] || "").toString().trim();
+                const source2 = (row[10] || "").toString().trim();
+                
+                if (id) {
+                  matches.push({
+                    id: id,
+                    round: round,
+                    team1: team1,
+                    team2: team2,
+                    status: status,
+                    winner: winner,
+                    score: score,
+                    time: time,
+                    stream: stream,
+                    source1: source1,
+                    source2: source2
+                  });
+                }
+              }
+              
+              return generateResponse({
+                type: "live",
+                matches: matches,
+                schedule: schedule,
+                bracketUrl: bracketUrl
+              });
+            }
+          }
+        } catch (liveErr) {
+          console.error("Live bracket load failed: " + liveErr.toString());
+        }
+      }
+
+      // 3. IMAGE FALLBACK (Default)
+      return generateResponse({ type: "image", bracketUrl: bracketUrl, schedule: schedule });
     }
 
     return generateResponse({ error: "NOT_FOUND: Endpoint " + endpoint + " not found." }, 404);
