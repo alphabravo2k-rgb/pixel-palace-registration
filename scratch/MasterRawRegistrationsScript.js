@@ -96,6 +96,9 @@ function doPost(e) {
     if (!rawSheet) throw new Error("Could not find Sheet1.");
     
     const rows = rawSheet.getDataRange().getValues();
+    const headers = rows[0] || [];
+    const cols = getRawColMap_(headers);
+    
     const newTeamName = payload.team_name.trim().toUpperCase();
     const newSteam64s = [];
     const newFaceitUrls = [];
@@ -108,16 +111,23 @@ function doPost(e) {
     }
 
     for (let i = 1; i < rows.length; i++) {
-      const existingStatus = rows[i][4]; // Column E (Status)
-      if (existingStatus === "REJECTED") continue;
-
-      const existingTeamName = String(rows[i][5]).trim().toUpperCase(); // Column F (Team Name)
-      if (existingTeamName === newTeamName) {
-        return generateResponse({ error: "DUPLICATE_TEAM_NAME: A team named '" + payload.team_name + "' is already registered." });
+      // Check status if column exists
+      if (cols.status !== undefined) {
+        const existingStatus = (rows[i][cols.status] || "").toString().trim().toUpperCase();
+        if (existingStatus === "REJECTED") continue;
       }
 
-      // Scan all cells in the row for matching steam64 or faceit url
-      for (let c = 7; c < rows[i].length; c++) {
+      // Check team name if column exists
+      if (cols.teamName !== undefined) {
+        const existingTeamName = String(rows[i][cols.teamName]).trim().toUpperCase();
+        if (existingTeamName === newTeamName) {
+          return generateResponse({ error: "DUPLICATE_TEAM_NAME: A team named '" + payload.team_name + "' is already registered." });
+        }
+      }
+
+      // Scan starting from playerBase for matching steam/faceit
+      const startCol = cols.playerBase !== undefined ? cols.playerBase : 9;
+      for (let c = startCol; c < rows[i].length; c++) {
         const cellVal = String(rows[i][c]).trim();
         if (!cellVal) continue;
 
@@ -136,10 +146,10 @@ function doPost(e) {
     const nextSerial = rows.length;
     const teamId = "PP-CC2-" + String(nextSerial).padStart(3, '0');
 
-    // 5. SECURE APPEND
+    // 5. SECURE HEADER SETUP IF EMPTY
     if (rawSheet.getLastRow() === 0) {
-      rawSheet.appendRow([
-        "Team ID", "Timestamp", "Tournament ID", "Submission ID", "Status", "Team Name", "Team Tag", "Region", "Logo URL",
+      const defaultHeaders = [
+        "Time Stamp", "Tournament ID", "Submission ID", "Team Name", "Team Tag", "Region", "Logo URL",
         "P1 Discord", "P1 Steam", "P1 Faceit", "P1 Rank",
         "P2 Discord", "P2 Steam", "P2 Faceit", "P2 Rank",
         "P3 Discord", "P3 Steam", "P3 Faceit", "P3 Rank",
@@ -148,24 +158,42 @@ function doPost(e) {
         "P6 Discord", "P6 Steam", "P6 Faceit", "P6 Rank",
         "P7 Discord", "P7 Steam", "P7 Faceit", "P7 Rank",
         "VIP Code Used"
-      ]);
+      ];
+      rawSheet.appendRow(defaultHeaders);
       rawSheet.setFrozenRows(1);
+      // Re-read headers and cols
+      const newRows = rawSheet.getDataRange().getValues();
+      headers.push(...newRows[0]);
+      Object.assign(cols, getRawColMap_(headers));
     }
 
     let formattedDate = Utilities.formatDate(new Date(), "GMT+5", "MM/dd/yyyy HH:mm:ss");
     
-    rawSheet.appendRow([
-        teamId, formattedDate, payload.tournament_id || "unknown", payload.submission_id || "", 
-        "PENDING", payload.team_name || "", payload.team_tag || "", payload.region || "", payload.logo_url || "", 
-        payload.p1Discord || "", payload.p1Steam || "", payload.p1Faceit || "", payload.p1Rank || "", 
-        payload.p2Discord || "", payload.p2Steam || "", payload.p2Faceit || "", payload.p2Rank || "", 
-        payload.p3Discord || "", payload.p3Steam || "", payload.p3Faceit || "", payload.p3Rank || "", 
-        payload.p4Discord || "", payload.p4Steam || "", payload.p4Faceit || "", payload.p4Rank || "", 
-        payload.p5Discord || "", payload.p5Steam || "", payload.p5Faceit || "", payload.p5Rank || "", 
-        payload.p6Discord || "", payload.p6Steam || "", payload.p6Faceit || "", payload.p6Rank || "", 
-        payload.p7Discord || "", payload.p7Steam || "", payload.p7Faceit || "", payload.p7Rank || "", 
-        payload.invite_code || ""
-    ]);
+    // Build row array dynamically to match the headers 100%
+    const newRowArray = new Array(headers.length).fill("");
+    
+    if (cols.teamId !== undefined) newRowArray[cols.teamId] = teamId;
+    if (cols.timestamp !== undefined) newRowArray[cols.timestamp] = formattedDate;
+    if (cols.tournament !== undefined) newRowArray[cols.tournament] = payload.tournament_id || "unknown";
+    if (cols.subId !== undefined) newRowArray[cols.subId] = payload.submission_id || "";
+    if (cols.status !== undefined) newRowArray[cols.status] = "PENDING";
+    if (cols.teamName !== undefined) newRowArray[cols.teamName] = payload.team_name || "";
+    if (cols.teamTag !== undefined) newRowArray[cols.teamTag] = payload.team_tag || "";
+    if (cols.region !== undefined) newRowArray[cols.region] = payload.region || "";
+    if (cols.logo !== undefined) newRowArray[cols.logo] = payload.logo_url || "";
+    if (cols.inviteCode !== undefined) newRowArray[cols.inviteCode] = payload.invite_code || "";
+
+    // Map player-level columns (up to 7 players)
+    for (let p = 0; p < 7; p++) {
+      const n = p + 1;
+      const baseIdx = cols.playerBase + p * 4;
+      if (baseIdx < headers.length)     newRowArray[baseIdx]     = payload[`p${n}Discord`] || "";
+      if (baseIdx + 1 < headers.length) newRowArray[baseIdx + 1] = payload[`p${n}Steam`] || "";
+      if (baseIdx + 2 < headers.length) newRowArray[baseIdx + 2] = payload[`p${n}Faceit`] || "";
+      if (baseIdx + 3 < headers.length) newRowArray[baseIdx + 3] = payload[`p${n}Rank`] || "";
+    }
+
+    rawSheet.appendRow(newRowArray);
 
     if (codeRowIndex > -1) codeSheet.getRange(codeRowIndex, 2).setValue(payload.team_name);
     if (payload.submission_id) cache.put(payload.submission_id, "processed", 60 * 60 * 24); 
@@ -319,44 +347,61 @@ function doGet(e) {
         const rawTagMap = getRawTagMap_(doc);
         const teams = [];
         
-        // Loop through rows in blocks of 7 (each team starts on a row and spans 7 rows)
-        for (let i = 1; i < data.length; i += 7) {
-          const teamName = (data[i][10] || "").toString().trim(); // Column K
+        // v3 layout for Chaos II: 3 rows per team, Team Name at Col B (index 1)
+        // CC2 layout: 7 rows per team, Team Name at Col K (index 10)
+        const isChaosII = (adminDocId === "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E");
+        const rowsPerTeam   = isChaosII ? 3 : 7;
+        const teamNameIdx   = isChaosII ? 1  : 10;  // Col B or Col K
+        const statusIdx     = isChaosII ? 14 : 12;  // Col O or Col M
+        const regionIdx     = isChaosII ? 4  : 1;   // Col E or Col B
+        const logoColNum    = isChaosII ? 4  : 3;   // Col D or Col C (1-indexed for getFormula)
+        const avgEloIdx     = isChaosII ? 13 : 11;  // Col N or Col L
+        const seedIdx       = isChaosII ? 15 : 13;  // Col P or Col N
+        const remarksIdx    = isChaosII ? 16 : 14;  // Col Q or Col O
+        // Player columns (same offset for both since player data starts at F(5))
+        const pNameIdx      = isChaosII ? 5  : 5;   // Col F
+        const discordIdx    = isChaosII ? 6  : 4;   // Col G (v3) or Col E (v2)
+        const steamIdx      = isChaosII ? 7  : 3;   // Col H (v3) or Col D (v2)
+        const faceitIdx     = isChaosII ? 11 : 6;   // Col L (v3) or Col G (v2)
+        const liveEloIdx    = isChaosII ? 12 : 7;   // Col M (v3) or Col H (v2)
+        
+        for (let i = 1; i < data.length; i += rowsPerTeam) {
+          const teamName = (data[i][teamNameIdx] || "").toString().trim();
           if (!teamName || teamName === "Team Name") continue;
           
-          const status = (data[i][12] || "").toString().trim().toUpperCase(); // Column M
+          const status = (data[i][statusIdx] || "").toString().trim().toUpperCase();
           // Only hide permanently rejected/disqualified teams
           if (status === "REJECTED" || status === "DISQUALIFIED" || status === "") continue;
           
-          const region = (data[i][1] || "").toString().trim(); // Column B
+          const region = (data[i][regionIdx] || "").toString().trim();
           
-          // Logo URL in Column C. If it has a formula (=IMAGE("url")), extract it
+          // Logo URL: extract from =IMAGE("url") formula
           let logoUrl = "";
           try {
-            const logoFormula = adminSheet.getRange(i + 1, 3).getFormula();
+            const logoFormula = adminSheet.getRange(i + 1, logoColNum).getFormula();
             if (logoFormula) {
               const match = logoFormula.match(/=IMAGE\("([^"]+)"\)/i);
               if (match) logoUrl = match[1];
             }
           } catch(e) {}
           if (!logoUrl) {
-            logoUrl = (data[i][2] || "").toString().trim();
+            logoUrl = (data[i][logoColNum - 1] || "").toString().trim();
           }
           
-          const averageElo = parseInt(data[i][11]) || 0; // Column L
-          const seed = (data[i][13] || "").toString().trim(); // Column N
-          const adminRemarks = (data[i][14] || "").toString().trim(); // Column O
+          const averageElo = parseInt(data[i][avgEloIdx]) || 0;
+          const seed = (data[i][seedIdx] || "").toString().trim();
+          const adminRemarks = (data[i][remarksIdx] || "").toString().trim();
           
           const roster = [];
-          for (let p = 0; p < 7; p++) {
+          for (let p = 0; p < rowsPerTeam; p++) {
             const rowIdx = i + p;
             if (rowIdx >= data.length) break;
             
-            const pName = (data[rowIdx][5] || "").toString().trim(); // Column F
-            const discord = (data[rowIdx][4] || "").toString().trim(); // Column E
-            const steam = (data[rowIdx][3] || "").toString().trim(); // Column D
-            const faceit = (data[rowIdx][6] || "").toString().trim(); // Column G
-            const liveEloVal = data[rowIdx][7]; // Column H
+            const pName = (data[rowIdx][pNameIdx] || "").toString().trim();
+            const discord = (data[rowIdx][discordIdx] || "").toString().trim();
+            const steam = (data[rowIdx][steamIdx] || "").toString().trim();
+            const faceit = (data[rowIdx][faceitIdx] || "").toString().trim();
+            const liveEloVal = data[rowIdx][liveEloIdx];
             
             let liveElo = "N/A";
             if (liveEloVal !== "" && liveEloVal !== undefined && liveEloVal !== null) {
@@ -495,24 +540,32 @@ function getRawColMap_(headerRow) {
               .replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
     map[k] = h;
   }
-  var get = function(keys, fallback) {
+  var get = function(keys) {
     for (var x = 0; x < keys.length; x++) {
       if (map[keys[x]] !== undefined) return map[keys[x]];
     }
-    return fallback;
+    return undefined;
   };
+  
+  // Find first player column (P1 Discord) to set the base index
+  let playerBase = get(['p1_discord', 'p1discord', 'p1_discord_id', 'p1_discord_username']);
+  if (playerBase === undefined) {
+    // Default fallback if not found
+    playerBase = 9;
+  }
+  
   return {
-    teamId:     get(['team_id'],                        0),
-    timestamp:  get(['timestamp'],                      1),
-    tournament: get(['tournament_id', 'tournament'],    2),
-    subId:      get(['submission_id'],                  3),
-    status:     get(['status'],                         4),
-    teamName:   get(['team_name', 'team name'],         5),
-    teamTag:    get(['team_tag', 'team tag'],           6),
-    region:     get(['region'],                         7),
-    logo:       get(['logo_url', 'logo url'],           8),
-    playerBase: get(['p1_discord', 'p1 discord'],       9),
-    inviteCode: get(['vip_code_used', 'vip code used'], 36)
+    teamId:     get(['team_id', 'teamid']),
+    timestamp:  get(['timestamp', 'time_stamp', 'timestamp_id']),
+    tournament: get(['tournament_id', 'tournament', 'tournamentid']),
+    subId:      get(['submission_id', 'submissionid']),
+    status:     get(['status', 'registration_status']),
+    teamName:   get(['team_name', 'teamname']),
+    teamTag:    get(['team_tag', 'teamtag']),
+    region:     get(['region']),
+    logo:       get(['logo_url', 'logo_url_image', 'logo']),
+    playerBase: playerBase,
+    inviteCode: get(['vip_code_used', 'vipcode', 'vip_code'])
   };
 }
 
@@ -763,8 +816,8 @@ function appendToAdminSheet(payload, teamId) {
  */
 function syncStatusToAdmin(teamName, newStatus) {
   const adminSheets = [
-    { id: "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E", teamNameIdx: 10, statusCol: 13 }, // CC2
-    { id: "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E", teamNameIdx: 1, statusCol: 15 }   // Chaos II
+    { id: "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E", teamNameIdx: 10, statusCol: 13 }, // CC2 (Col K, Col M)
+    { id: "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E", teamNameIdx: 1,  statusCol: 15 }  // Chaos II v3 (Col B, Col O)
   ];
   
   adminSheets.forEach(cfg => {
