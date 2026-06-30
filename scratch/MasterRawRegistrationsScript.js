@@ -967,6 +967,44 @@ function getRawMetadataMap_(doc) {
 }
 
 /**
+ * Parses the spreadsheet headers to map column indices dynamically.
+ */
+function getRawColMap_(headerRow) {
+  var map = {};
+  for (var h = 0; h < headerRow.length; h++) {
+    var k = headerRow[h].toString().trim().toLowerCase()
+              .replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
+    map[k] = h;
+  }
+  var get = function(keys) {
+    for (var x = 0; x < keys.length; x++) {
+      if (map[keys[x]] !== undefined) return map[keys[x]];
+    }
+    return undefined;
+  };
+  
+  // Find first player column (P1 Discord) to set the base index
+  let playerBase = get(['p1_discord', 'p1discord', 'p1_discord_id', 'p1_discord_username']);
+  if (playerBase === undefined) {
+    playerBase = 9;
+  }
+  
+  return {
+    teamId:     get(['team_id', 'teamid']),
+    timestamp:  get(['timestamp', 'time_stamp', 'timestamp_id']),
+    tournament: get(['tournament_id', 'tournament', 'tournamentid']),
+    subId:      get(['submission_id', 'submissionid']),
+    status:     get(['status', 'registration_status']),
+    teamName:   get(['team_name', 'teamname']),
+    teamTag:    get(['team_tag', 'teamtag']),
+    region:     get(['region']),
+    logo:       get(['logo_url', 'logo_url_image', 'logo']),
+    playerBase: playerBase,
+    inviteCode: get(['vip_code_used', 'vipcode', 'vip_code'])
+  };
+}
+
+/**
  * Automatically detects and fixes shifted rows in Sheet1 (Layout B).
  * Shifted rows contain a "PP-" Team ID in column 0 (which has header Timestamp/Time Stamp).
  */
