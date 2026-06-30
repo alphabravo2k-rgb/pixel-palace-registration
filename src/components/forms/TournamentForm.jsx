@@ -36,7 +36,6 @@ import {
   Tag,
   Globe,
   Image as ImageIcon,
-  Zap,
   Copy,
   Check,
   ExternalLink,
@@ -53,7 +52,6 @@ const buildFormSchema = (tournament) => {
   const coreCount = tournament.playersPerTeam ?? 5;
 
   const playerSchema = z.object({
-    ign: z.string().min(1, 'In-Game Name required'),
     discord: z.string().min(1, 'Discord handle required').transform(v => v.trim().toLowerCase()),
     steam: z.string().min(1, 'Steam URL required'),
     steam64: z.string().optional(),
@@ -242,8 +240,12 @@ export const TournamentForm = ({ tournament, slots }) => {
         setValue(`players.${index}.faceitElo`, data.faceitElo?.toString());
         setValue(`players.${index}.cs2RankLabel`, data.cs2RankLabel?.toString());
         
+        // Always extract IGN from FACEIT URL as a base fallback
+        const urlIgn = value.replace(/\/$/, '').split('/').pop();
+        if (urlIgn) setValue(`players.${index}.ign`, urlIgn, { shouldValidate: false });
+        
         if (data.nickname) {
-          setValue(`players.${index}.ign`, data.nickname, { shouldValidate: true });
+          setValue(`players.${index}.ign`, data.nickname, { shouldValidate: false });
         }
         if (data.avatar) {
           setValue(`players.${index}.avatar`, data.avatar);
@@ -261,9 +263,15 @@ export const TournamentForm = ({ tournament, slots }) => {
         setFaceitStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
       } else {
         setFaceitStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
+        // On API failure, still extract IGN from the URL path
+        const urlIgnFail = value.replace(/\/$/, '').split('/').pop();
+        if (urlIgnFail) setValue(`players.${index}.ign`, urlIgnFail, { shouldValidate: false });
       }
     } catch (err) {
       setFaceitStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
+      // Even on exception, extract IGN from the URL path
+      const urlIgn = value.replace(/\/$/, '').split('/').pop();
+      if (urlIgn) setValue(`players.${index}.ign`, urlIgn, { shouldValidate: false });
     }
   };
 
@@ -629,44 +637,24 @@ export const TournamentForm = ({ tournament, slots }) => {
                 </div>
 
                 <div className="space-y-3">
-                  {/* IGN + Discord */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
-                        In-Game Name (IGN) <span className="text-red-500">*</span>
-                      </label>
-                      <div className="input-group">
-                        <Zap className="ml-3 w-4 h-4 text-white/30" />
-                        <input
-                          {...register(`players.${index}.ign`)}
-                          type="text"
-                          readOnly={faceitStatus[index] === 'SUCCESS'}
-                          placeholder={faceitStatus[index] === 'SUCCESS' ? 'Auto-filled from FACEIT' : "What you're called in-game"}
-                          className={`input-ghost text-xs ${faceitStatus[index] === 'SUCCESS' ? 'text-zinc-400 bg-black/20 border-none select-none pointer-events-none' : ''}`}
-                        />
-                      </div>
-                      {errors.players?.[index]?.ign && (
-                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].ign.message}</p>
-                      )}
+                  {/* Discord */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
+                      Discord Username <span className="text-red-500">*</span>
+                    </label>
+                    <div className="input-group">
+                      <MessageSquare className="ml-3 w-4 h-4 text-white/30" />
+                      <input
+                        {...register(`players.${index}.discord`)}
+                        type="text"
+                        placeholder="username (no #0000)"
+                        className="input-ghost text-xs"
+                      />
                     </div>
-                    <div>
-                      <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
-                        Discord Username <span className="text-red-500">*</span>
-                      </label>
-                      <div className="input-group">
-                        <MessageSquare className="ml-3 w-4 h-4 text-white/30" />
-                        <input
-                          {...register(`players.${index}.discord`)}
-                          type="text"
-                          placeholder="username (no #0000)"
-                          className="input-ghost text-xs"
-                        />
-                      </div>
-                      <p className="text-zinc-500 text-[9px] mt-1 font-body">Exact username, no display names.</p>
-                      {errors.players?.[index]?.discord && (
-                        <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].discord.message}</p>
-                      )}
-                    </div>
+                    <p className="text-zinc-500 text-[9px] mt-1 font-body">Exact username, no display names.</p>
+                    {errors.players?.[index]?.discord && (
+                      <p className="text-red-400 text-[10px] mt-1 font-body">{errors.players[index].discord.message}</p>
+                    )}
                   </div>
 
                   {/* Steam URL */}
@@ -725,77 +713,6 @@ export const TournamentForm = ({ tournament, slots }) => {
 
 
 
-                  {/* FACEIT & CS2 Stat Badges */}
-                  <Controller
-                    control={control}
-                    name={`players.${index}.faceitLevel`}
-                    render={({ field: lvlField }) => {
-                       const elo = getValues(`players.${index}.faceitElo`);
-                       const rank = getValues(`players.${index}.cs2RankLabel`);
-                       const state = faceitStatus[index];
-                       const meta = faceitMeta[index];
-                       const lvl = lvlField.value;
-
-                       let badgeColor = 'bg-zinc-800 text-zinc-400 border-zinc-700';
-                       if (state === 'FETCHING...') badgeColor = 'bg-cyan-900/30 text-neon-cyan border-neon-cyan animate-pulse';
-                       else if (state === 'FAILED') badgeColor = 'bg-yellow-900/30 text-yellow-400 border-yellow-500';
-                       else if (state === 'SUCCESS') {
-                          const l = parseInt(lvl);
-                          if (l <= 3) badgeColor = 'bg-zinc-800 text-white border-zinc-500';
-                          else if (l <= 6) badgeColor = 'bg-green-900/30 text-green-400 border-green-500';
-                          else if (l <= 8) badgeColor = 'bg-yellow-900/30 text-yellow-500 border-yellow-500';
-                          else badgeColor = 'bg-red-900/30 text-red-500 border-red-500';
-                       }
-
-                       const fetchedAgo = meta ? Math.floor((Date.now() - meta.fetchedAt) / 1000) : 0;
-
-                       return (
-                         <div className="bg-black/40 border-t-2 border-white/10 rounded-t p-3 mt-2">
-                           {meta?.source === 'csgo' && (
-                             <div className="mb-3 flex items-center gap-2 bg-yellow-500/10 border border-yellow-500/30 px-3 py-1.5 rounded">
-                               <AlertTriangle className="w-3 h-3 text-yellow-500" />
-                               <span className="text-[9px] font-bold text-yellow-500 uppercase tracking-widest leading-none">
-                                 ELO pulled from CS:GO — may not reflect your CS2 rank.
-                               </span>
-                             </div>
-                           )}
-                           
-                           <div className="flex gap-2 sm:gap-4">
-                             <div className="flex flex-col flex-1">
-                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">FACEIT LVL</span>
-                                <div className={`px-2 py-1.5 flex items-center justify-center font-bold text-xs rounded border ${badgeColor}`}>
-                                   {state === 'FETCHING...' ? 'FETCHING' : (state === 'FAILED' ? 'LINK ERROR' : (lvl || 'AWAITING LINK'))}
-                                </div>
-                                {state === 'FAILED' && (
-                                  <select {...lvlField} className="mt-2 bg-black border border-yellow-500 text-yellow-400 text-xs px-2 py-1 outline-none w-full cursor-pointer focus:ring-0">
-                                     <option value="N/A">Select Lvl</option>
-                                     {[1,2,3,4,5,6,7,8,9,10].map(n => <option key={n} value={n}>{n}</option>)}
-                                  </select>
-                                )}
-                             </div>
-                             <div className="flex flex-col flex-1">
-                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">ELO</span>
-                                <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider">
-                                   {state === 'FETCHING...' ? '...' : (elo || 'N/A')}
-                                </div>
-                             </div>
-                             <div className="flex flex-col flex-1">
-                                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">CS2 RANK</span>
-                                <div className="flex-1 min-h-[30px] bg-black/50 border border-white/5 rounded flex items-center justify-center text-xs font-bold text-white tracking-wider text-center px-1">
-                                   {state === 'FETCHING...' ? '...' : (rank || 'Not Linked')}
-                                </div>
-                             </div>
-                           </div>
-                           
-                           {state === 'SUCCESS' && meta && (
-                             <div className="mt-2 text-[8px] text-zinc-600 font-bold uppercase tracking-[0.2em] text-right">
-                               Linked {fetchedAgo}s ago via Pixel-API
-                             </div>
-                           )}
-                         </div>
-                       )
-                    }}
-                  />
                 </div>
               </div>
             );

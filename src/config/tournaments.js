@@ -22,7 +22,7 @@ export const tournaments = [
     antiCheat: "Akros",
     playersPerTeam: 5,
     substitutes: { min: 0, max: 2 },
-    maps: ["Ancient", "Anubis", "Cache", "D2", "Inferno", "Mirage", "Nuke"],
+    maps: ["Ancient", "Anubis", "Cache", "Dust2", "Inferno", "Mirage", "Nuke"],
     sheetsEndpoint: "https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec",
     customVerification: [
       "MANDATORY ANTI-CHEAT — Our team acknowledges that Akros Anti-Cheat must be installed by all players.",
@@ -30,18 +30,18 @@ export const tournaments = [
       "VOICE COMMS — All players confirm to join Pixel Voice Channels during their matches.",
       "SCHEDULE — We confirm availability for the registration deadline and all tournament dates."
     ],
-    
+
     // Feature flags
     discordRequired: true,
     softBanEnabled: false,
     bracketsEnabled: false,
     supportsLogoUpload: true,
-    
+
     // Results
     tournamentComplete: false,
     champion: { name: "", tag: "", logo: "" },
     runnerUp: { name: "", tag: "", logo: "" },
-    
+
     scheduleUtc: [
       "2026-07-31T20:00:00+05:00",
       "2026-08-01T20:00:00+05:00",
@@ -80,17 +80,17 @@ export const tournaments = [
       "VOICE COMMS — All players confirm to join Pixel Voice Channels during their matches.",
       "SCHEDULE — We confirm availability for the registration deadline and all tournament dates."
     ],
-    
+
     // Feature flags for Chaos II
     discordRequired: true,
     softBanEnabled: true,
     bracketsEnabled: true,
     supportsLogoUpload: true,
-    
+
     // Results
     tournamentComplete: true,
-    champion: { 
-      name: "come mid", 
+    champion: {
+      name: "come mid",
       score: "2-1",
       players: ["SultaaN--", "-soulM8"],
       matchHistory: [
@@ -281,7 +281,7 @@ const defaultConfig = {
   supportsLogoUpload: false,
   champion: { name: "", tag: "", logo: "" },
   runnerUp: { name: "", tag: "", logo: "" },
-  
+
   // API Keys (empty strings = fallback UI logic is triggered)
   // API Keys (Environment Variables)
   faceitApiKey: import.meta.env.VITE_FACEIT_API_KEY || "",
@@ -290,7 +290,7 @@ const defaultConfig = {
   cloudinaryUploadPreset: import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET || "",
   discordStaffWebhook: import.meta.env.VITE_DISCORD_STAFF_WEBHOOK || "",
   adminPreviewKey: import.meta.env.VITE_ADMIN_PREVIEW_KEY || "pixel-palace-internal-2026",
-  
+
   playerFields: ["ign", "discord", "steam", "faceit"],
   scheduleUtc: [],
   entryFee: 0,

@@ -9,7 +9,7 @@ export const PlayerRole = z.enum(['CAPTAIN', 'PARTNER', 'STARTER', 'SUBSTITUTE']
 export const RosterPlayerSchema = z.object({
   player_id: z.string().uuid('player_id must be a valid UUID'),
   role: PlayerRole,
-  ign: z.string().min(1, 'IGN is required'),
+  ign: z.string().optional().default(''),
   discord: z.string().min(1, 'Discord handle is required'),
   steam: z.string().min(1, 'Steam URL is required'),
   steam64: z.string().optional().default(''),
