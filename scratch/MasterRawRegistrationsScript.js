@@ -470,9 +470,6 @@ function doGet(e) {
 
 function generateResponse(data, statusCode) {
   const output = ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
-  output.setHeader('Access-Control-Allow-Origin', '*');
-  output.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   return output;
 }
 
