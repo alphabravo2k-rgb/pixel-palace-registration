@@ -811,8 +811,15 @@ function ensureInviteCodes() {
     generateInviteCodes(6);
   }
 }
+
+function ensureInviteCodesSheet() {
+  const doc = SpreadsheetApp.getActiveSpreadsheet();
+  getOrCreateInviteCodesSheet_(doc);
+  ensureInviteCodes();
+}
+
 // Ensure codes exist on script load
-ensureInviteCodes();
+ensureInviteCodesSheet();
 
 function getLevelFromElo_(elo) {
   if (!elo || elo === "N/A" || elo === "Fetching...") return "N/A";
