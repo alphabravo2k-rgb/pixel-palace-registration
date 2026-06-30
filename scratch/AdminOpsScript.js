@@ -235,6 +235,10 @@ function syncRawToAdmin() {
   var adminSheet = getAdminSheet_();
   if (!rawSheet || !adminSheet) return;
 
+  // Automatically align any shifted rows in the raw sheet first
+  autoAlignRawSheet_(rawSheet);
+
+
   setupNewColumns();
 
   var rawData   = rawSheet.getDataRange().getValues();
@@ -966,5 +970,54 @@ function getRawTagMap_() {
   return map;
 }
 
+/**
+ * Automatically detects and fixes shifted rows in Sheet1 (Layout B).
+ * Shifted rows contain a "PP-" Team ID in column 0 (which has header Timestamp/Time Stamp).
+ */
+function autoAlignRawSheet_(rawSheet) {
+  try {
+    if (!rawSheet) return;
+    var range = rawSheet.getDataRange();
+    var values = range.getValues();
+    if (values.length < 2) return;
+
+    var headers = values[0];
+    var col0Header = (headers[0] || "").toString().trim().toLowerCase();
+    
+    // Check if the sheet header represents Layout B (no Team ID column)
+    if (col0Header === "time stamp" || col0Header === "timestamp") {
+      var updated = false;
+      
+      for (var i = 1; i < values.length; i++) {
+        var row = values[i];
+        var val0 = (row[0] || "").toString().trim();
+        
+        // If the row starts with "PP-", it was written with Team ID in Col A, which shifted it
+        if (val0.indexOf("PP-") === 0) {
+          var originalLength = row.length;
+          // Splice index 4 (Status) first
+          row.splice(4, 1);
+          // Splice index 0 (Team ID)
+          row.splice(0, 1);
+          // Pad to original length
+          while (row.length < originalLength) {
+            row.push("");
+          }
+          
+          // Write the aligned row back to the sheet
+          rawSheet.getRange(i + 1, 1, 1, originalLength).setValues([row]);
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        SpreadsheetApp.flush();
+      }
+    }
+  } catch (err) {
+    Logger.log("autoAlignRawSheet_ error: " + err);
+  }
+}
 
 // -- END OF FILE --------------------------------------------------------------
+

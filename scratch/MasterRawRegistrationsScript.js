@@ -20,8 +20,10 @@ function doPost(e) {
   try {
     const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
     ensureInviteCodesSheet(doc);
+    autoAlignRawSheet(doc);
     const payload = JSON.parse(e.postData.contents);
     const endpoint = payload.endpoint || "";
+
 
     // API Versioning Validation
     if (!endpoint.startsWith("/api/v1/")) {
@@ -216,8 +218,10 @@ function doPost(e) {
 function doGet(e) {
   try {
     const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
+    autoAlignRawSheet(doc);
     ensureInviteCodesSheet(doc);
     const params = e.parameter;
+
     const endpoint = params.endpoint || "";
 
     // API Versioning Enforcement
@@ -939,3 +943,55 @@ function getRawTagMap_(doc) {
   }
   return map;
 }
+
+/**
+ * Automatically detects and fixes shifted rows in Sheet1 (Layout B).
+ * Shifted rows contain a "PP-" Team ID in column 0 (which has header Timestamp/Time Stamp).
+ */
+function autoAlignRawSheet(doc) {
+  try {
+    const rawSheet = doc.getSheetByName("Sheet1");
+    if (!rawSheet) return;
+    const range = rawSheet.getDataRange();
+    const values = range.getValues();
+    if (values.length < 2) return;
+
+    const headers = values[0];
+    const col0Header = (headers[0] || "").toString().trim().toLowerCase();
+    
+    // Check if the sheet header represents Layout B (no Team ID column)
+    if (col0Header === "time stamp" || col0Header === "timestamp") {
+      let updated = false;
+      
+      for (let i = 1; i < values.length; i++) {
+        const row = values[i];
+        const val0 = (row[0] || "").toString().trim();
+        
+        // If the row starts with "PP-", it was written with Team ID in Col A, which shifted it
+        if (val0.startsWith("PP-")) {
+          const originalLength = row.length;
+          // Splice index 4 (Status) first
+          row.splice(4, 1);
+          // Splice index 0 (Team ID)
+          row.splice(0, 1);
+          // Pad to original length
+          while (row.length < originalLength) {
+            row.push("");
+          }
+          
+          // Write the aligned row back to the sheet
+          rawSheet.getRange(i + 1, 1, 1, originalLength).setValues([row]);
+          updated = true;
+        }
+      }
+      
+      if (updated) {
+        SpreadsheetApp.flush();
+        console.log("autoAlignRawSheet: Shifted rows corrected successfully.");
+      }
+    }
+  } catch (err) {
+    console.error("autoAlignRawSheet error: " + err);
+  }
+}
+
