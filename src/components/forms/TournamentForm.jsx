@@ -220,11 +220,31 @@ export const TournamentForm = ({ tournament, slots }) => {
 
   const handleSteamBlur = async (index, value) => {
     if (!value) return;
+
+    // Fast-path: if it's a /profiles/STEAMID64 URL, extract directly without any API call
+    const profileMatch = value.match(/\/profiles\/([0-9]{17})\/?/);
+    if (profileMatch) {
+      setValue(`players.${index}.steam64`, profileMatch[1]);
+      setSteamStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
+      return;
+    }
+
+    // Vanity /id/ URL — needs Steam API key which isn't available on the frontend
+    const vanityMatch = value.match(/\/id\/([^/?#]+)/);
+    if (vanityMatch && !tournament.steamApiKey) {
+      setSteamStatus((prev) => ({ ...prev, [index]: 'VANITY' }));
+      return;
+    }
+
     setSteamStatus((prev) => ({ ...prev, [index]: 'RESOLVING...' }));
     try {
       const steam64 = await resolveSteam64(value, tournament.steamApiKey);
-      setValue(`players.${index}.steam64`, steam64);
-      setSteamStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
+      if (steam64) {
+        setValue(`players.${index}.steam64`, steam64);
+        setSteamStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
+      } else {
+        setSteamStatus((prev) => ({ ...prev, [index]: 'VANITY' }));
+      }
     } catch (err) {
       setSteamStatus((prev) => ({ ...prev, [index]: 'FAILED' }));
     }
@@ -667,7 +687,7 @@ export const TournamentForm = ({ tournament, slots }) => {
                       <input
                         {...register(`players.${index}.steam`)}
                         type="url"
-                        placeholder="https://steamcommunity.com/id/yourname"
+                        placeholder="https://steamcommunity.com/profiles/76561198..."
                         className="input-ghost text-xs"
                         onBlur={(e) => handleSteamBlur(index, e.target.value)}
                       />
@@ -677,14 +697,15 @@ export const TournamentForm = ({ tournament, slots }) => {
                     {steamStatus[index] === 'RESOLVING...' && <span className="text-zinc-400 text-[9px] font-bold font-body tracking-wider">RESOLVING ID...</span>}
                     {steamStatus[index] === 'SUCCESS' && <span className="text-neon-cyan text-[9px] font-bold font-body tracking-wider">STEAM ID VERIFIED ✓ ({getValues(`players.${index}.steam64`)})</span>}
                     {steamStatus[index] === 'FAILED' && <span className="text-red-500 text-[9px] font-bold font-body tracking-wider">RESOLUTION FAILED — Enter ID manually below</span>}
+                    {steamStatus[index] === 'VANITY' && <span className="text-yellow-400 text-[9px] font-bold font-body tracking-wider">⚠ CUSTOM URL — Use your /profiles/76561... URL, or enter Steam64 ID below</span>}
                     </div>
                     
-                    {steamStatus[index] === 'FAILED' && (
+                    {(steamStatus[index] === 'FAILED' || steamStatus[index] === 'VANITY') && (
                         <input
                            {...register(`players.${index}.steam64`)}
                            type="text"
-                           placeholder="Steam64 ID (17 digits)"
-                           className="input-ghost mt-1 border border-red-500/30 font-mono text-xs text-red-100"
+                           placeholder="Steam64 ID (17 digits) — find it at steamidfinder.com"
+                           className={`input-ghost mt-1 font-mono text-xs ${steamStatus[index] === 'VANITY' ? 'border border-yellow-500/30 text-yellow-100' : 'border border-red-500/30 text-red-100'}`}
                         />
                     )}
                   </div>

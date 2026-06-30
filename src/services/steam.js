@@ -24,10 +24,9 @@ export const resolveSteam64 = async (profileUrl, steamApiKey = '') => {
     if (idMatch) {
       const vanityName = idMatch[1];
 
-      // If we don't have an API key, we have to abort resolution
+      // If we don't have an API key, skip resolution — caller handles fallback
       if (!steamApiKey) {
-        console.warn('Steam API Key missing: Cannot resolve Vanity URL automatically.');
-        throw new Error('NO_API_KEY');
+        return null;  // Signal: vanity URL but no key — use manual fallback
       }
 
       // External API fetch constraint routed through a robust CORS proxy
