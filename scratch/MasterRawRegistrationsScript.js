@@ -11,7 +11,7 @@ const ADMIN_SECRET = ""; // Optional gateway secret matching VITE_GATEWAY_AUTH_S
 // Google Drive folder where team logos are stored.
 // To create: Drive → New Folder → name it "PP_Logos" → share as Anyone with link → Viewer
 // Then paste the folder ID from the URL here:
-const LOGO_FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE";
+const LOGO_FOLDER_ID = "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e";
 
 /**
  * RECEIVE REGISTRATIONS (POST)
@@ -661,3 +661,36 @@ function syncStatusToAdmin(teamName, newStatus) {
     }
   });
 }
+
+/**
+ * Generates a set of invite codes and appends them to the InviteCodes sheet.
+ * Each code follows the pattern PP-CCII-XXXX where XXXX is a random 4‑character alphanumeric string.
+ *
+ * @param {number} count - Number of codes to generate (e.g., 6).
+ */
+function generateInviteCodes(count) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('InviteCodes');
+  if (!sheet) return;
+  const prefix = 'PP-CCII-';
+  const codes = [];
+  for (let i = 0; i < count; i++) {
+    const suffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    codes.push([prefix + suffix, '', '']); // VIP Codes | Used By | Reference/Allocation
+  }
+  // Append after header row (row 1)
+  sheet.getRange(sheet.getLastRow() + 1, 1, codes.length, 3).setValues(codes);
+}
+
+/**
+ * If the InviteCodes sheet has only the header row, generate 6 initial codes.
+ */
+function ensureInviteCodes() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('InviteCodes');
+  if (!sheet) return;
+  const data = sheet.getDataRange().getValues();
+  if (data.length <= 1) { // only header
+    generateInviteCodes(6);
+  }
+}
+// Ensure codes exist on script load
+ensureInviteCodes();
