@@ -258,12 +258,13 @@ function syncRawToAdmin() {
 
   var roleTags, roles;
   if (PLAYERS_PER_TEAM === 3) {
-    roleTags = [" (C)", " (Partner)", " (Sub)"];
-    roles    = ["Captain", "Partner", "Substitute"];
+    roleTags = [" (C)", "", " (Sub)"];
+    roles    = ["Captain", "Player 2", "Substitute"];
   } else {
-    roleTags = [" (C)", " (Partner)", " (Partner)", " (Partner)", " (Partner)", " (Sub)", " (Sub)"];
-    roles    = ["Captain", "Partner", "Partner", "Partner", "Partner", "Substitute", "Substitute"];
+    roleTags = [" (C)", "", "", "", "", " (Sub)", " (Sub)"];
+    roles    = ["Captain", "Player 2", "Player 3", "Player 4", "Player 5", "Substitute", "Substitute"];
   }
+
   var added    = 0;
 
 

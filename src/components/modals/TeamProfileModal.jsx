@@ -1,10 +1,12 @@
 import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
+
 
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
 export const TeamProfileModal = ({ team, onClose }) => {
   useKeyboardShortcut('Escape', onClose);
+  const [logoFailed, setLogoFailed] = useState(false);
   if (!team) return null;
 
   // ── Status configuration ───────────────────────────────────────────────
@@ -45,10 +47,10 @@ export const TeamProfileModal = ({ team, onClose }) => {
           <div className="w-32 h-32 rounded-xl bg-black border-2 border-white/10 p-2 shrink-0 shadow-2xl relative group">
             <div className="absolute inset-0 bg-neon-cyan/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl blur-xl" />
             <img 
-              src={team.logo && team.logo.startsWith('http') ? team.logo : 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'} 
+              src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo} 
               alt={team.name} 
-              className="w-full h-full object-contain relative z-10"
-              onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }}
+              className={`w-full h-full object-contain relative z-10 ${logoFailed ? 'opacity-20 grayscale' : ''}`}
+              onError={() => setLogoFailed(true)}
             />
           </div>
           

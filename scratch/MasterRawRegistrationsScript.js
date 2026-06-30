@@ -7,10 +7,6 @@
 
 const SPREADSHEET_ID = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc";
 const ADMIN_SECRET = ""; // Optional gateway secret matching VITE_GATEWAY_AUTH_SECRET
-
-// Google Drive folder where team logos are stored.
-// To create: Drive → New Folder → name it "PP_Logos" → share as Anyone with link → Viewer
-// Then paste the folder ID from the URL here:
 const LOGO_FOLDER_ID = "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e";
 
 /**
@@ -23,7 +19,6 @@ function doPost(e) {
     autoAlignRawSheet(doc);
     const payload = JSON.parse(e.postData.contents);
     const endpoint = payload.endpoint || "";
-
 
     // API Versioning Validation
     if (!endpoint.startsWith("/api/v1/")) {
@@ -221,7 +216,6 @@ function doGet(e) {
     autoAlignRawSheet(doc);
     ensureInviteCodesSheet(doc);
     const params = e.parameter;
-
     const endpoint = params.endpoint || "";
 
     // API Versioning Enforcement
@@ -242,29 +236,26 @@ function doGet(e) {
       if (inviteSheet && codeToCheck) {
         const inviteData = inviteSheet.getDataRange().getValues();
         for (let i = 1; i < inviteData.length; i++) {
-          const code     = (inviteData[i][0] || "").toString().trim();
-          const tid      = (inviteData[i][1] || "").toString().trim();
-          const maxUses  = parseInt(inviteData[i][3] || "999") || 999;
-          const timesUsed = parseInt(inviteData[i][4] || "0") || 0;
-          if (code.toLowerCase() === codeToCheck.toLowerCase() &&
-              (!tid || tid === tournamentId) &&
-              timesUsed < maxUses) {
+          const code = (inviteData[i][0] || "").toString().trim();
+          if (code.toLowerCase() === codeToCheck.toLowerCase()) {
             isValid = true;
-            slotType = (inviteData[i][2] || "INVITE").toString().trim();
+            slotType = "INVITE";
             break;
           }
         }
       }
-
-      // 2. Fallback: check legacy "Codes" sheet (unclaimed code = claimed field empty)
+      
+      // 2. Check legacy Codes sheet if not found
       if (!isValid) {
         const codeSheet = doc.getSheetByName("Codes");
         if (codeSheet && codeToCheck) {
           const codeData = codeSheet.getDataRange().getValues();
           for (let i = 1; i < codeData.length; i++) {
-            if (codeData[i][0] == codeToCheck && (!codeData[i][1] || codeData[i][1].toString().trim() === "")) {
-              isValid = true;
-              slotType = "INVITE";
+            if (codeData[i][0] == codeToCheck) {
+              if (!codeData[i][1] || codeData[i][1].toString().trim() === "") {
+                isValid = true;
+                slotType = "INVITE";
+              }
               break;
             }
           }
@@ -348,48 +339,58 @@ function doGet(e) {
         const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
         const data = adminSheet.getDataRange().getValues();
         
-        const rawTagMap = getRawTagMap_(doc);
+        const rawMetadataMap = getRawMetadataMap_(doc);
         const teams = [];
         
-        // v3 layout for Chaos II: 3 rows per team, Team Name at Col B (index 1)
-        // CC2 layout: 7 rows per team, Team Name at Col K (index 10)
+        // Both admin sheets now use the 33-column v3 layout
         const isChaosII = (adminDocId === "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E");
         const rowsPerTeam   = isChaosII ? 3 : 7;
-        const teamNameIdx   = isChaosII ? 1  : 10;  // Col B or Col K
-        const statusIdx     = isChaosII ? 14 : 12;  // Col O or Col M
-        const regionIdx     = isChaosII ? 4  : 1;   // Col E or Col B
-        const logoColNum    = isChaosII ? 4  : 3;   // Col D or Col C (1-indexed for getFormula)
-        const avgEloIdx     = isChaosII ? 13 : 11;  // Col N or Col L
-        const seedIdx       = isChaosII ? 15 : 13;  // Col P or Col N
-        const remarksIdx    = isChaosII ? 16 : 14;  // Col Q or Col O
-        // Player columns (same offset for both since player data starts at F(5))
-        const pNameIdx      = isChaosII ? 5  : 5;   // Col F
-        const discordIdx    = isChaosII ? 6  : 4;   // Col G (v3) or Col E (v2)
-        const steamIdx      = isChaosII ? 7  : 3;   // Col H (v3) or Col D (v2)
-        const faceitIdx     = isChaosII ? 11 : 6;   // Col L (v3) or Col G (v2)
-        const liveEloIdx    = isChaosII ? 12 : 7;   // Col M (v3) or Col H (v2)
+        const teamNameIdx   = 1;   // Col B (index 1)
+        const statusIdx     = 14;  // Col O (index 14)
+        const regionIdx     = 4;   // Col E (index 4)
+        const logoColNum    = 4;   // Col D (index 3, 1-indexed is 4 for getFormula)
+        const avgEloIdx     = 13;  // Col N (index 13)
+        const seedIdx       = 15;  // Col P (index 15)
+        const remarksIdx    = 16;  // Col Q (index 16)
+        
+        // Player columns
+        const pNameIdx      = 5;   // Col F (index 5)
+        const discordIdx    = 6;   // Col G (index 6)
+        const steamIdx      = 7;   // Col H (index 7)
+        const faceitIdx     = 11;  // Col L (index 11)
+        const liveEloIdx    = 12;  // Col M (index 12)
         
         for (let i = 1; i < data.length; i += rowsPerTeam) {
           const teamName = (data[i][teamNameIdx] || "").toString().trim();
           if (!teamName || teamName === "Team Name") continue;
           
           const status = (data[i][statusIdx] || "").toString().trim().toUpperCase();
-          // Only hide permanently rejected/disqualified teams
           if (status === "REJECTED" || status === "DISQUALIFIED" || status === "") continue;
           
           const region = (data[i][regionIdx] || "").toString().trim();
           
-          // Logo URL: extract from =IMAGE("url") formula
-          let logoUrl = "";
-          try {
-            const logoFormula = adminSheet.getRange(i + 1, logoColNum).getFormula();
-            if (logoFormula) {
-              const match = logoFormula.match(/=IMAGE\("([^"]+)"\)/i);
-              if (match) logoUrl = match[1];
-            }
-          } catch(e) {}
+          const meta = rawMetadataMap[teamName.toLowerCase()] || {};
+          
+          let logoUrl = meta.logo || "";
           if (!logoUrl) {
-            logoUrl = (data[i][logoColNum - 1] || "").toString().trim();
+            try {
+              const logoFormula = adminSheet.getRange(i + 1, logoColNum).getFormula();
+              if (logoFormula) {
+                const match = logoFormula.match(/=IMAGE\(['"]([^'"]+)['"]/i);
+                if (match) logoUrl = match[1];
+              }
+            } catch(e) {}
+            if (!logoUrl) {
+              logoUrl = (data[i][logoColNum - 1] || "").toString().trim();
+            }
+          }
+          
+          // Bypass Google Drive 403 embed blocks
+          if (logoUrl && logoUrl.includes("drive.google.com")) {
+            const driveIdMatch = logoUrl.match(/id=([a-zA-Z0-9_-]{25,})/) || logoUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+            if (driveIdMatch) {
+              logoUrl = "https://lh3.googleusercontent.com/d/" + driveIdMatch[1];
+            }
           }
           
           const averageElo = parseInt(data[i][avgEloIdx]) || 0;
@@ -418,18 +419,28 @@ function doGet(e) {
             }
             
             if (pName && pName !== "" && pName !== "N/A") {
-              let role = "Member";
+              let role = "Player";
               let cleanName = pName;
-              if (pName.endsWith(" (C)")) {
+              
+              if (pName.endsWith(" ©")) {
+                role = "Captain";
+                cleanName = pName.replace(" ©", "");
+              } else if (pName.endsWith(" (C)")) {
                 role = "Captain";
                 cleanName = pName.replace(" (C)", "");
               } else if (pName.endsWith(" (Sub)")) {
                 role = "Substitute";
                 cleanName = pName.replace(" (Sub)", "");
-              } else if (p === 0) {
+              } else if (pName.endsWith(" (Partner)")) {
+                cleanName = pName.replace(" (Partner)", "");
+              }
+              
+              if (p === 0) {
                 role = "Captain";
-              } else if (p >= 5) {
-                role = "Substitute";
+              } else if (rowsPerTeam === 3) {
+                role = (p === 2) ? "Substitute" : "Player 2";
+              } else {
+                role = (p >= 5) ? "Substitute" : "Player " + (p + 1);
               }
               
               roster.push({
@@ -454,7 +465,7 @@ function doGet(e) {
             ? "WAITLISTED"
             : "PENDING REVIEW";
             
-          const tag = rawTagMap[teamName.toLowerCase()] || teamName.substring(0, 4).toUpperCase();
+          const tag = meta.tag || (data[i][2] || "").toString().trim() || teamName.substring(0, 4).toUpperCase();
           
           teams.push({
             name: teamName,
@@ -488,7 +499,6 @@ function doGet(e) {
       const firstDataRow = isHeaderRow_(data[0]) ? 1 : 0;
 
       let invite = 0, open = 0;
-      // Also check InviteCodes sheet for valid codes
       const inviteSheet = doc.getSheetByName("InviteCodes");
       const validCodes = new Set();
       if (inviteSheet) {
@@ -507,24 +517,67 @@ function doGet(e) {
         if (tid !== tournamentId) continue;
         if (status === "REJECTED") continue;
 
-        // Get the invite code used — it's the last column (VIP Code Used)
         const inviteCode = (row[cols.inviteCode] || "").toString().trim();
-        // Count as invite slot only if the code used was a valid/registered invite code
-        if (inviteCode && validCodes.size > 0 && validCodes.has(inviteCode.toLowerCase())) {
-          invite++;
-        } else if (inviteCode && validCodes.size === 0) {
-          // Fallback: if no InviteCodes sheet, any code = invite slot
+        if (inviteCode && validCodes.has(inviteCode.toLowerCase())) {
           invite++;
         } else {
           open++;
         }
       }
+
       return generateResponse({ inviteConfirmed: invite, openConfirmed: open });
     }
 
-    return generateResponse({ "error": "Unknown Endpoint" }, 404);
-  } catch(error) {
-    return generateResponse({ "error": error.toString() });
+    // ── Check Bans ──────────────────────────────────────────────────────────
+    if (endpoint === "/api/v1/checkBans") {
+      const steamIdsStr = params.steamIds || "";
+      const steamIds = steamIdsStr.split(',').map(s => s.trim()).filter(Boolean);
+      if (steamIds.length === 0) return generateResponse({ hasBans: false, details: [] });
+
+      const banSheet = doc.getSheetByName("SoftBans");
+      if (!banSheet) return generateResponse({ hasBans: false, details: [] });
+
+      const banData = banSheet.getDataRange().getValues();
+      const bannedSteamIds = new Set();
+      for (let i = 1; i < banData.length; i++) {
+        const id = (banData[i][0] || "").toString().trim();
+        if (id) bannedSteamIds.add(id);
+      }
+
+      const found = [];
+      steamIds.forEach(id => {
+        if (bannedSteamIds.has(id)) {
+          found.push(id);
+        }
+      });
+
+      return generateResponse({ hasBans: found.length > 0, details: found });
+    }
+
+    // ── Get Bracket ─────────────────────────────────────────────────────────
+    if (endpoint === "/api/v1/getBracket") {
+      const settingsSheet = doc.getSheetByName("Settings");
+      let bracketUrl = "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png";
+      let schedule = ["Quarterfinals: 18:00 GST", "Semifinals: 20:00 GST", "Grand Finals: 22:00 GST"];
+
+      if (settingsSheet) {
+        const sData = settingsSheet.getDataRange().getValues();
+        for (let i = 1; i < sData.length; i++) {
+          const key = (sData[i][0] || "").toString().trim().toLowerCase();
+          const val = (sData[i][1] || "").toString().trim();
+          if (key === "bracket_url" && val) bracketUrl = val;
+          if (key === "schedule" && val) {
+            schedule = val.split(',').map(s => s.trim());
+          }
+        }
+      }
+
+      return generateResponse({ bracketUrl: bracketUrl, schedule: schedule });
+    }
+
+    return generateResponse({ error: "NOT_FOUND: Endpoint " + endpoint + " not found." }, 404);
+  } catch (error) {
+    return generateResponse({ error: error.toString() }, 500);
   }
 }
 
@@ -533,102 +586,40 @@ function generateResponse(data, statusCode) {
   return output;
 }
 
-/**
- * Detects raw sheet column positions from the header row.
- * Works for both Layout A (with Team ID column) and Layout B (without).
- */
-function getRawColMap_(headerRow) {
-  var map = {};
-  for (var h = 0; h < headerRow.length; h++) {
-    var k = headerRow[h].toString().trim().toLowerCase()
-              .replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
-    map[k] = h;
-  }
-  var get = function(keys) {
-    for (var x = 0; x < keys.length; x++) {
-      if (map[keys[x]] !== undefined) return map[keys[x]];
-    }
-    return undefined;
-  };
-  
-  // Find first player column (P1 Discord) to set the base index
-  let playerBase = get(['p1_discord', 'p1discord', 'p1_discord_id', 'p1_discord_username']);
-  if (playerBase === undefined) {
-    // Default fallback if not found
-    playerBase = 9;
-  }
-  
-  return {
-    teamId:     get(['team_id', 'teamid']),
-    timestamp:  get(['timestamp', 'time_stamp', 'timestamp_id']),
-    tournament: get(['tournament_id', 'tournament', 'tournamentid']),
-    subId:      get(['submission_id', 'submissionid']),
-    status:     get(['status', 'registration_status']),
-    teamName:   get(['team_name', 'teamname']),
-    teamTag:    get(['team_tag', 'teamtag']),
-    region:     get(['region']),
-    logo:       get(['logo_url', 'logo_url_image', 'logo']),
-    playerBase: playerBase,
-    inviteCode: get(['vip_code_used', 'vipcode', 'vip_code'])
-  };
-}
-
-/**
- * Returns true if the given row looks like a header row.
- */
 function isHeaderRow_(row) {
   var first = (row[0] || "").toString().trim().toLowerCase();
-  return first === "team id" || first === "timestamp" || first === "team_id";
+  return first === "time stamp" || first === "timestamp" || first === "team id";
 }
 
-/**
- * Creates or returns the InviteCodes sheet.
- * Structure: Code | Tournament ID | Slot Type (INVITE/OPEN) | Max Uses | Times Used | Notes
- */
-function getOrCreateInviteCodesSheet_(doc) {
-  var sheet = doc.getSheetByName("InviteCodes");
-  if (!sheet) {
-    sheet = doc.insertSheet("InviteCodes");
-    sheet.appendRow(["Code", "Tournament ID", "Slot Type", "Max Uses", "Times Used", "Notes"]);
-    sheet.getRange(1, 1, 1, 6).setFontWeight("bold").setBackground("#1a1a2e").setFontColor("#00f0ff");
-    sheet.setFrozenRows(1);
-    sheet.setColumnWidth(1, 180);
-    sheet.setColumnWidth(2, 160);
-    sheet.setColumnWidth(3, 120);
-    // Seed with a demo code for community-cup-2
-    sheet.appendRow(["PP-INVITE-DEMO", "community-cup-2", "INVITE", 1, 0, "Demo invite code — replace with real codes"]);
-  }
-  return sheet;
+function ensureInviteCodesSheet(doc) {
+  ensureInviteCodes(doc);
 }
 
-/**
- * Triggered on edits to check approvals / rejections and enforce state transitions
- */
 function onEdit(e) {
-  const range = e.range;
-  const sheet = range.getSheet();
+  if (!e) return;
+  const range  = e.range;
+  const sheet  = range.getSheet();
+  const doc    = sheet.getParent();
   const sheetName = sheet.getName();
-  
+
+  // Audit and State Lock for Raw Sheet status transitions
   if (sheetName === "Sheet1") {
-    const col = range.getColumn();
-    
-    // Column E (index 5) is the Status column (after inserting Team ID column)
-    if (col === 5) {
-      const oldValue = e.oldValue ? String(e.oldValue).trim().toUpperCase() : "";
-      const newValue = e.value ? String(e.value).trim().toUpperCase() : "";
-      
-      if (oldValue === newValue) return;
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastRow()).getValues()[0];
+    const cols = getRawColMap_(headers);
+    if (cols.status !== undefined && range.getColumn() === (cols.status + 1)) {
+      const oldValue = e.oldValue ? e.oldValue.toString().trim().toUpperCase() : "";
+      const newValue = range.getValue().toString().trim().toUpperCase();
       
       const validTransitions = {
-        "PENDING": ["UNDER_REVIEW", "REJECTED"],
-        "UNDER_REVIEW": ["APPROVED", "REJECTED"],
-        "APPROVED": ["ROSTER_LOCKED", "REJECTED"],
-        "ROSTER_LOCKED": ["CHECKED_IN", "REJECTED"],
-        "CHECKED_IN": ["QUALIFIED", "ELIMINATED"],
-        "QUALIFIED": ["CHAMPION", "ELIMINATED"],
-        "REJECTED": [],
-        "ELIMINATED": [],
-        "CHAMPION": []
+        "PENDING": ["APPROVED", "REJECTED", "WAITLISTED"],
+        "APPROVED": ["ROSTER_LOCKED", "REJECTED", "DISQUALIFIED"],
+        "ROSTER_LOCKED": ["CHECKED_IN", "APPROVED", "DISQUALIFIED"],
+        "CHECKED_IN": ["ELIMINATED", "DISQUALIFIED", "CHAMPION"],
+        "WAITLISTED": ["APPROVED", "REJECTED"],
+        "REJECTED": ["PENDING"],
+        "DISQUALIFIED": [],
+        "CHAMPION": [],
+        "ELIMINATED": []
       };
       
       const currentOld = oldValue || "PENDING";
@@ -645,7 +636,7 @@ function onEdit(e) {
       logAuditEntry(sheetName, range.getRow(), "STATUS_CHANGE", oldValue, newValue);
 
       // Real-time status sync back to Admin Operations Sheet
-      const teamName = sheet.getRange(range.getRow(), 6).getValue().toString().trim();
+      const teamName = sheet.getRange(range.getRow(), cols.teamName + 1).getValue().toString().trim();
       if (teamName) {
         syncStatusToAdmin(teamName, newValue);
       }
@@ -675,7 +666,6 @@ function appendToAdminSheet(payload, teamId) {
   const tournamentId = payload.tournament_id || "community-cup-2";
   let adminSheetId = "";
   let maxPlayers = 7;
-  let isChaos = false;
   
   if (tournamentId === "community-cup-2") {
     adminSheetId = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
@@ -683,7 +673,6 @@ function appendToAdminSheet(payload, teamId) {
   } else if (tournamentId === "chaos-ii") {
     adminSheetId = "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E";
     maxPlayers = 3;
-    isChaos = true;
   } else {
     return; // Fallback or unsupported tournament
   }
@@ -694,7 +683,7 @@ function appendToAdminSheet(payload, teamId) {
     
     const adminData = adminSheet.getDataRange().getValues();
     const existingTeams = new Set();
-    const nameIdx = isChaos ? 1 : 10; // Chaos II uses Col B (index 1), CC2 uses Col K (index 10)
+    const nameIdx = 1; // Both now use Col B (index 1) under the 33-column layout
     for (let i = 1; i < adminData.length; i++) {
       if (adminData[i][nameIdx]) existingTeams.add(adminData[i][nameIdx].toString().toLowerCase().trim());
     }
@@ -724,91 +713,52 @@ function appendToAdminSheet(payload, teamId) {
     }
     const averageElo = eloCount > 0 ? Math.round(eloSum / eloCount) : 0;
 
-    if (isChaos) {
-      // Chaos II format (33 columns structure)
-      const roleTags = [" ©", " (Partner)", " (Sub)"];
-      const roles = ["Captain", "Partner", "Substitute"];
-      
-      for (let p = 0; p < 3; p++) {
-        const pNum = p + 1;
-        const discord = payload[`p${pNum}Discord`] || "N/A";
-        const steam = payload[`p${pNum}Steam`] || "N/A";
-        const faceit = payload[`p${pNum}Faceit`] || "N/A";
-        const pName = faceit
-          ? faceit.replace(/\/$/, "").split("/").pop() + roleTags[p]
-          : (discord ? discord + roleTags[p] : "N/A");
-          
-        const r = new Array(33).fill("");
-        r[0]  = p === 0 ? sn : "";                     // Col A (1): S.N
-        r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
-        r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
-        r[3]  = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
-        r[4]  = p === 0 ? region : "";                 // Col E (5): Region
-        r[5]  = pName;                                 // Col F (6): Player Name
-        r[6]  = discord || "N/A";                      // Col G (7): Discord
-        r[7]  = steam || "N/A";                        // Col H (8): Steam URL
-        r[8]  = "";                                    // Col I (9): Joined Discord
-        r[9]  = "";                                    // Col J (10): Role Issued
-        r[10] = "";                                    // Col K (11): Private VC
-        r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
-        r[12] = "⏳";                                  // Col M (13): Live ELO
-        r[13] = p === 0 ? "⏳" : "";                    // Col N (14): Avg ELO
-        r[14] = p === 0 ? "Pending" : "";              // Col O (15): Reg. Status
-        r[15] = p === 0 ? "TBD" : "";                  // Col P (16): Team Seed
-        r[16] = "";                                    // Col Q (17): Remarks
-        r[17] = roles[p];                              // Col R (18): Role
-        r[32] = p === 0 ? "⏳" : "";                    // Col AG (33): Risk Flag
+    // Both tournaments now use the 33-column layout (maxPlayers = 3 or 7)
+    const roleTags = maxPlayers === 3
+      ? [" ©", "", " (Sub)"]
+      : [" ©", "", "", "", "", " (Sub)", " (Sub)"];
+    const roles = maxPlayers === 3
+      ? ["Captain", "Player 2", "Substitute"]
+      : ["Captain", "Player 2", "Player 3", "Player 4", "Player 5", "Substitute", "Substitute"];
+    
+    for (let p = 0; p < maxPlayers; p++) {
+      const pNum = p + 1;
+      const discord = payload[`p${pNum}Discord`] || "N/A";
+      const steam = payload[`p${pNum}Steam`] || "N/A";
+      const faceit = payload[`p${pNum}Faceit`] || "N/A";
+      const pName = faceit && faceit !== "N/A"
+        ? faceit.replace(/\/$/, "").split("/").pop() + roleTags[p]
+        : (discord && discord !== "N/A" ? discord + roleTags[p] : "N/A");
         
-        rowsToAppend.push(r);
-      }
+      const r = new Array(33).fill("");
+      r[0]  = p === 0 ? sn : "";                     // Col A (1): S.N
+      r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
+      r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
+      r[3]  = p === 0 ? (logoUrl ? `=IMAGE("${logoUrl}")` : "") : ""; // Col D (4): Logo
+      r[4]  = p === 0 ? region : "";                 // Col E (5): Region
+      r[5]  = pName;                                 // Col F (6): Player Name
+      r[6]  = discord || "N/A";                      // Col G (7): Discord
+      r[7]  = steam || "N/A";                        // Col H (8): Steam URL
+      r[8]  = "";                                    // Col I (9): Joined Discord
+      r[9]  = "";                                    // Col J (10): Role Issued
+      r[10] = "";                                    // Col K (11): Private VC
+      r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
+      r[12] = "⏳";                                  // Col M (13): Live ELO
+      r[13] = p === 0 ? "⏳" : "";                    // Col N (14): Avg ELO
+      r[14] = p === 0 ? "Pending" : "";              // Col O (15): Reg. Status
+      r[15] = p === 0 ? "TBD" : "";                  // Col P (16): Team Seed
+      r[16] = "";                                    // Col Q (17): Remarks
+      r[17] = roles[p];                              // Col R (18): Role
+      r[32] = p === 0 ? "⏳" : "";                    // Col AG (33): Risk Flag
       
-      adminSheet.getRange(startRowIndex, 1, 3, 33).setValues(rowsToAppend);
-      [1, 2, 3, 4, 5, 14, 15, 16, 17, 33].forEach(col => {
-         adminSheet.getRange(startRowIndex, col, 3, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
-      });
-      adminSheet.setRowHeightsForced(startRowIndex, 3, 28);
-      
-    } else {
-      // Community Cup 2 format (15 columns structure)
-      let seed = averageElo <= 1200 ? "LOW" : averageElo <= 1800 ? "MID" : averageElo <= 2200 ? "NORMAL" : averageElo <= 2500 ? "AVG" : averageElo <= 3000 ? "GOOD" : "BEST";
-
-      for (let p = 0; p < 7; p++) {
-        const pNum = p + 1;
-        const discord = payload[`p${pNum}Discord`] || "N/A";
-        const steam = payload[`p${pNum}Steam`] || "N/A";
-        const faceit = payload[`p${pNum}Faceit`] || "N/A";
-        
-        const pRole = p === 0 ? " ©" : (p >= 5 ? " (Sub)" : "");
-        const pName = faceit !== "N/A" ? faceit.split('/').filter(Boolean).pop() + pRole : discord + pRole;
-        
-        const r = new Array(15).fill("");
-        r[0]  = p === 0 ? sn : "";                     // Col A: S.N
-        r[1]  = p === 0 ? region : "";                 // Col B: Region
-        r[2]  = p === 0 && logoUrl ? `=IMAGE("${logoUrl}")` : ""; // Col C: Logo URL
-        r[3]  = steam || "N/A";                        // Col D: Steam Profile
-        r[4]  = discord || "N/A";                      // Col E: Discord ID
-        r[5]  = pName;                                 // Col F: Player Name
-        r[6]  = faceit || "N/A";                       // Col G: Faceit Profile
-        r[7]  = payload[`p${pNum}FaceitElo`] || "N/A"; // Col H: Live FACE IT ELO
-        r[8]  = "";                                    // Col I: Joined Discord
-        r[9]  = "";                                    // Col J: Role Issued
-        r[10] = p === 0 ? teamName : "";               // Col K: Team Name
-        r[11] = p === 0 ? averageElo : "";             // Col L: AVERAGE ELO
-        r[12] = p === 0 ? "PENDING" : "";              // Col M: Registration status
-        r[13] = p === 0 ? seed : "";                   // Col N: Team Seed
-        r[14] = "";                                    // Col O: Admin Remarks
-        rowsToAppend.push(r);
-      }
-      
-      adminSheet.getRange(startRowIndex, 1, 7, 15).setValues(rowsToAppend);
-      [1, 2, 3, 11, 12, 13, 14, 15].forEach(col => {
-         adminSheet.getRange(startRowIndex, col, 7, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
-      });
-      
-      const seedRange = adminSheet.getRange(startRowIndex, 14);
-      seedRange.setBackground(seed==="LOW"?"#d9d9d9":seed==="MID"?"#b6d7a8":seed==="NORMAL"?"#ffe599":seed==="AVG"?"#f9cb9c":seed==="GOOD"?"#00ffff":"#ff00ff")
-               .setFontWeight("bold");
+      rowsToAppend.push(r);
     }
+    
+    adminSheet.getRange(startRowIndex, 1, maxPlayers, 33).setValues(rowsToAppend);
+    [1, 2, 3, 4, 5, 14, 15, 16, 17, 33].forEach(col => {
+       adminSheet.getRange(startRowIndex, col, maxPlayers, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
+    });
+    adminSheet.setRowHeightsForced(startRowIndex, maxPlayers, 28);
              
   } catch (err) {
     console.error("Failed to append to admin sheet:", err);
@@ -820,8 +770,8 @@ function appendToAdminSheet(payload, teamId) {
  */
 function syncStatusToAdmin(teamName, newStatus) {
   const adminSheets = [
-    { id: "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E", teamNameIdx: 10, statusCol: 13 }, // CC2 (Col K, Col M)
-    { id: "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E", teamNameIdx: 1,  statusCol: 15 }  // Chaos II v3 (Col B, Col O)
+    { id: "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E", teamNameIdx: 1, statusCol: 15 }, // CC2 (Col B, Col O)
+    { id: "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E", teamNameIdx: 1, statusCol: 15 }  // Chaos II (Col B, Col O)
   ];
   
   adminSheets.forEach(cfg => {
@@ -846,13 +796,6 @@ function syncStatusToAdmin(teamName, newStatus) {
   });
 }
 
-/**
- * Generates a set of invite codes and appends them to the InviteCodes sheet.
- * Each code follows the pattern PP-CCII-XXXX where XXXX is a random 4‑character alphanumeric string.
- *
- * @param {object} doc - Spreadsheet object.
- * @param {number} count - Number of codes to generate (e.g., 6).
- */
 function generateInviteCodes(doc, count) {
   const sheet = doc.getSheetByName('InviteCodes');
   if (!sheet) return;
@@ -866,44 +809,22 @@ function generateInviteCodes(doc, count) {
   sheet.getRange(sheet.getLastRow() + 1, 1, codes.length, 3).setValues(codes);
 }
 
-/**
- * If the InviteCodes sheet has only the header row, generate 6 initial codes.
- */
 function ensureInviteCodes(doc) {
-  const sheet = doc.getSheetByName('InviteCodes');
-  if (!sheet) return;
-  const data = sheet.getDataRange().getValues();
-  if (data.length <= 1) { // only header
+  var sheet = doc.getSheetByName("InviteCodes");
+  if (!sheet) {
+    sheet = doc.insertSheet("InviteCodes");
+    sheet.appendRow(["Access Code", "Claimed By", "Allocation Reference"]);
+    sheet.setFrozenRows(1);
     generateInviteCodes(doc, 6);
   }
 }
 
-function getOrCreateInviteCodesSheet_(doc) {
-  let sheet = doc.getSheetByName('InviteCodes');
-  if (!sheet) {
-    sheet = doc.insertSheet('InviteCodes');
-    sheet.appendRow(['Code', 'TournamentId', 'SlotType', 'MaxUses', 'TimesUsed', 'AllocatedTo']);
-    sheet.setFrozenRows(1);
-  }
-  return sheet;
-}
-
 function ensureInviteCodesSheet(doc) {
-  getOrCreateInviteCodesSheet_(doc);
   ensureInviteCodes(doc);
 }
 
-// Ensure codes exist on script load
-try {
-  const doc = SpreadsheetApp.getActiveSpreadsheet();
-  if (doc) ensureInviteCodesSheet(doc);
-} catch (e) {
-  console.warn("Global ensureInviteCodesSheet skipped outside spreadsheet bound context:", e);
-}
-
 function getLevelFromElo_(elo) {
-  if (!elo || elo === "N/A" || elo === "Fetching...") return "N/A";
-  const val = parseInt(elo);
+  var val = parseInt(elo);
   if (isNaN(val) || val <= 0) return "N/A";
   if (val <= 500)  return "1";
   if (val <= 750)  return "2";
@@ -917,7 +838,7 @@ function getLevelFromElo_(elo) {
   return "10";
 }
 
-function getRawTagMap_(doc) {
+function getRawMetadataMap_(doc) {
   const map = {};
   const rawSheet = doc.getSheetByName("Sheet1");
   if (!rawSheet) return map;
@@ -925,20 +846,23 @@ function getRawTagMap_(doc) {
   if (data.length < 2) return map;
   
   const header = data[0];
-  let teamNameCol = 5;
-  let teamTagCol = 6;
+  let teamNameCol = 3;
+  let teamTagCol = 4;
+  let logoCol = 6;
   for (let h = 0; h < header.length; h++) {
     if (header[h] === undefined || header[h] === null) continue;
     const val = header[h].toString().trim().toLowerCase();
-    if (val === "team name") teamNameCol = h;
-    if (val === "team tag") teamTagCol = h;
+    if (val.indexOf("team") !== -1 && val.indexOf("name") !== -1) teamNameCol = h;
+    if (val.indexOf("tag") !== -1) teamTagCol = h;
+    if (val.indexOf("logo") !== -1) logoCol = h;
   }
   
   for (let i = 1; i < data.length; i++) {
     const name = (data[i][teamNameCol] || "").toString().trim().toLowerCase();
     const tag = (data[i][teamTagCol] || "").toString().trim();
+    const logo = (data[i][logoCol] || "").toString().trim();
     if (name) {
-      map[name] = tag;
+      map[name] = { tag: tag, logo: logo };
     }
   }
   return map;
@@ -994,4 +918,3 @@ function autoAlignRawSheet(doc) {
     console.error("autoAlignRawSheet error: " + err);
   }
 }
-

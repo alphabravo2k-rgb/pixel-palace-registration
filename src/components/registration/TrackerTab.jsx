@@ -1,5 +1,6 @@
-import { AlertOctagon, Layers,RefreshCw } from 'lucide-react';
-import React from 'react';
+import { AlertOctagon, Layers, RefreshCw } from 'lucide-react';
+import React, { useState } from 'react';
+
 
 export const TrackerTab = ({
   isArchived,
@@ -10,6 +11,7 @@ export const TrackerTab = ({
   playClick,
   setSelectedTeam
 }) => {
+  const [failedLogos, setFailedLogos] = useState({});
   return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-panel p-8 min-h-[600px]">
@@ -64,22 +66,29 @@ export const TrackerTab = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {teams.map((team, idx) => (
-              <div 
-                key={`${team.name}-${idx}`} 
-                className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" 
-                onMouseEnter={playHover} 
-                onClick={() => { playClick(); setSelectedTeam(team); }}
-              >
-                <div className="flex items-stretch h-20 bg-black/40 relative">
-                  <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
-                    <img 
-                      src={team.logo && team.logo.startsWith('http') ? team.logo : 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'} 
-                      alt={team.name} 
-                      className="w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500" 
-                      onError={(e) => { e.target.src = 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'; e.target.className += ' opacity-20 grayscale'; }} 
-                    />
-                  </div>
+            {teams.map((team, idx) => {
+              const isFailed = failedLogos[`${team.name}-${idx}`];
+              const logoSrc = isFailed || !team.logo || !team.logo.startsWith('http')
+                ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'
+                : team.logo;
+              return (
+                <div 
+                  key={`${team.name}-${team.logo || ''}-${idx}`} 
+                  className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" 
+                  onMouseEnter={playHover} 
+                  onClick={() => { playClick(); setSelectedTeam(team); }}
+                >
+                  <div className="flex items-stretch h-20 bg-black/40 relative">
+                    <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
+                      <img 
+                        src={logoSrc} 
+                        alt={team.name} 
+                        className={`w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500 ${isFailed ? 'opacity-20 grayscale' : ''}`} 
+                        onError={() => {
+                          setFailedLogos(prev => ({ ...prev, [`${team.name}-${idx}`]: true }));
+                        }} 
+                      />
+                    </div>
                   <div className="flex-grow p-4 flex flex-col justify-center min-w-0 pr-16">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">{team.tag || 'TEAM'}</span>
@@ -117,7 +126,8 @@ export const TrackerTab = ({
                   </span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
