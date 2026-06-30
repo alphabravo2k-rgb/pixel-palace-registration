@@ -5,7 +5,7 @@
  * Web App URL: https://script.google.com/macros/s/AKfycby0ryeemIms7XhpnEohHms0Cm3k2gUIgl0_XBDhz7gjJfGH5Hi7Qhm12l-ERNd9C7ACgw/exec
  */
 
-const SPREADSHEET_ID = SpreadsheetApp.getActiveSpreadsheet().getId();
+const SPREADSHEET_ID = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc";
 const ADMIN_SECRET = ""; // Optional gateway secret matching VITE_GATEWAY_AUTH_SECRET
 
 // Google Drive folder where team logos are stored.
