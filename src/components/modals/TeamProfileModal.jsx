@@ -105,7 +105,7 @@ export const TeamProfileModal = ({ team, onClose }) => {
                 )}
                 {needsContact && (
                   <a
-                    href="https://discord.com/invite/pixelpalacee"
+                    href="https://discord.gg/xGMZ5wrgUd"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 self-start text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded border border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5 hover:bg-neon-cyan/10 hover:border-neon-cyan/60 transition-all"

@@ -56,7 +56,7 @@ export function Footer() {
           </a>
 
           <a 
-            href="https://discord.com/invite/pixelpalacee" 
+            href="https://discord.gg/xGMZ5wrgUd" 
             target="_blank" 
             rel="noreferrer" 
             className="group flex items-center gap-3 px-5 py-2.5 bg-black border border-white/10 hover:border-[#00f0ff] transition-all duration-300 shadow-[0_5px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]"

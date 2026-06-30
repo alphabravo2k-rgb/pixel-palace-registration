@@ -202,6 +202,24 @@ function setupNewColumns() {
     sheet.setColumnWidth(parseInt(col), widths[col]);
   });
   sheet.setFrozenRows(1);
+  setupValidation();
+}
+
+function setupValidation() {
+  var sheet = getAdminSheet_();
+  if (!sheet) return;
+  
+  var range = sheet.getRange(2, C.REG_STATUS, sheet.getMaxRows() - 1, 1);
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["PENDING", "APPROVED", "ROSTER_LOCKED", "CHECKED_IN", "OBJECTION", "WAITLISTED", "REJECTED", "DISQUALIFIED", "CHAMPION", "ELIMINATED"], true)
+    .setAllowInvalid(false)
+    .setHelpText("Please select a valid registration status.")
+    .build();
+    
+  range.setDataValidation(rule);
+  try {
+    SpreadsheetApp.getActiveSpreadsheet().toast("Status dropdown validation applied to Column O!", "Admin Ops", 5);
+  } catch (e) {}
 }
 
 // -- STEP 1: FILL ROLES FROM PLAYER NAME COLUMN ------------------------------

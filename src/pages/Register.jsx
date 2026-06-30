@@ -353,7 +353,7 @@ export const Register = () => {
 
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto relative z-10">
               <a 
-                href="https://discord.com/invite/pixelpalacee" 
+                href="https://discord.gg/xGMZ5wrgUd" 
                 target="_blank" 
                 rel="noreferrer" 
                 onMouseEnter={playHover}

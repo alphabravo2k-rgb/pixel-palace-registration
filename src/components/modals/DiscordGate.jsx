@@ -214,7 +214,7 @@ export const DiscordGate = ({ tournament, onAccept }) => {
                   Match lobbies, check-ins, and direct admin coordination will be managed strictly on our Discord server. All players must be present inside the server.
                 </p>
                 <a 
-                  href={tournament?.discordInviteUrl || "https://discord.com/invite/pixelpalacee"} 
+                  href={tournament?.discordInviteUrl || "https://discord.gg/xGMZ5wrgUd"} 
                   target="_blank" 
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors shadow-lg font-body"
