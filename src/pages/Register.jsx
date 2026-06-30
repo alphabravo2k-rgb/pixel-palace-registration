@@ -159,7 +159,7 @@ export const Register = () => {
   const renderCommandDeck = () => {
     if (!activeTeam) return null;
 
-    const liveTeam = (teams || []).find(t => t.name.toUpperCase() === activeTeam.teamName.toUpperCase());
+    const liveTeam = Array.isArray(teams) ? teams.find(t => t.name.toUpperCase() === activeTeam.teamName.toUpperCase()) : null;
     const liveStatus = liveTeam ? liveTeam.status : 'PENDING';
 
     const statusSteps = [
