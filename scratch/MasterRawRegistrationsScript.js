@@ -577,24 +577,24 @@ function doGet(e) {
       // 1. BETA MODE: Renders a pre-configured sample 16-team bracket for demonstration
       if (bracketMode === "BETA") {
         const mockMatches = [
-          { id: "M01", round: "Round of 16", team1: "BSV", team2: "Matrix Gaming", status: "COMPLETED", winner: "BSV", score: "2-0", time: "20:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M02", round: "Round of 16", team1: "Dubai Duos", team2: "Pakistan Active", status: "COMPLETED", winner: "Dubai Duos", score: "2-1", time: "20:30 +4 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M03", round: "Round of 16", team1: "Natus Vincere", team2: "FaZe Clan", status: "COMPLETED", winner: "Natus Vincere", score: "2-0", time: "21:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M04", round: "Round of 16", team1: "G2 Esports", team2: "Team Vitality", status: "COMPLETED", winner: "G2 Esports", score: "2-1", time: "21:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M05", round: "Round of 16", team1: "Team Spirit", team2: "MOUZ", status: "LIVE", winner: "TBD", score: "1-1", time: "22:00 +5 GMT", stream: "https://twitch.tv/pixelpalace", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M06", round: "Round of 16", team1: "Astralis", team2: "Virtus.pro", status: "ON HOLD", winner: "TBD", score: "0-0", time: "22:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M07", round: "Round of 16", team1: "Team Liquid", team2: "Complexity", status: "SCHEDULED", winner: "TBD", score: "", time: "23:00 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
-          { id: "M08", round: "Round of 16", team1: "HEROIC", team2: "BYE", status: "BYE", winner: "HEROIC", score: "", time: "23:30 +5 GMT", stream: "", source1: "SEEDED", source2: "SEEDED" },
+          { id: "M01", round: "Round of 16", team1: "BSV", team2: "Matrix Gaming", status: "COMPLETED", winner: "BSV", score: "2-0", time: "2026-07-31T20:00:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "Mirage" },
+          { id: "M02", round: "Round of 16", team1: "Dubai Duos", team2: "Pakistan Active", status: "COMPLETED", winner: "Dubai Duos", score: "2-1", time: "2026-07-31T20:30:00+04:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "Anubis, Nuke, Ancient" },
+          { id: "M03", round: "Round of 16", team1: "Natus Navis", team2: "FaZe Clan", status: "COMPLETED", winner: "Natus Navis", score: "2-0", time: "2026-07-31T21:00:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "Dust2" },
+          { id: "M04", round: "Round of 16", team1: "G2 Esports", team2: "Team Vitality", status: "COMPLETED", winner: "G2 Esports", score: "2-1", time: "2026-07-31T21:30:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "Vertigo, Inferno, Mirage" },
+          { id: "M05", round: "Round of 16", team1: "Team Spirit", team2: "MOUZ", status: "LIVE", winner: "TBD", score: "1-1", time: "2026-07-31T22:00:00+05:00", stream: "https://twitch.tv/pixelpalace", source1: "SEEDED", source2: "SEEDED", format: "BO3", maps: "Nuke, Mirage, Ancient" },
+          { id: "M06", round: "Round of 16", team1: "Astralis", team2: "Virtus.pro", status: "ON HOLD", winner: "TBD", score: "0-0", time: "2026-07-31T22:30:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "Mirage" },
+          { id: "M07", round: "Round of 16", team1: "Team Liquid", team2: "Complexity", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-07-31T23:00:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "" },
+          { id: "M08", round: "Round of 16", team1: "HEROIC", team2: "BYE", status: "BYE", winner: "HEROIC", score: "", time: "2026-07-31T23:30:00+05:00", stream: "", source1: "SEEDED", source2: "SEEDED", format: "BO1", maps: "" },
           
-          { id: "M09", round: "Quarterfinals", team1: "BSV", team2: "Dubai Duos", status: "SCHEDULED", winner: "TBD", score: "", time: "18:00 +5 GMT", stream: "", source1: "M01", source2: "M02" },
-          { id: "M10", round: "Quarterfinals", team1: "Natus Vincere", team2: "G2 Esports", status: "SCHEDULED", winner: "TBD", score: "", time: "19:00 +5 GMT", stream: "", source1: "M03", source2: "M04" },
-          { id: "M11", round: "Quarterfinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "20:00 +5 GMT", stream: "", source1: "M05", source2: "M06" },
-          { id: "M12", round: "Quarterfinals", team1: "TBD", team2: "HEROIC", status: "SCHEDULED", winner: "TBD", score: "", time: "21:00 +5 GMT", stream: "", source1: "M07", source2: "M08" },
+          { id: "M09", round: "Quarterfinals", team1: "BSV", team2: "Dubai Duos", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-01T18:00:00+05:00", stream: "", source1: "M01", source2: "M02", format: "BO3", maps: "" },
+          { id: "M10", round: "Quarterfinals", team1: "Natus Navis", team2: "G2 Esports", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-01T19:00:00+05:00", stream: "", source1: "M03", source2: "M04", format: "BO3", maps: "" },
+          { id: "M11", round: "Quarterfinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-01T20:00:00+05:00", stream: "", source1: "M05", source2: "M06", format: "BO3", maps: "" },
+          { id: "M12", round: "Quarterfinals", team1: "TBD", team2: "HEROIC", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-01T21:00:00+05:00", stream: "", source1: "M07", source2: "M08", format: "BO3", maps: "" },
           
-          { id: "M13", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "20:00 +5 GMT", stream: "", source1: "M09", source2: "M10" },
-          { id: "M14", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "21:00 +5 GMT", stream: "", source1: "M11", source2: "M12" },
+          { id: "M13", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-02T20:00:00+05:00", stream: "", source1: "M09", source2: "M10", format: "BO3", maps: "" },
+          { id: "M14", round: "Semifinals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-02T21:00:00+05:00", stream: "", source1: "M11", source2: "M12", format: "BO3", maps: "" },
           
-          { id: "M15", round: "Grand Finals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "22:00 +5 GMT", stream: "", source1: "M13", source2: "M14" }
+          { id: "M15", round: "Grand Finals", team1: "TBD", team2: "TBD", status: "SCHEDULED", winner: "TBD", score: "", time: "2026-08-03T22:00:00+05:00", stream: "", source1: "M13", source2: "M14", format: "BO5", maps: "" }
         ];
         return generateResponse({
           type: "live",
@@ -634,6 +634,8 @@ function doGet(e) {
                 const stream = (row[8] || "").toString().trim();
                 const source1 = (row[9] || "").toString().trim();
                 const source2 = (row[10] || "").toString().trim();
+                const format = (row[11] || "BO1").toString().trim();
+                const maps = (row[12] || "").toString().trim();
                 
                 if (id) {
                   matches.push({
@@ -647,7 +649,9 @@ function doGet(e) {
                     time: time,
                     stream: stream,
                     source1: source1,
-                    source2: source2
+                    source2: source2,
+                    format: format,
+                    maps: maps
                   });
                 }
               }

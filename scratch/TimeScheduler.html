@@ -62,7 +62,7 @@
     }
     
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     
     label {
@@ -112,6 +112,7 @@
       font-size: 12px;
       box-shadow: 0 4px 14px rgba(0, 240, 255, 0.3);
       transition: all 0.3s;
+      margin-top: 8px;
     }
     
     .btn:hover {
@@ -179,13 +180,26 @@
         <option value="+0">GMT+0 (UTC / London)</option>
       </select>
     </div>
+
+    <div class="form-group">
+      <label for="formatSelect">Match Format</label>
+      <select id="formatSelect" class="custom-input">
+        <option value="BO1">Best of 1 (BO1)</option>
+        <option value="BO3">Best of 3 (BO3)</option>
+        <option value="BO5">Best of 5 (BO5)</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="mapsInput">Selected Maps</label>
+      <input type="text" id="mapsInput" class="custom-input" placeholder="e.g. Mirage, Nuke, Anubis">
+    </div>
     
     <button id="saveBtn" class="btn" onclick="saveSchedule()">Save Schedule</button>
     <div id="statusMsg" class="status-msg">Schedule saved successfully!</div>
   </div>
 
   <script>
-    // Automatically load match info on launch
     document.addEventListener("DOMContentLoaded", function() {
       google.script.run
         .withSuccessHandler(onMatchLoaded)
@@ -203,11 +217,9 @@
       document.getElementById("matchIdVal").innerText = match.id;
       document.getElementById("vsInfoVal").innerText = match.team1 + " VS " + match.team2;
       
-      // If we have an existing date, prefill
       if (match.date) {
         document.getElementById("dateInput").value = match.date;
       } else {
-        // Set default to today
         const today = new Date().toISOString().split('T')[0];
         document.getElementById("dateInput").value = today;
       }
@@ -221,6 +233,14 @@
       if (match.offset) {
         document.getElementById("offsetSelect").value = match.offset;
       }
+      
+      if (match.format) {
+        document.getElementById("formatSelect").value = match.format;
+      } else {
+        document.getElementById("formatSelect").value = "BO1";
+      }
+      
+      document.getElementById("mapsInput").value = match.maps || "";
     }
     
     function onMatchLoadFailed(err) {
@@ -232,6 +252,8 @@
       const date = document.getElementById("dateInput").value;
       const time = document.getElementById("timeInput").value;
       const offset = document.getElementById("offsetSelect").value;
+      const format = document.getElementById("formatSelect").value;
+      const maps = document.getElementById("mapsInput").value;
       const saveBtn = document.getElementById("saveBtn");
       
       if (!date || !time) {
@@ -258,7 +280,7 @@
           saveBtn.innerHTML = 'Save Schedule';
           alert("Failed to save schedule: " + err);
         })
-        .saveMatchTime(date, time, offset);
+        .saveMatchTime(date, time, offset, format, maps);
     }
   </script>
 

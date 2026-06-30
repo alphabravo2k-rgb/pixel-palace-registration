@@ -1061,7 +1061,7 @@ function setupBracketsSheet() {
   }
   
   var headers = [
-    "Match ID", "Round", "Team 1", "Team 2", "Status", "Winner", "Score", "Time (e.g. 20:00 +5 GMT)", "Stream Link", "Source Match 1", "Source Match 2"
+    "Match ID", "Round", "Team 1", "Team 2", "Status", "Winner", "Score", "Time (e.g. 20:00 +5 GMT)", "Stream Link", "Source Match 1", "Source Match 2", "Format", "Selected Maps"
   ];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
        .setFontWeight("bold")
@@ -1079,7 +1079,7 @@ function setupBracketsSheet() {
     // Round of 32 (M01 to M16)
     for (var i = 1; i <= 16; i++) {
       var id = "M" + String(i).padStart(2, "0");
-      matches.push([id, "Round of 32", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "SEEDED", "SEEDED"]);
+      matches.push([id, "Round of 32", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "SEEDED", "SEEDED", "BO1", ""]);
     }
     
     // Round of 16 (M17 to M24)
@@ -1089,7 +1089,7 @@ function setupBracketsSheet() {
       var src2Idx = src1Idx + 1;
       var src1 = "M" + String(src1Idx).padStart(2, "0");
       var src2 = "M" + String(src2Idx).padStart(2, "0");
-      matches.push([id, "Round of 16", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+      matches.push([id, "Round of 16", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2, "BO1", ""]);
     }
     
     // Quarterfinals (M25 to M28)
@@ -1099,7 +1099,7 @@ function setupBracketsSheet() {
       var src2Idx = src1Idx + 1;
       var src1 = "M" + String(src1Idx).padStart(2, "0");
       var src2 = "M" + String(src2Idx).padStart(2, "0");
-      matches.push([id, "Quarterfinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+      matches.push([id, "Quarterfinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2, "BO3", ""]);
     }
     
     // Semifinals (M29 to M30)
@@ -1109,11 +1109,11 @@ function setupBracketsSheet() {
       var src2Idx = src1Idx + 1;
       var src1 = "M" + String(src1Idx).padStart(2, "0");
       var src2 = "M" + String(src2Idx).padStart(2, "0");
-      matches.push([id, "Semifinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2]);
+      matches.push([id, "Semifinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2, "BO3", ""]);
     }
     
     // Grand Finals (M31)
-    matches.push(["M31", "Grand Finals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "M29", "M30"]);
+    matches.push(["M31", "Grand Finals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "M29", "M30", "BO3", ""]);
     
     sheet.getRange(2, 1, matches.length, headers.length).setValues(matches);
   }
@@ -1125,6 +1125,14 @@ function setupBracketsSheet() {
     .setAllowInvalid(false)
     .build();
   statusRange.setDataValidation(statusRule);
+
+  // Format column validation (Col L / index 12)
+  var formatRange = sheet.getRange(2, 12, sheet.getMaxRows() - 1, 1);
+  var formatRule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(["BO1", "BO3", "BO5"], true)
+    .setAllowInvalid(false)
+    .build();
+  formatRange.setDataValidation(formatRule);
   
   // Apply team dropdown validations
   updateBracketDropdowns();
@@ -1314,11 +1322,13 @@ function getActiveMatchDetails() {
       return { error: "Please select a valid Match row (Row 2 or below)." };
     }
     
-    var rowData = sheet.getRange(rowIdx, 1, 1, 11).getValues()[0];
+    var rowData = sheet.getRange(rowIdx, 1, 1, 13).getValues()[0];
     var matchId = (rowData[0] || "").toString().trim();
     var team1 = (rowData[2] || "").toString().trim();
     var team2 = (rowData[3] || "").toString().trim();
     var timeStr = (rowData[7] || "").toString().trim(); // Column H (8)
+    var formatStr = (rowData[11] || "BO1").toString().trim(); // Column L (12)
+    var mapsStr = (rowData[12] || "").toString().trim(); // Column M (13)
     
     if (!matchId) {
       return { error: "Selected row does not contain a valid Match ID." };
@@ -1358,7 +1368,9 @@ function getActiveMatchDetails() {
       team2: team2 || "TBD",
       date: dateVal,
       time: timeVal,
-      offset: offsetVal
+      offset: offsetVal,
+      format: formatStr,
+      maps: mapsStr
     };
   } catch (e) {
     return { error: e.toString() };
@@ -1368,7 +1380,7 @@ function getActiveMatchDetails() {
 /**
  * Saves a formatted ISO 8601 date-time string to the active row's Time column (H)
  */
-function saveMatchTime(dateVal, timeVal, offsetVal) {
+function saveMatchTime(dateVal, timeVal, offsetVal, formatVal, mapsVal) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getActiveSheet();
   if (sheet.getName() !== "Brackets") {
@@ -1392,6 +1404,8 @@ function saveMatchTime(dateVal, timeVal, offsetVal) {
   // Construct standard ISO 8601: YYYY-MM-DDTHH:MM:00+HH:MM
   var timestamp = dateVal + "T" + timeVal + ":00" + offsetFormatted;
   
-  // Write to Column H (8)
+  // Write to Column H (8), Format (12), Selected Maps (13)
   sheet.getRange(rowIdx, 8).setValue(timestamp);
+  sheet.getRange(rowIdx, 12).setValue(formatVal || "BO1");
+  sheet.getRange(rowIdx, 13).setValue(mapsVal || "");
 }

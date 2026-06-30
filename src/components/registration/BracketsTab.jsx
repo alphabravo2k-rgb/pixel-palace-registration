@@ -229,10 +229,15 @@ export const BracketsTab = ({
                                 : 'border-white/5 hover:border-white/10'
                           } rounded-lg p-3 relative overflow-hidden group transition-all`}
                         >
-                          {/* Match ID Tag */}
-                          <span className="absolute top-1 right-2 text-[8px] font-bold text-zinc-600 font-body">
-                            {m.id}
-                          </span>
+                           {/* Match ID and Format Tags */}
+                          <div className="absolute top-1.5 right-2 flex items-center gap-1.5">
+                            <span className="text-[8px] bg-white/5 border border-white/10 text-zinc-500 font-extrabold px-1 py-0.5 rounded font-body leading-none">
+                              {m.format || 'BO1'}
+                            </span>
+                            <span className="text-[8px] font-bold text-zinc-600 font-body">
+                              {m.id}
+                            </span>
+                          </div>
 
                           {/* Team 1 Row */}
                           <div className={`flex items-center justify-between py-1.5 border-b border-white/5 ${
@@ -271,6 +276,13 @@ export const BracketsTab = ({
                               {isCompleted ? (m.score.split('-')[1] || '0') : ''}
                             </span>
                           </div>
+
+                          {/* Selected Maps display */}
+                          {m.maps && (
+                            <div className="mt-2.5 px-2 py-1 bg-black/30 border border-white/5 rounded text-[8px] font-bold text-zinc-400 font-body truncate uppercase tracking-wider">
+                              <span className="text-neon-cyan/80 font-black mr-1">MAPS:</span> {m.maps}
+                            </div>
+                          )}
 
                           {/* Match Info Footer */}
                           <div className="mt-3 pt-2 border-t border-white/5 flex items-center justify-between">
