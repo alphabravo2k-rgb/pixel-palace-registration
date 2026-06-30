@@ -17,6 +17,7 @@ const LOGO_FOLDER_ID = "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e";
  * RECEIVE REGISTRATIONS (POST)
  */
 function doPost(e) {
+  ensureInviteCodesSheet();
   try {
     const payload = JSON.parse(e.postData.contents);
     const endpoint = payload.endpoint || "";
@@ -186,6 +187,7 @@ function doPost(e) {
  * READ QUERIES (GET)
  */
 function doGet(e) {
+  ensureInviteCodesSheet();
   try {
     const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
     const params = e.parameter;
@@ -354,7 +356,11 @@ function doGet(e) {
 }
 
 function generateResponse(data, statusCode) {
-  return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  const output = ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON);
+  output.setHeader('Access-Control-Allow-Origin', '*');
+  output.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
+  output.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  return output;
 }
 
 /**
