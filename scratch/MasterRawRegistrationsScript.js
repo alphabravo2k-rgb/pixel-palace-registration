@@ -325,7 +325,8 @@ function doGet(e) {
           if (!teamName || teamName === "Team Name") continue;
           
           const status = (data[i][12] || "").toString().trim().toUpperCase(); // Column M
-          if (status === "REJECTED" || status === "ELIMINATED" || status === "") continue;
+          // Only hide permanently rejected/disqualified teams
+          if (status === "REJECTED" || status === "DISQUALIFIED" || status === "") continue;
           
           const region = (data[i][1] || "").toString().trim(); // Column B
           
@@ -344,6 +345,7 @@ function doGet(e) {
           
           const averageElo = parseInt(data[i][11]) || 0; // Column L
           const seed = (data[i][13] || "").toString().trim(); // Column N
+          const adminRemarks = (data[i][14] || "").toString().trim(); // Column O
           
           const roster = [];
           for (let p = 0; p < 7; p++) {
@@ -393,8 +395,15 @@ function doGet(e) {
             }
           }
           
-          const displayStatus = status === "APPROVED" || status === "ROSTER_LOCKED" || status === "CHECKED_IN" || status === "QUALIFIED" || status === "CHAMPION"
-            ? "VERIFIED" : "PENDING REVIEW";
+          // Map raw admin status to a portal-facing label
+          const VERIFIED_STATUSES = ["APPROVED", "ROSTER_LOCKED", "CHECKED_IN", "QUALIFIED", "CHAMPION"];
+          const displayStatus = VERIFIED_STATUSES.includes(status)
+            ? "VERIFIED"
+            : status === "OBJECTION"
+            ? "OBJECTION"
+            : status === "WAITLISTED"
+            ? "WAITLISTED"
+            : "PENDING REVIEW";
             
           const tag = rawTagMap[teamName.toLowerCase()] || teamName.substring(0, 4).toUpperCase();
           
@@ -403,6 +412,8 @@ function doGet(e) {
             tag: tag,
             logo: logoUrl,
             status: displayStatus,
+            rawStatus: status,
+            adminRemarks: adminRemarks || "",
             region: region,
             averageElo: averageElo ? averageElo.toString() : "N/A",
             seed: seed || "TBD",

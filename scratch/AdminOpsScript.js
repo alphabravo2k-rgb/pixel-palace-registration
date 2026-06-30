@@ -82,6 +82,7 @@ function onOpen() {
     .addItem("Full Sync + ELO Fetch", "syncAndFetch")
     .addSeparator()
     .addItem("Setup / Fix Headers (Row 1)", "setupHeaders")
+    .addItem("Setup Status Dropdown + Colors", "setupValidation")
     .addItem("Fix Merged Cells", "fixMerges")
     .addItem("Enable Auto-Sync (Every 30 Mins)", "createTimeTriggers")
     .addItem("Remove All Triggers", "removeAllTriggers")
@@ -121,6 +122,72 @@ function setupHeaders() {
     .setFontColor("#ffffff");
   sheet.setFrozenRows(1);
   SpreadsheetApp.getActiveSpreadsheet().toast("Headers set in Row 1.", "Setup", 4);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  SETUP STATUS DROPDOWN + CONDITIONAL COLORS
+//  Run from Admin Tools menu after adding new team rows.
+// ─────────────────────────────────────────────────────────────────────────────
+function setupValidation() {
+  var sheet = getAdminSheet_();
+  var lastRow = Math.max(sheet.getLastRow(), 2);
+
+  // ── Data Validation Dropdown on Column M (Registration Status) ──
+  var statusOptions = [
+    "PENDING",
+    "APPROVED",
+    "ROSTER_LOCKED",
+    "CHECKED_IN",
+    "OBJECTION",
+    "WAITLISTED",
+    "REJECTED",
+    "DISQUALIFIED",
+    "CHAMPION"
+  ];
+  var rule = SpreadsheetApp.newDataValidation()
+    .requireValueInList(statusOptions, true)
+    .setAllowInvalid(false)
+    .setHelpText("Select a registration status from the list.")
+    .build();
+  sheet.getRange(2, COL.STATUS, lastRow - 1, 1).setDataValidation(rule);
+
+  // ── Conditional Formatting: color each status row distinctly ──
+  var statusCol = "M";
+  var range = sheet.getRange("A2:O" + lastRow);
+  // Clear existing conditional format rules first
+  sheet.clearConditionalFormatRules();
+  var rules = [];
+
+  var statusColors = {
+    "PENDING":        { bg: "#FFF9C4", fg: "#5D4037" }, // pale yellow
+    "APPROVED":       { bg: "#C8E6C9", fg: "#1B5E20" }, // green
+    "ROSTER_LOCKED":  { bg: "#B2EBF2", fg: "#006064" }, // cyan
+    "CHECKED_IN":     { bg: "#BBDEFB", fg: "#0D47A1" }, // blue
+    "OBJECTION":      { bg: "#FFE0B2", fg: "#BF360C" }, // orange
+    "WAITLISTED":     { bg: "#E1BEE7", fg: "#4A148C" }, // purple
+    "REJECTED":       { bg: "#FFCDD2", fg: "#B71C1C" }, // red
+    "DISQUALIFIED":   { bg: "#CFD8DC", fg: "#37474F" }, // grey
+    "CHAMPION":       { bg: "#FFF176", fg: "#F57F17" }  // gold
+  };
+
+  Object.keys(statusColors).forEach(function(status) {
+    var c = statusColors[status];
+    var formula = '=$' + statusCol + '2="' + status + '"';
+    rules.push(
+      SpreadsheetApp.newConditionalFormatRule()
+        .whenFormulaSatisfied(formula)
+        .setBackground(c.bg)
+        .setFontColor(c.fg)
+        .setRanges([range])
+        .build()
+    );
+  });
+
+  sheet.setConditionalFormatRules(rules);
+  SpreadsheetApp.getActiveSpreadsheet().toast(
+    "Status dropdown + color rules applied to " + (lastRow - 1) + " rows.",
+    "Setup Done", 5
+  );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

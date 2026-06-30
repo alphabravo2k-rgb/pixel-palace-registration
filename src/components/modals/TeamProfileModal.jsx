@@ -1,4 +1,4 @@
-import { Crosshair, X } from 'lucide-react';
+import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass } from 'lucide-react';
 import React from 'react';
 
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
@@ -6,6 +6,23 @@ import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 export const TeamProfileModal = ({ team, onClose }) => {
   useKeyboardShortcut('Escape', onClose);
   if (!team) return null;
+
+  // ── Status configuration ───────────────────────────────────────────────
+  const STATUS_CONFIG = {
+    'VERIFIED':       { label: 'VERIFIED',        color: 'bg-green-500/10 text-green-400 border-green-500/30',   icon: CheckCircle2,  glow: 'shadow-green-500/20' },
+    'PENDING REVIEW': { label: 'PENDING REVIEW',   color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', icon: Clock,         glow: 'shadow-yellow-500/20' },
+    'OBJECTION':      { label: 'ACTION REQUIRED',  color: 'bg-orange-500/10 text-orange-400 border-orange-500/40', icon: AlertTriangle,  glow: 'shadow-orange-500/30' },
+    'WAITLISTED':     { label: 'WAITLISTED',       color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', icon: Hourglass,     glow: 'shadow-purple-500/20' },
+    'REJECTED':       { label: 'NOT ACCEPTED',     color: 'bg-red-500/10 text-red-400 border-red-500/30',         icon: Ban,           glow: 'shadow-red-500/20' },
+    'DISQUALIFIED':   { label: 'DISQUALIFIED',     color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30',      icon: Shield,        glow: 'shadow-zinc-500/20' },
+    'CHAMPION':       { label: 'CHAMPION 🏆',      color: 'bg-yellow-400/10 text-yellow-300 border-yellow-400/40', icon: Trophy,        glow: 'shadow-yellow-400/30' },
+  };
+
+  const CONTACT_STATUSES = ['OBJECTION', 'REJECTED', 'DISQUALIFIED', 'WAITLISTED'];
+  const statusKey = team.status || 'PENDING REVIEW';
+  const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['PENDING REVIEW'];
+  const StatusIcon = statusCfg.icon;
+  const needsContact = CONTACT_STATUSES.includes(statusKey);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
@@ -41,8 +58,9 @@ export const TeamProfileModal = ({ team, onClose }) => {
               <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">
                 {team.tag || 'TEAM'}
               </span>
-              <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${team.status === 'PENDING REVIEW' ? 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20' : 'bg-green-500/10 text-green-400 border-green-500/20'}`}>
-                {team.status === 'PENDING REVIEW' ? 'REVIEW' : 'VERIFIED'}
+              <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusCfg.color}`}>
+                <StatusIcon size={10} />
+                {statusCfg.label}
               </span>
             </div>
             <h2 className="text-4xl sm:text-5xl font-heading text-white uppercase tracking-widest leading-none drop-shadow-lg">
@@ -63,6 +81,38 @@ export const TeamProfileModal = ({ team, onClose }) => {
                 <span className="text-xl font-heading text-zinc-300 tracking-widest">{team.region || 'Unknown'}</span>
               </div>
             </div>
+
+            {/* Admin Remarks Notice */}
+            {(team.adminRemarks || needsContact) && (
+              <div className={`mt-5 border rounded-lg p-4 flex flex-col gap-3 ${
+                statusKey === 'OBJECTION'    ? 'bg-orange-500/5 border-orange-500/30' :
+                statusKey === 'REJECTED'     ? 'bg-red-500/5 border-red-500/30' :
+                statusKey === 'WAITLISTED'   ? 'bg-purple-500/5 border-purple-500/30' :
+                'bg-zinc-800/50 border-white/10'
+              }`}>
+                {team.adminRemarks && (
+                  <div>
+                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1 font-body">Admin Remarks</p>
+                    <p className={`text-[11px] font-body leading-relaxed ${
+                      statusKey === 'OBJECTION'  ? 'text-orange-300' :
+                      statusKey === 'REJECTED'   ? 'text-red-300' :
+                      statusKey === 'WAITLISTED' ? 'text-purple-300' :
+                      'text-zinc-300'
+                    }`}>{team.adminRemarks}</p>
+                  </div>
+                )}
+                {needsContact && (
+                  <a
+                    href="https://discord.com/invite/pixelpalacee"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 self-start text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded border border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5 hover:bg-neon-cyan/10 hover:border-neon-cyan/60 transition-all"
+                  >
+                    <MessageSquare size={11} /> Contact Us on Discord
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
 

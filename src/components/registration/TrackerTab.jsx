@@ -90,8 +90,26 @@ export const TrackerTab = ({
                 </div>
                 <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
                   <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${team.status === 'PENDING REVIEW' ? 'bg-yellow-500' : 'bg-green-500'}`} />
-                    <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-[0.2em] font-body">STATUS: {team.status || 'VERIFIED'}</span>
+                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
+                      team.status === 'VERIFIED'      ? 'bg-green-500' :
+                      team.status === 'OBJECTION'     ? 'bg-orange-500' :
+                      team.status === 'WAITLISTED'    ? 'bg-purple-500' :
+                      team.status === 'REJECTED'      ? 'bg-red-500' :
+                      team.status === 'DISQUALIFIED'  ? 'bg-zinc-500' :
+                      team.status === 'CHAMPION'      ? 'bg-yellow-400' :
+                      'bg-yellow-500'
+                    }`} />
+                    <span className={`text-[9px] font-bold uppercase tracking-[0.2em] font-body ${
+                      team.status === 'VERIFIED'      ? 'text-green-400' :
+                      team.status === 'OBJECTION'     ? 'text-orange-400' :
+                      team.status === 'WAITLISTED'    ? 'text-purple-400' :
+                      team.status === 'REJECTED'      ? 'text-red-400' :
+                      team.status === 'DISQUALIFIED'  ? 'text-zinc-500' :
+                      team.status === 'CHAMPION'      ? 'text-yellow-300' :
+                      'text-yellow-500'
+                    }`}>
+                      {team.status === 'OBJECTION' ? '⚠ ACTION REQUIRED' : `STATUS: ${team.status || 'PENDING REVIEW'}`}
+                    </span>
                   </div>
                   <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex gap-2">
                     {team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}
