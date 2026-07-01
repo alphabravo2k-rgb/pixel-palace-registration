@@ -56,7 +56,13 @@ function doPost(e) {
     const postData = e.postData ? e.postData.contents : "";
     if (!postData) return generateResponse({ error: "EMPTY_PAYLOAD" }, 400);
 
-    const payload = JSON.parse(postData);
+    let payload;
+    try {
+      payload = JSON.parse(postData);
+    } catch(jsonErr) {
+      return generateResponse({ error: "INVALID_JSON_PAYLOAD" }, 400);
+    }
+
     const action = payload.action || payload.endpoint || "";
 
     if (action === "uploadLogo" || action === "/api/v1/uploadLogo") {
@@ -92,7 +98,7 @@ function generateResponse(data, statusCode) {
 
 /**
  * 2. DATABASE ADAPTER
- * abstracts storage operations to minimize the amount of application code that depends on the underlying persistence layer.
+ * Abstracts storage operations to minimize the amount of application code that depends on the underlying persistence layer.
  * Implements CacheService for sub-second perceived latency.
  */
 const DatabaseAdapter = {
@@ -127,6 +133,11 @@ const DatabaseAdapter = {
     return this.getDefaultConfig_(tournamentId);
   },
 
+  clearConfigCache: function() {
+    CacheService.getScriptCache().remove("config_community-cup-2");
+    CacheService.getScriptCache().remove("config_chaos-ii");
+  },
+
   getDefaultConfig_: function(tournamentId) {
     return {
       tournamentid: tournamentId,
@@ -144,41 +155,34 @@ const DatabaseAdapter = {
   },
 
   appendRawRegistration: function(rowArray) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(10000); // Wait up to 10 seconds for the lock
-      
-      const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
-      let sheet = doc.getSheetByName("MASTER_RAW_REGISTRATIONS");
-      if (!sheet) {
-        sheet = doc.insertSheet("MASTER_RAW_REGISTRATIONS");
-        const defaultHeaders = [
-          "Submission ID", "Registration ID", "Timestamp", "Tournament ID", "Status", "Team Name", "Team Tag", "Region",
-          "Storage Provider", "Logo File ID", "Logo Mime Type", "Logo Uploaded At",
-          "P1 Discord", "P1 Steam", "P1 Faceit", "P1 Rank",
-          "P2 Discord", "P2 Steam", "P2 Faceit", "P2 Rank",
-          "P3 Discord", "P3 Steam", "P3 Faceit", "P3 Rank",
-          "P4 Discord", "P4 Steam", "P4 Faceit", "P4 Rank",
-          "P5 Discord", "P5 Steam", "P5 Faceit", "P5 Rank",
-          "P6 Discord", "P6 Steam", "P6 Faceit", "P6 Rank",
-          "P7 Discord", "P7 Steam", "P7 Faceit", "P7 Rank",
-          "VIP Code Used"
-        ];
-        sheet.appendRow(defaultHeaders);
-        sheet.setFrozenRows(1);
-      }
-      sheet.appendRow(rowArray);
-      SpreadsheetApp.flush();
-      
-      // Add row index to script cache
-      const newIdx = sheet.getLastRow();
-      const subId = rowArray[0];
-      const regId = rowArray[1];
-      CacheService.getScriptCache().put("idx_sub_" + subId, String(newIdx), 1800); // 30 min cache
-      CacheService.getScriptCache().put("idx_reg_" + regId, String(newIdx), 1800);
-    } finally {
-      lock.releaseLock();
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("MASTER_RAW_REGISTRATIONS");
+    if (!sheet) {
+      sheet = doc.insertSheet("MASTER_RAW_REGISTRATIONS");
+      const defaultHeaders = [
+        "Submission ID", "Registration ID", "Timestamp", "Tournament ID", "Status", "Team Name", "Team Tag", "Region",
+        "Storage Provider", "Logo File ID", "Logo Mime Type", "Logo Uploaded At",
+        "P1 Discord", "P1 Steam", "P1 Faceit", "P1 Rank",
+        "P2 Discord", "P2 Steam", "P2 Faceit", "P2 Rank",
+        "P3 Discord", "P3 Steam", "P3 Faceit", "P3 Rank",
+        "P4 Discord", "P4 Steam", "P4 Faceit", "P4 Rank",
+        "P5 Discord", "P5 Steam", "P5 Faceit", "P5 Rank",
+        "P6 Discord", "P6 Steam", "P6 Faceit", "P6 Rank",
+        "P7 Discord", "P7 Steam", "P7 Faceit", "P7 Rank",
+        "VIP Code Used"
+      ];
+      sheet.appendRow(defaultHeaders);
+      sheet.setFrozenRows(1);
     }
+    sheet.appendRow(rowArray);
+    SpreadsheetApp.flush();
+    
+    // Add row index to script cache
+    const newIdx = sheet.getLastRow();
+    const subId = rowArray[0];
+    const regId = rowArray[1];
+    CacheService.getScriptCache().put("idx_sub_" + subId, String(newIdx), 1800); // 30 min cache
+    CacheService.getScriptCache().put("idx_reg_" + regId, String(newIdx), 1800);
   },
 
   getRawRegistrations: function() {
@@ -227,6 +231,63 @@ const DatabaseAdapter = {
     });
     sheet.setRowHeightsForced(startRow, numPlayers, 28);
     SpreadsheetApp.flush();
+  },
+
+  getBracketSettings: function(adminSpreadsheetId) {
+    const adminDoc = SpreadsheetApp.openById(adminSpreadsheetId);
+    const settingsSheet = adminDoc.getSheetByName("Settings");
+    if (!settingsSheet) return null;
+    return settingsSheet.getDataRange().getValues();
+  },
+
+  getBracketMatches: function(adminSpreadsheetId) {
+    const adminDoc = SpreadsheetApp.openById(adminSpreadsheetId);
+    const bracketsSheet = adminDoc.getSheetByName("Brackets");
+    if (!bracketsSheet) return null;
+    return bracketsSheet.getDataRange().getValues();
+  },
+
+  logRosterChangeRequest: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("Roster_Change_Requests");
+    if (!sheet) {
+      sheet = doc.insertSheet("Roster_Change_Requests");
+      sheet.appendRow(["Timestamp", "Tournament ID", "Team ID", "Field Changed", "Old Value", "New Value", "Status"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  appendEventLog: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("EVENT_LOG");
+    if (!sheet) {
+      sheet = doc.insertSheet("EVENT_LOG");
+      sheet.appendRow(["Event ID", "Timestamp", "Tournament ID", "Event Type", "Old State", "New State", "Description", "Triggered By"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  appendAuditLog: function(row) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let logSheet = ss.getSheetByName("Audit_Log");
+    if (!logSheet) {
+      logSheet = ss.insertSheet("Audit_Log");
+      logSheet.appendRow(["Audit ID", "Timestamp", "Sheet", "Range", "Team ID", "Team Name", "Field Changed", "Previous Value", "New Value", "Source", "Action", "Reason", "Admin/User"]);
+      logSheet.setFrozenRows(1);
+    }
+    logSheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  getInviteCodes: function() {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    const inviteSheet = doc.getSheetByName("InviteCodes");
+    if (!inviteSheet) return [];
+    return inviteSheet.getDataRange().getValues();
   }
 };
 
@@ -316,77 +377,82 @@ const StorageService = {
  */
 const RegistrationService = {
   registerTeam: function(payload) {
-    const tournamentId = payload.tournament_id;
-    const submissionId = payload.submission_id || Utilities.getUuid();
-    const config = DatabaseAdapter.getTournamentConfig(tournamentId);
+    const lock = LockService.getScriptLock();
+    try {
+      lock.waitLock(15000); // 15 seconds lock wrapping ID generation and write
+      
+      const tournamentId = payload.tournament_id;
+      const submissionId = payload.submission_id || Utilities.getUuid();
+      const config = DatabaseAdapter.getTournamentConfig(tournamentId);
 
-    // Phase 1: PreValidation (Format, Missing fields)
-    const preRes = this.validatePreConditions_(payload);
-    if (!preRes.valid) {
-      return { success: false, error: "PRE_VALIDATION_FAILED", reason: preRes.error };
+      // Phase 1: PreValidation (Format, Missing fields)
+      const preRes = this.validatePreConditions_(payload);
+      if (!preRes.valid) {
+        return { success: false, error: "PRE_VALIDATION_FAILED", reason: preRes.error };
+      }
+
+      // Phase 2: BusinessValidation (Duplicates, invites, bans)
+      const businessRes = this.validateBusinessRules_(payload, config);
+      const isSuccess = businessRes.valid;
+      const status = isSuccess ? "SUBMITTED" : "FAILED_VALIDATION";
+
+      // Extract logo file ID from Drive URL
+      const logoUrl = payload.logo_url || payload.logoLink || "";
+      let logoFileId = payload.logo_file_id || "";
+      if (!logoFileId && logoUrl.includes("/d/")) {
+        try {
+          logoFileId = logoUrl.split("/d/")[1].split(/[/?#]/)[0];
+        } catch(e) {}
+      }
+
+      const rawData = DatabaseAdapter.getRawRegistrations();
+      const registrationId = "REG-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-" + String(rawData.length).padStart(6, '0');
+      const formattedDate = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
+
+      // Immutably write transaction ledger row
+      const newRow = [
+        submissionId,
+        registrationId,
+        formattedDate,
+        tournamentId,
+        status,
+        payload.team_name,
+        payload.team_tag,
+        payload.region || "",
+        "Drive",
+        logoFileId,
+        payload.logo_mime_type || "image/png",
+        new Date().toISOString(),
+        payload.p1Discord || "", payload.p1Steam || "", payload.p1Faceit || "", payload.p1Rank || "",
+        payload.p2Discord || "", payload.p2Steam || "", payload.p2Faceit || "", payload.p2Rank || "",
+        payload.p3Discord || "", payload.p3Steam || "", payload.p3Faceit || "", payload.p3Rank || "",
+        payload.p4Discord || "", payload.p4Steam || "", payload.p4Faceit || "", payload.p4Rank || "",
+        payload.p5Discord || "", payload.p5Steam || "", payload.p5Faceit || "", payload.p5Rank || "",
+        payload.p6Discord || "", payload.p6Steam || "", payload.p6Faceit || "", payload.p6Rank || "",
+        payload.p7Discord || "", payload.p7Steam || "", payload.p7Faceit || "", payload.p7Rank || "",
+        payload.invite_code || ""
+      ];
+
+      DatabaseAdapter.appendRawRegistration(newRow);
+
+      // Log the lifecycle action
+      AuditService.logEvent(
+        tournamentId, 
+        "REGISTRATION_RECEIVED", 
+        "NONE", 
+        status, 
+        "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")", 
+        "System"
+      );
+
+      if (!isSuccess) {
+        return { success: false, error: "BUSINESS_VALIDATION_FAILED", reason: businessRes.error };
+      }
+
+      return { success: true, submissionId: submissionId, registrationId: registrationId };
+    } finally {
+      lock.releaseLock();
     }
-
-    // Phase 2: BusinessValidation (Duplicates, invites, bans)
-    const businessRes = this.validateBusinessRules_(payload, config);
-    
-    // If business checks fail, we still write to raw DB with FAILED_VALIDATION state
-    const isSuccess = businessRes.valid;
-    const status = isSuccess ? "SUBMITTED" : "FAILED_VALIDATION";
-
-    // Extract logo file ID from Drive URL
-    const logoUrl = payload.logo_url || payload.logoLink || "";
-    let logoFileId = payload.logo_file_id || "";
-    if (!logoFileId && logoUrl.includes("/d/")) {
-      try {
-        logoFileId = logoUrl.split("/d/")[1].split(/[/?#]/)[0];
-      } catch(e) {}
-    }
-
-    const rawData = DatabaseAdapter.getRawRegistrations();
-    const registrationId = "REG-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-" + String(rawData.length).padStart(6, '0');
-    const formattedDate = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
-
-    // Immutably write transaction ledger row
-    const newRow = [
-      submissionId,
-      registrationId,
-      formattedDate,
-      tournamentId,
-      status,
-      payload.team_name,
-      payload.team_tag,
-      payload.region || "",
-      "Drive",
-      logoFileId,
-      payload.logo_mime_type || "image/png",
-      new Date().toISOString(),
-      payload.p1Discord || "", payload.p1Steam || "", payload.p1Faceit || "", payload.p1Rank || "",
-      payload.p2Discord || "", payload.p2Steam || "", payload.p2Faceit || "", payload.p2Rank || "",
-      payload.p3Discord || "", payload.p3Steam || "", payload.p3Faceit || "", payload.p3Rank || "",
-      payload.p4Discord || "", payload.p4Steam || "", payload.p4Faceit || "", payload.p4Rank || "",
-      payload.p5Discord || "", payload.p5Steam || "", payload.p5Faceit || "", payload.p5Rank || "",
-      payload.p6Discord || "", payload.p6Steam || "", payload.p6Faceit || "", payload.p6Rank || "",
-      payload.p7Discord || "", payload.p7Steam || "", payload.p7Faceit || "", payload.p7Rank || "",
-      payload.invite_code || ""
-    ];
-
-    DatabaseAdapter.appendRawRegistration(newRow);
-
-    // Log the lifecycle action
-    AuditService.logEvent(
-      tournamentId, 
-      "REGISTRATION_RECEIVED", 
-      "NONE", 
-      status, 
-      "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")", 
-      "System"
-    );
-
-    if (!isSuccess) {
-      return { success: false, error: "BUSINESS_VALIDATION_FAILED", reason: businessRes.error };
-    }
-
-    return { success: true, submissionId: submissionId, registrationId: registrationId };
   },
 
   validatePreConditions_: function(payload) {
@@ -434,7 +500,7 @@ const RegistrationService = {
   getApprovedTeams: function(tournamentId, config) {
     try {
       const adminDoc = SpreadsheetApp.openById(config.adminspreadsheetid);
-      const sheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+      const sheet = adminDoc.getSheetByName("Admin_Ops") || doc.getSheets()[0];
       const data = sheet.getDataRange().getValues();
       const teams = [];
       const rowsPerTeam = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
@@ -636,15 +702,7 @@ const RosterService = {
       return { success: false, error: "ROSTER_LOCKED" };
     }
 
-    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
-    let sheet = doc.getSheetByName("Roster_Change_Requests");
-    if (!sheet) {
-      sheet = doc.insertSheet("Roster_Change_Requests");
-      sheet.appendRow(["Timestamp", "Tournament ID", "Team ID", "Field Changed", "Old Value", "New Value", "Status"]);
-      sheet.setFrozenRows(1);
-    }
-
-    sheet.appendRow([
+    const row = [
       new Date().toISOString(),
       tournamentId,
       payload.team_id,
@@ -652,7 +710,9 @@ const RosterService = {
       payload.old_value,
       payload.new_value,
       "PENDING_APPROVAL"
-    ]);
+    ];
+
+    DatabaseAdapter.logRosterChangeRequest(row);
 
     AuditService.logEvent(tournamentId, "ROSTER_CHANGE_REQUESTED", "PENDING", "SUBMITTED", "Roster change requested for Team " + payload.team_id, "Captain");
     return { success: true };
@@ -665,18 +725,15 @@ const RosterService = {
  */
 const MatchService = {
   getBracketData: function(tournamentId, config) {
-    const adminDoc = SpreadsheetApp.openById(config.adminspreadsheetid);
-    const settingsSheet = adminDoc.getSheetByName("Settings");
-    
+    const settings = DatabaseAdapter.getBracketSettings(config.adminspreadsheetid);
     let bracketMode = "BETA";
     let bracketUrl = "";
     let schedule = [];
 
-    if (settingsSheet) {
-      const sData = settingsSheet.getDataRange().getValues();
-      for (let i = 1; i < sData.length; i++) {
-        const key = (sData[i][0] || "").toString().trim().toLowerCase();
-        const val = (sData[i][1] || "").toString().trim();
+    if (settings) {
+      for (let i = 1; i < settings.length; i++) {
+        const key = (settings[i][0] || "").toString().trim().toLowerCase();
+        const val = (settings[i][1] || "").toString().trim();
         if (key === "bracket_url" && val) bracketUrl = val;
         if (key === "bracket_mode" && val) bracketMode = val.toString().trim().toUpperCase();
         if (key === "schedule" && val) {
@@ -697,9 +754,8 @@ const MatchService = {
     }
 
     if (bracketMode === "LIVE") {
-      const bracketsSheet = adminDoc.getSheetByName("Brackets");
-      if (bracketsSheet) {
-        const bData = bracketsSheet.getDataRange().getValues();
+      const bData = DatabaseAdapter.getBracketMatches(config.adminspreadsheetid);
+      if (bData) {
         const matches = [];
         for (let i = 1; i < bData.length; i++) {
           const row = bData[i];
@@ -737,11 +793,7 @@ const MatchService = {
 const ValidationService = {
   validateInviteCode: function(code) {
     if (!code) return false;
-    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
-    const inviteSheet = doc.getSheetByName("InviteCodes");
-    if (!inviteSheet) return false;
-
-    const inviteData = inviteSheet.getDataRange().getValues();
+    const inviteData = DatabaseAdapter.getInviteCodes();
     for (let i = 1; i < inviteData.length; i++) {
       const activeCode = (inviteData[i][0] || "").toString().trim();
       if (activeCode.toLowerCase() === code.toLowerCase()) {
@@ -759,19 +811,10 @@ const ValidationService = {
 const AuditService = {
   logEvent: function(tournamentId, eventType, oldState, newState, desc, userEmail) {
     try {
-      const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
-      let sheet = doc.getSheetByName("EVENT_LOG");
-      if (!sheet) {
-        sheet = doc.insertSheet("EVENT_LOG");
-        sheet.appendRow(["Event ID", "Timestamp", "Tournament ID", "Event Type", "Old State", "New State", "Description", "Triggered By"]);
-        sheet.setFrozenRows(1);
-      }
-      
       const eventId = "EVT-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
-      
-      sheet.appendRow([eventId, time, tournamentId, eventType, oldState, newState, desc, userEmail]);
-      SpreadsheetApp.flush();
+      const row = [eventId, time, tournamentId, eventType, oldState, newState, desc, userEmail];
+      DatabaseAdapter.appendEventLog(row);
     } catch(e) {
       Logger.log("Failed to write to EVENT_LOG: " + e);
     }
@@ -779,18 +822,9 @@ const AuditService = {
 
   logAudit: function(sheetName, range, teamId, teamName, field, oldValue, newValue, source, reason, userEmail, action) {
     try {
-      const ss = SpreadsheetApp.getActiveSpreadsheet();
-      let logSheet = ss.getSheetByName("Audit_Log");
-      if (!logSheet) {
-        logSheet = ss.insertSheet("Audit_Log");
-        logSheet.appendRow(["Audit ID", "Timestamp", "Sheet", "Range", "Team ID", "Team Name", "Field Changed", "Previous Value", "New Value", "Source", "Action", "Reason", "Admin/User"]);
-        logSheet.setFrozenRows(1);
-      }
-
       const auditId = "AUD-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
-
-      logSheet.appendRow([
+      const row = [
         auditId, 
         time, 
         sheetName, 
@@ -804,8 +838,8 @@ const AuditService = {
         action || "UPDATE", 
         reason || "N/A", 
         userEmail
-      ]);
-      SpreadsheetApp.flush();
+      ];
+      DatabaseAdapter.appendAuditLog(row);
     } catch(e) {
       Logger.log("Failed to write to Audit_Log: " + e);
     }
@@ -908,10 +942,17 @@ function onEdit(e) {
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Tournament OS")
+    .addItem("Clear Settings Cache", "clearSettingsCache")
+    .addSeparator()
     .addItem("Schedule Match Time", "showTimeScheduler")
     .addItem("Setup Brackets Sheet", "setupBracketsSheet")
     .addItem("Update Bracket Dropdowns", "updateBracketDropdowns")
     .addToUi();
+}
+
+function clearSettingsCache() {
+  DatabaseAdapter.clearConfigCache();
+  SpreadsheetApp.getActiveSpreadsheet().toast("Configuration cache successfully cleared!", "Tournament OS");
 }
 
 function showTimeScheduler() {
