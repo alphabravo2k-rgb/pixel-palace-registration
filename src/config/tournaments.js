@@ -125,6 +125,8 @@ export const tournaments = [
     registrationDeadline: "2026-02-28T23:59:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
     playersPerTeam: 5,
+    tournamentComplete: true,
+    champion: { name: "Team Sanctuary", tag: "SNC", logo: "" },
     scheduleUtc: [
       "2026-03-01T22:30:00Z", // Week 1
       "2026-03-08T22:30:00Z", // Week 2
@@ -158,7 +160,9 @@ export const tournaments = [
     region: "PAK / IND",
     tournamentDate: "2026-01-30T18:00:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png",
-    playersPerTeam: 2
+    playersPerTeam: 2,
+    tournamentComplete: true,
+    champion: { name: "Team Come Mid", tag: "MID", logo: "" }
   },
   {
     id: "rocket-league-1",
@@ -202,6 +206,8 @@ export const tournaments = [
     registrationDeadline: "2026-01-08T23:59:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png",
     playersPerTeam: 5,
+    tournamentComplete: true,
+    champion: { name: "Team Legion", tag: "LGN", logo: "" },
     scheduleUtc: [
       "2026-01-09T18:00:00Z", // Day 1
       "2026-01-10T18:00:00Z", // Day 2
@@ -237,7 +243,9 @@ export const tournaments = [
     region: "PAK / IND",
     tournamentDate: "2025-12-28T18:00:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
-    playersPerTeam: 2
+    playersPerTeam: 2,
+    tournamentComplete: true,
+    champion: { name: "Team Que Ota", tag: "QO", logo: "" }
   },
   {
     id: "cs2-1v1-i",
@@ -266,7 +274,9 @@ export const tournaments = [
     tournamentDate: "2025-11-28T18:00:00Z",
     registrationDeadline: "2025-11-27T23:59:00Z",
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_vertigo.png",
-    playersPerTeam: 2
+    playersPerTeam: 2,
+    tournamentComplete: true,
+    champion: { name: "Team Aimers", tag: "AMR", logo: "" }
   }
 ];
 
