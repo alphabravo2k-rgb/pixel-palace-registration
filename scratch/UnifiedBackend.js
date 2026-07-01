@@ -4,7 +4,7 @@
  */
 
 // Global configuration spreadsheet ID (immutable receiver database)
-const RECEIVER_SPREADSHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+const RECEIVER_SPREADSHEET_ID = "YOUR_SPREADSHEET_ID_HERE";
 
 const BACKEND_CONFIG = {
   version: "2.7.0",
@@ -229,10 +229,10 @@ const DatabaseAdapter = {
       inviteslots: tournamentId === "chaos-ii" ? 0 : 6,
       playersperteam: tournamentId === "chaos-ii" ? 2 : 5,
       substitutesmax: tournamentId === "chaos-ii" ? 1 : 2,
-      logofolderid: "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E",
+      logofolderid: "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e",
       adminspreadsheetid: tournamentId === "chaos-ii" 
-        ? "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E" 
-        : "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E",
+        ? "YOUR_CHAOS_SPREADSHEET_ID_HERE" 
+        : "YOUR_SPREADSHEET_ID_HERE",
       currentphase: "Registration Open",
       workerbatchsize: 10,
       maxretries: 4

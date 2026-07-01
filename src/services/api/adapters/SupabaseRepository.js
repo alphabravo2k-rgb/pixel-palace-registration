@@ -1,21 +1,29 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://placeholder.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'placeholder';
+let supabaseInstance = null;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+function getSupabase() {
+  if (supabaseInstance) return supabaseInstance;
+  const url = import.meta.env.VITE_SUPABASE_URL;
+  const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+  if (!url || !key) {
+    throw new Error('Supabase client is not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+  }
+  supabaseInstance = createClient(url, key);
+  return supabaseInstance;
+}
 
 export class SupabaseRepository {
   static getSession() {
-    return supabase.auth.getSession();
+    return getSupabase().auth.getSession();
   }
 
   static onAuthStateChange(callback) {
-    return supabase.auth.onAuthStateChange(callback);
+    return getSupabase().auth.onAuthStateChange(callback);
   }
 
   static async fetchMatches() {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('matches')
       .select(`
         id, round, state, score, metadata,
@@ -30,7 +38,7 @@ export class SupabaseRepository {
   }
 
   static subscribeToMatches(callback) {
-    const channel = supabase
+    const channel = getSupabase()
       .channel('public:matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, callback)
       .subscribe();
@@ -38,23 +46,23 @@ export class SupabaseRepository {
   }
 
   static unsubscribe(channel) {
-    supabase.removeChannel(channel);
+    getSupabase().removeChannel(channel);
   }
 
   static loginViaDiscord() {
-    return supabase.auth.signInWithOAuth({ 
+    return getSupabase().auth.signInWithOAuth({ 
       provider: 'discord',
       options: { redirectTo: window.location.origin }
     });
   }
 
   static logout() {
-    return supabase.auth.signOut();
+    return getSupabase().auth.signOut();
   }
 
   static async updateMatchVeto(matchId, vetoLog, currentMeta) {
     const newMeta = { ...currentMeta, veto_log: vetoLog };
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('matches')
       .update({ metadata: newMeta })
       .eq('id', matchId);
@@ -62,7 +70,7 @@ export class SupabaseRepository {
   }
 
   static async forceWin(matchId) {
-    const { error } = await supabase
+    const { error } = await getSupabase()
       .from('matches')
       .update({ state: 'complete', score: '1-0 (Forced)' })
       .eq('id', matchId);

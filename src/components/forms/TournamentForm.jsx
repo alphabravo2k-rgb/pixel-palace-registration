@@ -52,6 +52,7 @@ const buildFormSchema = (tournament) => {
   const coreCount = tournament.playersPerTeam ?? 5;
 
   const playerSchema = z.object({
+    ign: z.string().optional().default(''),
     discord: z.string().min(1, 'Discord handle required').transform(v => v.trim().toLowerCase()),
     steam: z.string().min(1, 'Steam URL required'),
     steam64: z.string().optional(),
@@ -79,6 +80,9 @@ const buildFormSchema = (tournament) => {
     players: z
       .array(playerSchema)
       .min(coreCount, `Minimum ${coreCount} players required`),
+    agreeDiscord: z.literal(true, { errorMap: () => ({ message: "You must agree to Discord presence requirement" }) }),
+    agreeVoice: z.literal(true, { errorMap: () => ({ message: "You must agree to join Voice Channels" }) }),
+    agreeSchedule: z.literal(true, { errorMap: () => ({ message: "You must confirm availability for all dates" }) }),
   });
 };
 
@@ -140,7 +144,10 @@ export const TournamentForm = ({ tournament, slots }) => {
       teamTag: '',
       teamRegion: '',
       logoLink: '',
-      players: Array.from({ length: corePlayerCount }, blankPlayer)
+      players: Array.from({ length: corePlayerCount }, blankPlayer),
+      agreeDiscord: false,
+      agreeVoice: false,
+      agreeSchedule: false
     },
   });
 
@@ -302,6 +309,9 @@ export const TournamentForm = ({ tournament, slots }) => {
       setValue('teamTag', 'TEST', { shouldValidate: true });
       setValue('teamRegion', 'EU', { shouldValidate: true });
       setValue('logoLink', 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png', { shouldValidate: true });
+      setValue('agreeDiscord', true, { shouldValidate: true });
+      setValue('agreeVoice', true, { shouldValidate: true });
+      setValue('agreeSchedule', true, { shouldValidate: true });
       
       const mockProfiles = [
         { ign: "s1mple", steam: "https://steamcommunity.com/id/s1mpleO", faceit: "https://www.faceit.com/en/players/s1mple", discord: "s1mple_test" },
@@ -744,7 +754,59 @@ export const TournamentForm = ({ tournament, slots }) => {
   );
 
   const FormSubmitSection = (
-    <div className="glass-panel p-6 flex flex-col gap-4">
+    <div className="glass-panel p-6 flex flex-col gap-6">
+      {/* Roster Verification & Agreements */}
+      <div className="space-y-3">
+        <span className="text-[10px] font-black font-body text-neon-pink uppercase tracking-widest block mb-1">
+          Acknowledge & Confirm Roster Rules:
+        </span>
+        
+        <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
+          <input 
+            type="checkbox" 
+            {...register('agreeDiscord')}
+            className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
+          />
+          <span className="text-xs text-zinc-400 leading-relaxed font-body">
+            <strong className="text-white uppercase tracking-wider block mb-0.5">DISCORD PRESENCE</strong>
+            All players must be in the Discord server before match start.
+          </span>
+        </label>
+        {errors.agreeDiscord && (
+          <p className="text-red-400 text-[10px] font-body uppercase tracking-widest">{errors.agreeDiscord.message}</p>
+        )}
+
+        <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
+          <input 
+            type="checkbox" 
+            {...register('agreeVoice')}
+            className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
+          />
+          <span className="text-xs text-zinc-400 leading-relaxed font-body">
+            <strong className="text-white uppercase tracking-wider block mb-0.5">VOICE COMMS</strong>
+            All players confirm to join Pixel Voice Channels during matches.
+          </span>
+        </label>
+        {errors.agreeVoice && (
+          <p className="text-red-400 text-[10px] font-body uppercase tracking-widest">{errors.agreeVoice.message}</p>
+        )}
+
+        <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
+          <input 
+            type="checkbox" 
+            {...register('agreeSchedule')}
+            className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
+          />
+          <span className="text-xs text-zinc-400 leading-relaxed font-body">
+            <strong className="text-white uppercase tracking-wider block mb-0.5">SCHEDULE</strong>
+            We confirm availability for the deadline and all tournament dates.
+          </span>
+        </label>
+        {errors.agreeSchedule && (
+          <p className="text-red-400 text-[10px] font-body uppercase tracking-widest">{errors.agreeSchedule.message}</p>
+        )}
+      </div>
+
       {error && (
         <div className={`border p-6 flex flex-col items-center gap-4 animate-in zoom-in duration-300 shadow-2xl ${error.includes('PLAYER_BANNED') ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-orange-500/20' : 'bg-red-500/10 border-red-500 text-red-400 shadow-red-500/20'}`}>
           <div className="flex items-center gap-3">

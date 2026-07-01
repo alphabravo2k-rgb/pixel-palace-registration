@@ -58,6 +58,7 @@ node_modules/
 .turbo/
 .cache/
 .parcel-cache
+vite.config.js.timestamp-*.mjs
 
 # 🏗️ BUILD ARTIFACTS (STAGING & PRODUCTION)
 dist/
