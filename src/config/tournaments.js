@@ -126,7 +126,20 @@ export const tournaments = [
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
     playersPerTeam: 5,
     tournamentComplete: true,
-    champion: { name: "Team Sanctuary", tag: "SNC", logo: "" },
+    champion: {
+      name: "Team Sanctuary",
+      tag: "SNC",
+      logo: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
+      score: "2-1",
+      players: ["Sanctuary-1", "Sanctuary-2", "Sanctuary-3", "Sanctuary-4", "Sanctuary-5"],
+      matchHistory: [
+        { map: "Dust2", score: "11-13", win: false },
+        { map: "Mirage", score: "13-10", win: true },
+        { map: "Inferno", score: "13-8", win: true }
+      ]
+    },
+    runnerUp: { name: "TBD", players: ["Runner-1", "Runner-2", "Runner-3", "Runner-4", "Runner-5"] },
+    maps: ["Dust2", "Mirage", "Inferno", "Nuke", "Anubis", "Ancient"],
     scheduleUtc: [
       "2026-03-01T22:30:00Z", // Week 1
       "2026-03-08T22:30:00Z", // Week 2
@@ -162,7 +175,19 @@ export const tournaments = [
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png",
     playersPerTeam: 2,
     tournamentComplete: true,
-    champion: { name: "Team Come Mid", tag: "MID", logo: "" }
+    champion: {
+      name: "Team Come Mid",
+      tag: "MID",
+      logo: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png",
+      score: "2-0",
+      players: ["ComeMid-1", "ComeMid-2"],
+      matchHistory: [
+        { map: "Nuke", score: "9-4", win: true },
+        { map: "Inferno", score: "9-6", win: true }
+      ]
+    },
+    runnerUp: { name: "TBD", players: ["Runner-1", "Runner-2"] },
+    maps: ["Nuke", "Inferno", "Vertigo", "Overpass", "Poseidon", "Sanctum"]
   },
   {
     id: "rocket-league-1",
@@ -207,7 +232,19 @@ export const tournaments = [
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png",
     playersPerTeam: 5,
     tournamentComplete: true,
-    champion: { name: "Team Legion", tag: "LGN", logo: "" },
+    champion: {
+      name: "Team Legion",
+      tag: "LGN",
+      logo: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png",
+      score: "2-0",
+      players: ["Legion-1", "Legion-2", "Legion-3", "Legion-4", "Legion-5"],
+      matchHistory: [
+        { map: "Inferno", score: "13-9", win: true },
+        { map: "Mirage", score: "13-7", win: true }
+      ]
+    },
+    runnerUp: { name: "TBD", players: ["Runner-1", "Runner-2", "Runner-3", "Runner-4", "Runner-5"] },
+    maps: ["Inferno", "Mirage", "Nuke", "Ancient", "Anubis", "Dust2"],
     scheduleUtc: [
       "2026-01-09T18:00:00Z", // Day 1
       "2026-01-10T18:00:00Z", // Day 2
@@ -245,7 +282,19 @@ export const tournaments = [
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
     playersPerTeam: 2,
     tournamentComplete: true,
-    champion: { name: "Team Que Ota", tag: "QO", logo: "" }
+    champion: {
+      name: "Team Que Ota",
+      tag: "QO",
+      logo: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
+      score: "2-0",
+      players: ["QueOta-1", "QueOta-2"],
+      matchHistory: [
+        { map: "Overpass", score: "9-5", win: true },
+        { map: "Vertigo", score: "9-6", win: true }
+      ]
+    },
+    runnerUp: { name: "TBD", players: ["Runner-1", "Runner-2"] },
+    maps: ["Overpass", "Vertigo", "Nuke", "Inferno"]
   },
   {
     id: "cs2-1v1-i",
@@ -276,7 +325,20 @@ export const tournaments = [
     thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_vertigo.png",
     playersPerTeam: 2,
     tournamentComplete: true,
-    champion: { name: "Team Aimers", tag: "AMR", logo: "" }
+    champion: {
+      name: "Team Aimers",
+      tag: "AMR",
+      logo: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_vertigo.png",
+      score: "2-1",
+      players: ["Aimers-1", "Aimers-2"],
+      matchHistory: [
+        { map: "Vertigo", score: "5-9", win: false },
+        { map: "Nuke", score: "9-7", win: true },
+        { map: "Inferno", score: "9-4", win: true }
+      ]
+    },
+    runnerUp: { name: "TBD", players: ["Runner-1", "Runner-2"] },
+    maps: ["Vertigo", "Nuke", "Inferno", "Overpass", "Poseidon", "Sanctum"]
   }
 ];
 

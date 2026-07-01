@@ -68,17 +68,12 @@ export const Home = () => {
         <div className="mt-8 flex flex-wrap justify-center gap-4 md:gap-8 glass-panel px-8 py-4 rounded-full border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)] bg-black/50 backdrop-blur-md">
           <div className="flex items-center gap-2">
             <Trophy className="w-4 h-4 text-yellow-500" />
-            <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={stats.totalEvents} /></span> Events</span>
+            <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={15} suffix="+" /></span> Events</span>
           </div>
           <div className="hidden md:block w-px h-6 bg-white/10" />
           <div className="flex items-center gap-2">
             <Award className="w-4 h-4 text-green-400" />
-            <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={stats.totalPrize} prefix="$" suffix="+" /></span> Prize Money</span>
-          </div>
-          <div className="hidden md:block w-px h-6 bg-white/10" />
-          <div className="flex items-center gap-2">
-            <Users className="w-4 h-4 text-neon-cyan" />
-            <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={stats.totalTeams} suffix="+" /></span> Teams</span>
+            <span className="text-xs font-bold font-body tracking-widest text-zinc-300 uppercase"><span className="text-white text-base mr-1"><CountUp end={17000} prefix="USD " suffix="+" /></span> Prize Money & Giveaways</span>
           </div>
           <div className="hidden md:block w-px h-6 bg-white/10" />
           <div className="flex items-center gap-2">
