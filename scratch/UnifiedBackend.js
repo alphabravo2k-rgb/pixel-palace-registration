@@ -1,10 +1,29 @@
 /**
- * TOURNAMENT OS: UNIFIED BACKEND (v2.6.0)
+ * TOURNAMENT OS: UNIFIED BACKEND (v2.7.0)
  * Consolidated, modular architecture decoupling business logic from Google Sheets storage.
  */
 
 // Global configuration spreadsheet ID (immutable receiver database)
 const RECEIVER_SPREADSHEET_ID = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+
+const BACKEND_CONFIG = {
+  version: "2.7.0",
+  updated: "2026-07-02",
+  environment: "Production"
+};
+
+const ERROR_CODES = {
+  INVALID_JSON: { code: "ERR001", message: "Invalid JSON payload." },
+  TOURNAMENT_NOT_FOUND: { code: "ERR002", message: "Tournament config not found." },
+  INVALID_INVITE: { code: "ERR003", message: "Invalid invite code." },
+  ROSTER_LOCKED: { code: "ERR004", message: "Roster has been locked for this tournament." },
+  DUPLICATE_TEAM: { code: "ERR005", message: "Team name already exists." },
+  STEAM_BANNED: { code: "ERR006", message: "One or more players have active Steam bans." },
+  FACEIT_LOOKUP_FAILED: { code: "ERR007", message: "Faceit profile lookup failed." },
+  DRIVE_UPLOAD_FAILED: { code: "ERR008", message: "Image upload failed." },
+  DATABASE_LOCK_TIMEOUT: { code: "ERR009", message: "Database is busy. Please try again." },
+  UNKNOWN: { code: "ERR010", message: "Unknown internal error." }
+};
 
 /**
  * 1. API ROUTER & ENTRY POINTS
@@ -18,10 +37,15 @@ function doGet(e) {
       return generateResponse({ error: "UNSUPPORTED_API_VERSION" }, 400);
     }
 
+    if (endpoint === "/api/v1/health") {
+      const health = checkSystemHealth_();
+      return generateResponse(health);
+    }
+
     // Load dynamic config first
     const config = DatabaseAdapter.getTournamentConfig(params.tournamentId);
     if (params.tournamentId && !config) {
-      return generateResponse({ error: "TOURNAMENT_NOT_FOUND" }, 404);
+      return generateResponse({ error: ERROR_CODES.TOURNAMENT_NOT_FOUND.message, errorCode: ERROR_CODES.TOURNAMENT_NOT_FOUND.code }, 404);
     }
 
     if (endpoint === "/api/v1/getTeams") {
@@ -46,7 +70,7 @@ function doGet(e) {
 
     return generateResponse({ error: "ENDPOINT_NOT_FOUND" }, 404);
   } catch (err) {
-    AuditService.logEvent(params.tournamentId || "system", "SYSTEM_ERROR", "GET_FAILED", "N/A", err.toString(), "doGet");
+    AuditService.recordEvent(params.tournamentId || "system", "SYSTEM_ERROR", "GET_FAILED", "N/A", err.toString(), "doGet");
     return generateResponse({ error: err.toString() }, 500);
   }
 }
@@ -60,24 +84,22 @@ function doPost(e) {
     try {
       payload = JSON.parse(postData);
     } catch(jsonErr) {
-      return generateResponse({ error: "INVALID_JSON_PAYLOAD" }, 400);
+      return generateResponse({ error: ERROR_CODES.INVALID_JSON.message, errorCode: ERROR_CODES.INVALID_JSON.code }, 400);
     }
 
     const action = payload.action || payload.endpoint || "";
 
+    // Route requests to executeRequest wrapper
     if (action === "uploadLogo" || action === "/api/v1/uploadLogo") {
-      const fileData = StorageService.uploadLogo(payload);
-      return generateResponse(fileData);
+      return executeRequest(action, payload, 10000, () => StorageService.upload(payload));
     }
 
     if (action === "register" || action === "/api/v1/register") {
-      const regResult = RegistrationService.registerTeam(payload);
-      return generateResponse(regResult);
+      return executeRequest(action, payload, 15000, () => RegistrationService.registerTeam(payload));
     }
 
     if (action === "submitChangeRequest" || action === "/api/v1/submitChangeRequest") {
-      const requestResult = RosterService.submitChangeRequest(payload);
-      return generateResponse(requestResult);
+      return executeRequest(action, payload, 10000, () => TournamentService.submitChangeRequest(payload));
     }
 
     return generateResponse({ error: "ACTION_NOT_FOUND" }, 404);
@@ -87,19 +109,80 @@ function doPost(e) {
 }
 
 /**
+ * Shared execution wrapper handling timing, locking, and error standardization
+ */
+function executeRequest(action, payload, lockTime, serviceFn) {
+  const lock = LockService.getScriptLock();
+  const startTime = Date.now();
+  try {
+    if (lockTime > 0) {
+      const success = lock.tryLock(lockTime);
+      if (!success) {
+        return generateResponse({ error: ERROR_CODES.DATABASE_LOCK_TIMEOUT.message, errorCode: ERROR_CODES.DATABASE_LOCK_TIMEOUT.code }, 408);
+      }
+    }
+
+    const result = serviceFn();
+    const duration = Date.now() - startTime;
+    Logger.log("Action: " + action + " executed in " + duration + "ms");
+    return generateResponse(result);
+  } catch(err) {
+    const duration = Date.now() - startTime;
+    Logger.log("Action: " + action + " failed after " + duration + "ms: " + err);
+    return generateResponse({ error: err.toString(), errorCode: ERROR_CODES.UNKNOWN.code }, 500);
+  } finally {
+    if (lockTime > 0 && lock.hasLock()) {
+      lock.releaseLock();
+    }
+  }
+}
+
+/**
+ * System Health checker
+ */
+function checkSystemHealth_() {
+  let spreadsheetOk = false;
+  let driveOk = false;
+  let cacheOk = false;
+
+  try {
+    SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    spreadsheetOk = true;
+  } catch(e) {}
+
+  try {
+    DriveApp.getRootFolder();
+    driveOk = true;
+  } catch(e) {}
+
+  try {
+    CacheService.getScriptCache().put("health_test", "1", 10);
+    cacheOk = CacheService.getScriptCache().get("health_test") === "1";
+  } catch(e) {}
+
+  return {
+    status: (spreadsheetOk && driveOk && cacheOk) ? "ok" : "degraded",
+    version: BACKEND_CONFIG.version,
+    updated: BACKEND_CONFIG.updated,
+    environment: BACKEND_CONFIG.environment,
+    spreadsheet: spreadsheetOk,
+    drive: driveOk,
+    cache: cacheOk,
+    timestamp: new Date().toISOString()
+  };
+}
+
+/**
  * Helper to construct JSON HTTP Response
  */
 function generateResponse(data, statusCode) {
-  const code = statusCode || 200;
-  const out = ContentService.createTextOutput(JSON.stringify(data))
+  return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
-  return out;
 }
 
 /**
  * 2. DATABASE ADAPTER
- * Abstracts storage operations to minimize the amount of application code that depends on the underlying persistence layer.
- * Implements CacheService for sub-second perceived latency.
+ * The ONLY layer allowed to touch SpreadsheetApp
  */
 const DatabaseAdapter = {
   getTournamentConfig: function(tournamentId) {
@@ -150,7 +233,9 @@ const DatabaseAdapter = {
       adminspreadsheetid: tournamentId === "chaos-ii" 
         ? "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E" 
         : "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E",
-      currentphase: "Registration Open"
+      currentphase: "Registration Open",
+      workerbatchsize: 10,
+      maxretries: 4
     };
   },
 
@@ -288,6 +373,119 @@ const DatabaseAdapter = {
     const inviteSheet = doc.getSheetByName("InviteCodes");
     if (!inviteSheet) return [];
     return inviteSheet.getDataRange().getValues();
+  },
+
+  appendEnrichmentJob: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
+    if (!sheet) {
+      sheet = doc.insertSheet("ENRICHMENT_QUEUE");
+      sheet.appendRow([
+        "Queue ID", "Team ID", "Player ID", "Job Type", "Queue Status", 
+        "Priority", "Retry Count", "Next Run Time", "Last Heartbeat", 
+        "Reserved By Worker", "Last Error"
+      ]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  getPendingJobs: function(batchSize) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
+    if (!sheet) return [];
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) return [];
+
+    const now = new Date().toISOString();
+    const jobs = [];
+    // Index mapping
+    const headers = data[0].map(h => h.toString().toLowerCase().trim());
+    const statusIdx = headers.indexOf("queue status");
+    const nextRunIdx = headers.indexOf("next run time");
+    const priorityIdx = headers.indexOf("priority");
+
+    for (let i = 1; i < data.length; i++) {
+      const status = data[i][statusIdx];
+      const nextRun = data[i][nextRunIdx] || "";
+      if ((status === "QUEUED" || status === "RETRY") && (!nextRun || nextRun <= now)) {
+        jobs.push({
+          rowIdx: i + 1,
+          queueId: data[i][headers.indexOf("queue id")],
+          teamId: data[i][headers.indexOf("team id")],
+          playerId: data[i][headers.indexOf("player id")],
+          jobType: data[i][headers.indexOf("job type")],
+          status: status,
+          priority: parseInt(data[i][priorityIdx]) || 50,
+          retryCount: parseInt(data[i][headers.indexOf("retry count")]) || 0
+        });
+      }
+    }
+
+    // Sort by priority descending
+    jobs.sort((a, b) => b.priority - a.priority);
+    return jobs.slice(0, batchSize);
+  },
+
+  reserveJob: function(rowIdx, workerId) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
+    const now = new Date().toISOString();
+    sheet.getRange(rowIdx, 5).setValue("RESERVED"); // Status
+    sheet.getRange(rowIdx, 9).setValue(now);       // Last Heartbeat
+    sheet.getRange(rowIdx, 10).setValue(workerId); // Reserved By Worker
+    SpreadsheetApp.flush();
+  },
+
+  updateJobStatus: function(rowIdx, status, errorMsg) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
+    sheet.getRange(rowIdx, 5).setValue(status);
+    if (errorMsg) {
+      sheet.getRange(rowIdx, 11).setValue(errorMsg);
+    }
+    SpreadsheetApp.flush();
+  },
+
+  logPlayerHistory: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("PLAYER_HISTORY");
+    if (!sheet) {
+      sheet = doc.insertSheet("PLAYER_HISTORY");
+      sheet.appendRow([
+        "Timestamp", "Registration ID", "Tournament ID", "Player Slot", 
+        "Steam64", "Faceit ID", "Source", "Field", "Old Value", 
+        "New Value", "Sync Type", "Worker Version"
+      ]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  logTeamHistory: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("TEAM_HISTORY");
+    if (!sheet) {
+      sheet = doc.insertSheet("TEAM_HISTORY");
+      sheet.appendRow(["Timestamp", "Team ID", "Field Changed", "Old Value", "New Value", "Sync Type", "Worker Version"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
+  },
+
+  logWorkerStats: function(row) {
+    const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+    let sheet = doc.getSheetByName("WORKER_STATS");
+    if (!sheet) {
+      sheet = doc.insertSheet("WORKER_STATS");
+      sheet.appendRow(["Worker ID", "Started", "Finished", "Jobs Completed", "Jobs Failed", "Average Runtime", "API Calls", "Errors", "Timeouts"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow(row);
+    SpreadsheetApp.flush();
   }
 };
 
@@ -322,10 +520,18 @@ const FailedTransactionsQueue = {
 
 /**
  * 4. STORAGE SERVICE
- * Handles base64 uploads and returns storage abstractions.
+ * Provider agnostic upload abstraction
  */
 const StorageService = {
-  uploadLogo: function(payload) {
+  upload: function(payload) {
+    const provider = payload.storageProvider || "Drive";
+    if (provider === "Drive") {
+      return this.uploadToDrive_(payload);
+    }
+    throw new Error("UNSUPPORTED_STORAGE_PROVIDER");
+  },
+
+  uploadToDrive_: function(payload) {
     const base64Data = payload.base64Data || payload.fileData;
     const mimeType = payload.mimeType || "image/png";
     const filename = payload.filename || payload.fileName || "logo.png";
@@ -345,7 +551,7 @@ const StorageService = {
     const fileId = file.getId();
     const url = "https://lh3.googleusercontent.com/d/" + fileId;
     
-    // Get file hash (MD5)
+    // Get file MD5 checksum
     let checksum = "N/A";
     try {
       const fileBytes = file.getBlob().getBytes();
@@ -356,7 +562,7 @@ const StorageService = {
     }
 
     // Log upload event
-    AuditService.logEvent(tournamentId, "STORAGE_UPLOAD", "SUCCESS", "N/A", "Uploaded " + filename, "System");
+    AuditService.recordEvent(tournamentId, "STORAGE_UPLOAD", "SUCCESS", "N/A", "Uploaded logo " + filename, "System");
 
     return {
       success: true,
@@ -377,82 +583,97 @@ const StorageService = {
  */
 const RegistrationService = {
   registerTeam: function(payload) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(15000); // 15 seconds lock wrapping ID generation and write
-      
-      const tournamentId = payload.tournament_id;
-      const submissionId = payload.submission_id || Utilities.getUuid();
-      const config = DatabaseAdapter.getTournamentConfig(tournamentId);
+    const tournamentId = payload.tournament_id;
+    const submissionId = payload.submission_id || Utilities.getUuid();
+    const config = DatabaseAdapter.getTournamentConfig(tournamentId);
 
-      // Phase 1: PreValidation (Format, Missing fields)
-      const preRes = this.validatePreConditions_(payload);
-      if (!preRes.valid) {
-        return { success: false, error: "PRE_VALIDATION_FAILED", reason: preRes.error };
-      }
-
-      // Phase 2: BusinessValidation (Duplicates, invites, bans)
-      const businessRes = this.validateBusinessRules_(payload, config);
-      const isSuccess = businessRes.valid;
-      const status = isSuccess ? "SUBMITTED" : "FAILED_VALIDATION";
-
-      // Extract logo file ID from Drive URL
-      const logoUrl = payload.logo_url || payload.logoLink || "";
-      let logoFileId = payload.logo_file_id || "";
-      if (!logoFileId && logoUrl.includes("/d/")) {
-        try {
-          logoFileId = logoUrl.split("/d/")[1].split(/[/?#]/)[0];
-        } catch(e) {}
-      }
-
-      const rawData = DatabaseAdapter.getRawRegistrations();
-      const registrationId = "REG-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-" + String(rawData.length).padStart(6, '0');
-      const formattedDate = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
-
-      // Immutably write transaction ledger row
-      const newRow = [
-        submissionId,
-        registrationId,
-        formattedDate,
-        tournamentId,
-        status,
-        payload.team_name,
-        payload.team_tag,
-        payload.region || "",
-        "Drive",
-        logoFileId,
-        payload.logo_mime_type || "image/png",
-        new Date().toISOString(),
-        payload.p1Discord || "", payload.p1Steam || "", payload.p1Faceit || "", payload.p1Rank || "",
-        payload.p2Discord || "", payload.p2Steam || "", payload.p2Faceit || "", payload.p2Rank || "",
-        payload.p3Discord || "", payload.p3Steam || "", payload.p3Faceit || "", payload.p3Rank || "",
-        payload.p4Discord || "", payload.p4Steam || "", payload.p4Faceit || "", payload.p4Rank || "",
-        payload.p5Discord || "", payload.p5Steam || "", payload.p5Faceit || "", payload.p5Rank || "",
-        payload.p6Discord || "", payload.p6Steam || "", payload.p6Faceit || "", payload.p6Rank || "",
-        payload.p7Discord || "", payload.p7Steam || "", payload.p7Faceit || "", payload.p7Rank || "",
-        payload.invite_code || ""
-      ];
-
-      DatabaseAdapter.appendRawRegistration(newRow);
-
-      // Log the lifecycle action
-      AuditService.logEvent(
-        tournamentId, 
-        "REGISTRATION_RECEIVED", 
-        "NONE", 
-        status, 
-        "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")", 
-        "System"
-      );
-
-      if (!isSuccess) {
-        return { success: false, error: "BUSINESS_VALIDATION_FAILED", reason: businessRes.error };
-      }
-
-      return { success: true, submissionId: submissionId, registrationId: registrationId };
-    } finally {
-      lock.releaseLock();
+    // Phase 1: PreValidation (Format, Missing fields)
+    const preRes = this.validatePreConditions_(payload);
+    if (!preRes.valid) {
+      return { success: false, error: ERROR_CODES.INVALID_JSON.message, errorCode: ERROR_CODES.INVALID_JSON.code, reason: preRes.error };
     }
+
+    // Phase 2: BusinessValidation (Duplicates, invites, bans)
+    const businessRes = this.validateBusinessRules_(payload, config);
+    const isSuccess = businessRes.valid;
+    const status = isSuccess ? "SUBMITTED" : "FAILED_VALIDATION";
+
+    // Extract logo file ID from Drive URL
+    const logoUrl = payload.logo_url || payload.logoLink || "";
+    let logoFileId = payload.logo_file_id || "";
+    if (!logoFileId && logoUrl.includes("/d/")) {
+      try {
+        logoFileId = logoUrl.split("/d/")[1].split(/[/?#]/)[0];
+      } catch(e) {}
+    }
+
+    // Year-based Registration ID (e.g. PP-CC2-2026-000145)
+    const rawData = DatabaseAdapter.getRawRegistrations();
+    const year = new Date().getFullYear();
+    const cleanTournament = tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "");
+    const registrationId = "PP-" + cleanTournament + "-" + year + "-" + String(rawData.length).padStart(6, '0');
+    const formattedDate = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
+
+    // Immutably write transaction ledger row
+    const newRow = [
+      submissionId,
+      registrationId,
+      formattedDate,
+      tournamentId,
+      status,
+      payload.team_name,
+      payload.team_tag,
+      payload.region || "",
+      "Drive",
+      logoFileId,
+      payload.logo_mime_type || "image/png",
+      new Date().toISOString(),
+      payload.p1Discord || "", payload.p1Steam || "", payload.p1Faceit || "", payload.p1Rank || "",
+      payload.p2Discord || "", payload.p2Steam || "", payload.p2Faceit || "", payload.p2Rank || "",
+      payload.p3Discord || "", payload.p3Steam || "", payload.p3Faceit || "", payload.p3Rank || "",
+      payload.p4Discord || "", payload.p4Steam || "", payload.p4Faceit || "", payload.p4Rank || "",
+      payload.p5Discord || "", payload.p5Steam || "", payload.p5Faceit || "", payload.p5Rank || "",
+      payload.p6Discord || "", payload.p6Steam || "", payload.p6Faceit || "", payload.p6Rank || "",
+      payload.p7Discord || "", payload.p7Steam || "", payload.p7Faceit || "", payload.p7Rank || "",
+      payload.invite_code || ""
+    ];
+
+    DatabaseAdapter.appendRawRegistration(newRow);
+
+    // Queue player enrichment jobs
+    const teamId = Utilities.getUuid();
+    for (let p = 1; p <= 7; p++) {
+      const steamVal = payload[`p${p}Steam`] || "";
+      if (steamVal) {
+        const playerId = Utilities.getUuid();
+        
+        // Queue FACEIT & Steam sync jobs separately
+        DatabaseAdapter.appendEnrichmentJob([
+          Utilities.getUuid(), teamId, playerId, "FACEIT_SYNC", "QUEUED",
+          100, 0, "", "", "", ""
+        ]);
+        DatabaseAdapter.appendEnrichmentJob([
+          Utilities.getUuid(), teamId, playerId, "STEAM_SYNC", "QUEUED",
+          100, 0, "", "", "", ""
+        ]);
+      }
+    }
+
+    // Log the lifecycle action
+    AuditService.recordEvent(
+      tournamentId, 
+      "REGISTRATION_RECEIVED", 
+      "NONE", 
+      status, 
+      "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")", 
+      "System"
+    );
+
+    if (!isSuccess) {
+      return { success: false, error: ERROR_CODES.DUPLICATE_TEAM.message, errorCode: ERROR_CODES.DUPLICATE_TEAM.code, reason: businessRes.error };
+    }
+
+    return { success: true, submissionId: submissionId, registrationId: registrationId };
   },
 
   validatePreConditions_: function(payload) {
@@ -500,8 +721,8 @@ const RegistrationService = {
   getApprovedTeams: function(tournamentId, config) {
     try {
       const adminDoc = SpreadsheetApp.openById(config.adminspreadsheetid);
-      const sheet = adminDoc.getSheetByName("Admin_Ops") || doc.getSheets()[0];
-      const data = sheet.getDataRange().getValues();
+      const sheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+      const sheetData = sheet.getDataRange().getValues();
       const teams = [];
       const rowsPerTeam = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
       
@@ -518,29 +739,29 @@ const RegistrationService = {
       const faceitIdx = 11;
       const liveEloIdx = 12;
 
-      for (let i = 1; i < data.length; i += rowsPerTeam) {
-        const teamName = (data[i][teamNameIdx] || "").toString().trim();
+      for (let i = 1; i < sheetData.length; i += rowsPerTeam) {
+        const teamName = (sheetData[i][teamNameIdx] || "").toString().trim();
         if (!teamName || teamName === "Team Name") continue;
         
-        const status = (data[i][statusIdx] || "").toString().trim().toUpperCase();
+        const status = (sheetData[i][statusIdx] || "").toString().trim().toUpperCase();
         if (status === "REJECTED" || status === "DISQUALIFIED" || status === "") continue;
 
-        const region = (data[i][regionIdx] || "").toString().trim();
-        let logoUrl = (data[i][logoIdx] || "").toString().trim();
+        const region = (sheetData[i][regionIdx] || "").toString().trim();
+        let logoUrl = (sheetData[i][logoIdx] || "").toString().trim();
         if (logoUrl.includes("IMAGE(")) {
           const match = logoUrl.match(/IMAGE\(['"]([^'"]+)['"]/i);
           if (match) logoUrl = match[1];
         }
 
-        const averageElo = data[i][avgEloIdx] || 0;
-        const seed = data[i][seedIdx] || "TBD";
+        const averageElo = sheetData[i][avgEloIdx] || 0;
+        const seed = sheetData[i][seedIdx] || "TBD";
         const roster = [];
 
         for (let p = 0; p < rowsPerTeam; p++) {
           const rowIdx = i + p;
-          if (rowIdx >= data.length) break;
+          if (rowIdx >= sheetData.length) break;
           
-          const pName = (data[rowIdx][pNameIdx] || "").toString().trim();
+          const pName = (sheetData[rowIdx][pNameIdx] || "").toString().trim();
           if (pName && pName !== "" && pName !== "N/A") {
             let role = "Player " + (p + 1);
             if (p === 0) role = "Captain";
@@ -548,11 +769,11 @@ const RegistrationService = {
 
             roster.push({
               role: role,
-              discord: data[rowIdx][discordIdx] || "",
+              discord: sheetData[rowIdx][discordIdx] || "",
               ign: pName,
-              steam: data[rowIdx][steamIdx] || "",
-              faceit: data[rowIdx][faceitIdx] || "",
-              faceitElo: data[rowIdx][liveEloIdx] || "N/A"
+              steam: sheetData[rowIdx][steamIdx] || "",
+              faceit: sheetData[rowIdx][faceitIdx] || "",
+              faceitElo: sheetData[rowIdx][liveEloIdx] || "N/A"
             });
           }
         }
@@ -587,119 +808,75 @@ const RegistrationService = {
 };
 
 /**
- * 6. APPROVAL SERVICE
- * Generates roster hashes, seals version counters, and seeds ADMIN workspace.
+ * 6. TOURNAMENT SERVICE
+ * Consolidates approvals, roster change requests, and operational state changes.
  */
-const ApprovalService = {
+const TournamentService = {
   approveTeam: function(submissionId, tournamentId) {
-    const lock = LockService.getScriptLock();
-    try {
-      lock.waitLock(15000); // Wait up to 15 seconds for approval locks
+    const config = DatabaseAdapter.getTournamentConfig(tournamentId);
+    const teamRow = DatabaseAdapter.getRowBySubmissionId(submissionId);
+    if (!teamRow) throw new Error("REGISTRATION_NOT_FOUND");
+
+    const rawData = DatabaseAdapter.getRawRegistrations();
+    const headers = rawData[0].map(h => h.toString().toLowerCase());
+
+    const teamName = teamRow[headers.indexOf("team name")];
+    const teamTag = teamRow[headers.indexOf("team tag")];
+    const region = teamRow[headers.indexOf("region")];
+    const fileId = teamRow[headers.indexOf("logo file id")];
+    const logoUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+    
+    const maxPlayers = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
+    const rowsToAppend = [];
+    const seedId = "PP-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-TBD";
+
+    for (let p = 0; p < maxPlayers; p++) {
+      const pNum = p + 1;
+      const discordIdx = headers.indexOf(`p${pNum} discord`);
+      const steamIdx = headers.indexOf(`p${pNum} steam`);
+      const faceitIdx = headers.indexOf(`p${pNum} faceit`);
       
-      const config = DatabaseAdapter.getTournamentConfig(tournamentId);
-      const teamRow = DatabaseAdapter.getRowBySubmissionId(submissionId);
-      if (!teamRow) throw new Error("REGISTRATION_NOT_FOUND");
+      const discord = discordIdx > -1 ? teamRow[discordIdx] : "";
+      const steam = steamIdx > -1 ? teamRow[steamIdx] : "";
+      const faceit = faceitIdx > -1 ? teamRow[faceitIdx] : "";
 
-      const rawData = DatabaseAdapter.getRawRegistrations();
-      const headers = rawData[0].map(h => h.toString().toLowerCase());
-
-      const teamName = teamRow[headers.indexOf("team name")];
-      const teamTag = teamRow[headers.indexOf("team tag")];
-      const region = teamRow[headers.indexOf("region")];
-      const fileId = teamRow[headers.indexOf("logo file id")];
-      const logoUrl = "https://lh3.googleusercontent.com/d/" + fileId;
+      const r = new Array(36).fill("");
+      r[0]  = p === 0 ? "TBD" : "";                   // Col A (1): S.N
+      r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
+      r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
+      r[3]  = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
+      r[4]  = p === 0 ? region : "";                 // Col E (5): Region
+      r[5]  = faceit ? faceit.replace(/\/$/, "").split("/").pop() : (discord || ""); // Col F (6): IGN
+      r[6]  = discord || "N/A";                      // Col G (7): Discord
+      r[7]  = steam || "N/A";                        // Col H (8): Steam URL
+      r[8]  = "⏳";                                  // Col I (9): Joined Discord
+      r[9]  = "⏳";                                  // Col J (10): Role Issued
+      r[10] = "⏳";                                  // Col K (11): Private VC
+      r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
+      r[12] = "⏳";                                  // Col M (13): Live ELO
+      r[13] = p === 0 ? "⏳" : "";                    // Col N (14): Avg ELO
+      r[14] = p === 0 ? "PENDING" : "";              // Col O (15): Reg. Status
+      r[15] = p === 0 ? seedId : "";                 // Col P (16): Team Seed
+      r[16] = "";                                    // Col Q (17): Remarks
       
-      const maxPlayers = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
-      const rowsToAppend = [];
-      const seedId = "PP-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-TBD";
+      // Metadata columns (Versioning & Optimistic Concurrency)
+      r[33] = p === 0 ? 1 : "";                      // Col AH (34): Version
+      r[34] = p === 0 ? new Date().toISOString() : ""; // Col AI (35): Updated At
+      r[35] = p === 0 ? "System" : "";               // Col AJ (36): Updated By
 
-      // Gather roster identifiers for hash calculation
-      const hashInputs = [];
-      
-      for (let p = 0; p < maxPlayers; p++) {
-        const pNum = p + 1;
-        const discordIdx = headers.indexOf(`p${pNum} discord`);
-        const steamIdx = headers.indexOf(`p${pNum} steam`);
-        const faceitIdx = headers.indexOf(`p${pNum} faceit`);
-        
-        const discord = discordIdx > -1 ? teamRow[discordIdx] : "";
-        const steam = steamIdx > -1 ? teamRow[steamIdx] : "";
-        const faceit = faceitIdx > -1 ? teamRow[faceitIdx] : "";
-
-        hashInputs.push(steam, faceit, discord);
-      }
-
-      // Generate roster hash
-      const rosterHash = this.generateRosterHash_(hashInputs);
-
-      for (let p = 0; p < maxPlayers; p++) {
-        const pNum = p + 1;
-        const discordIdx = headers.indexOf(`p${pNum} discord`);
-        const steamIdx = headers.indexOf(`p${pNum} steam`);
-        const faceitIdx = headers.indexOf(`p${pNum} faceit`);
-        
-        const discord = discordIdx > -1 ? teamRow[discordIdx] : "";
-        const steam = steamIdx > -1 ? teamRow[steamIdx] : "";
-        const faceit = faceitIdx > -1 ? teamRow[faceitIdx] : "";
-
-        const r = new Array(36).fill("");
-        r[0]  = p === 0 ? "TBD" : "";                   // Col A (1): S.N
-        r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
-        r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
-        r[3]  = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
-        r[4]  = p === 0 ? region : "";                 // Col E (5): Region
-        r[5]  = faceit ? faceit.replace(/\/$/, "").split("/").pop() : (discord || ""); // Col F (6): IGN
-        r[6]  = discord || "N/A";                      // Col G (7): Discord
-        r[7]  = steam || "N/A";                        // Col H (8): Steam URL
-        r[8]  = "⏳";                                  // Col I (9): Joined Discord
-        r[9]  = "⏳";                                  // Col J (10): Role Issued
-        r[10] = "⏳";                                  // Col K (11): Private VC
-        r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
-        r[12] = "⏳";                                  // Col M (13): Live ELO
-        r[13] = p === 0 ? "⏳" : "";                    // Col N (14): Avg ELO
-        r[14] = p === 0 ? "PENDING" : "";              // Col O (15): Reg. Status
-        r[15] = p === 0 ? seedId : "";                 // Col P (16): Team Seed
-        r[16] = "";                                    // Col Q (17): Remarks
-        
-        // Metadata columns (Versioning & Optimistic Concurrency)
-        r[33] = p === 0 ? 1 : "";                      // Col AH (34): Version
-        r[34] = p === 0 ? new Date().toISOString() : ""; // Col AI (35): Updated At
-        r[35] = p === 0 ? "System" : "";               // Col AJ (36): Updated By
-        r[36] = p === 0 ? rosterHash : "";             // Col AK (37): Roster Hash
-
-        rowsToAppend.push(r);
-      }
-
-      DatabaseAdapter.seedTeamToAdminOps(config.adminspreadsheetid, rowsToAppend);
-      AuditService.logEvent(tournamentId, "ROSTER_SEEDED", "PENDING", "APPROVED", "Seeded roster for " + teamName, "Admin");
-    } finally {
-      lock.releaseLock();
+      rowsToAppend.push(r);
     }
+
+    DatabaseAdapter.seedTeamToAdminOps(config.adminspreadsheetid, rowsToAppend);
+    AuditService.recordEvent(tournamentId, "ROSTER_SEEDED", "PENDING", "APPROVED", "Seeded roster for " + teamName, "Admin");
   },
 
-  generateRosterHash_: function(inputs) {
-    const str = inputs.join("|");
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return "HSH-" + Math.abs(hash).toString(16).toUpperCase();
-  }
-};
-
-/**
- * 7. ROSTER SERVICE
- * Manages player roster validation, roster locks, and changes.
- */
-const RosterService = {
   submitChangeRequest: function(payload) {
     const tournamentId = payload.tournament_id;
     const config = DatabaseAdapter.getTournamentConfig(tournamentId);
 
     if (config.currentphase === "Roster Lock" || config.currentphase === "Completed") {
-      return { success: false, error: "ROSTER_LOCKED" };
+      return { success: false, error: ERROR_CODES.ROSTER_LOCKED.message, errorCode: ERROR_CODES.ROSTER_LOCKED.code };
     }
 
     const row = [
@@ -714,8 +891,107 @@ const RosterService = {
 
     DatabaseAdapter.logRosterChangeRequest(row);
 
-    AuditService.logEvent(tournamentId, "ROSTER_CHANGE_REQUESTED", "PENDING", "SUBMITTED", "Roster change requested for Team " + payload.team_id, "Captain");
+    AuditService.recordEvent(tournamentId, "ROSTER_CHANGE_REQUESTED", "PENDING", "SUBMITTED", "Roster change requested for Team " + payload.team_id, "Captain");
     return { success: true };
+  }
+};
+
+/**
+ * 7. ENRICHMENT QUEUE SERVICE
+ * Player level worker processing under LockService transactions
+ */
+const EnrichmentQueueService = {
+  processQueue: function(workerId) {
+    const config = DatabaseAdapter.getTournamentConfig("chaos-ii") || DatabaseAdapter.getTournamentConfig("community-cup-2");
+    const batchSize = config.workerbatchsize || 10;
+    
+    const lock = LockService.getScriptLock();
+    let jobs = [];
+    
+    try {
+      lock.waitLock(10000); // Wait up to 10 seconds to lock queue
+      jobs = DatabaseAdapter.getPendingJobs(batchSize);
+      if (jobs.length === 0) return { processed: 0 };
+
+      // Reserve jobs instantly
+      jobs.forEach(job => {
+        DatabaseAdapter.reserveJob(job.rowIdx, workerId);
+      });
+    } catch(err) {
+      Logger.log("Worker failed to acquire queue reservation lock: " + err);
+      return { error: "LOCK_TIMEOUT" };
+    } finally {
+      lock.releaseLock();
+    }
+
+    const startedTime = Date.now();
+    let completedCount = 0;
+    let failedCount = 0;
+
+    jobs.forEach(job => {
+      try {
+        let success = false;
+        let resultMsg = "";
+        
+        if (job.jobType === "FACEIT_SYNC") {
+          success = EnrichmentQueueService.enrichFaceitPlayer_(job.playerId);
+        } else if (job.jobType === "STEAM_SYNC") {
+          success = EnrichmentQueueService.enrichSteamPlayer_(job.playerId);
+        }
+
+        if (success) {
+          DatabaseAdapter.updateJobStatus(job.rowIdx, "SUCCESS", "");
+          completedCount++;
+        } else {
+          const nextRetry = new Date(Date.now() + 60000 * 5).toISOString(); // Retry in 5 minutes
+          DatabaseAdapter.updateJobStatus(job.rowIdx, "RETRY", "Enrichment step returned false");
+          failedCount++;
+        }
+      } catch(jobErr) {
+        DatabaseAdapter.updateJobStatus(job.rowIdx, "FAILED", jobErr.toString());
+        failedCount++;
+      }
+    });
+
+    // Log Worker Telemetry
+    const duration = Date.now() - startedTime;
+    const avgRuntime = jobs.length > 0 ? duration / jobs.length : 0;
+    DatabaseAdapter.logWorkerStats([
+      workerId,
+      new Date(startedTime).toISOString(),
+      new Date().toISOString(),
+      completedCount,
+      failedCount,
+      avgRuntime,
+      jobs.length * 2, // API count estimation
+      failedCount,
+      0
+    ]);
+
+    return { processed: jobs.length, completed: completedCount, failed: failedCount };
+  },
+
+  enrichFaceitPlayer_: function(playerId) {
+    // Mock connector simulating external API retrieval
+    Utilities.sleep(100); 
+    const randomElo = Math.floor(Math.random() * 1000) + 1200;
+    
+    // Log player history via DatabaseAdapter
+    DatabaseAdapter.logPlayerHistory([
+      new Date().toISOString(), "N/A", "N/A", "Player Slot", "N/A", playerId, 
+      "FACEIT", "ELO", "N/A", String(randomElo), "AUTO", BACKEND_CONFIG.version
+    ]);
+    return true;
+  },
+
+  enrichSteamPlayer_: function(playerId) {
+    Utilities.sleep(100);
+    
+    DatabaseAdapter.logPlayerHistory([
+      new Date().toISOString(), "N/A", "N/A", "Player Slot", playerId, "N/A", 
+      "STEAM", "VAC Ban", "N/A", "False", "AUTO", BACKEND_CONFIG.version
+    ]);
+    return true;
   }
 };
 
@@ -806,21 +1082,21 @@ const ValidationService = {
 
 /**
  * 10. AUDIT SERVICE
- * Records changes to AUDIT_LOG and lifecycles to EVENT_LOG.
+ * Standardized logging facade writing only via the DatabaseAdapter
  */
 const AuditService = {
-  logEvent: function(tournamentId, eventType, oldState, newState, desc, userEmail) {
+  recordEvent: function(tournamentId, eventType, oldState, newState, desc, userEmail) {
     try {
       const eventId = "EVT-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
       const row = [eventId, time, tournamentId, eventType, oldState, newState, desc, userEmail];
       DatabaseAdapter.appendEventLog(row);
     } catch(e) {
-      Logger.log("Failed to write to EVENT_LOG: " + e);
+      Logger.log("Event write failed: " + e);
     }
   },
 
-  logAudit: function(sheetName, range, teamId, teamName, field, oldValue, newValue, source, reason, userEmail, action) {
+  recordAudit: function(sheetName, range, teamId, teamName, field, oldValue, newValue, source, reason, userEmail, action) {
     try {
       const auditId = "AUD-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
@@ -841,8 +1117,16 @@ const AuditService = {
       ];
       DatabaseAdapter.appendAuditLog(row);
     } catch(e) {
-      Logger.log("Failed to write to Audit_Log: " + e);
+      Logger.log("Audit write failed: " + e);
     }
+  },
+
+  // Retain legacy bindings
+  logEvent: function(t, ev, o, n, d, u) {
+    this.recordEvent(t, ev, o, n, d, u);
+  },
+  logAudit: function(sh, rg, tid, tnm, f, old, nw, src, usr) {
+    this.recordAudit(sh, rg, tid, tnm, f, old, nw, src, "Manual edit", usr, "UPDATE");
   }
 };
 
@@ -904,7 +1188,7 @@ function onEdit(e) {
       teamName = sheet.getRange(row, 3).getValue() + " vs " + sheet.getRange(row, 4).getValue();
     }
     
-    AuditService.logAudit(
+    AuditService.recordAudit(
       sheetName,
       "R" + row + "C" + col,
       teamId,
@@ -919,7 +1203,7 @@ function onEdit(e) {
     );
   } else {
     // Bulk Edit Audit
-    AuditService.logAudit(
+    AuditService.recordAudit(
       sheetName,
       range.getA1Notation(),
       "N/A",
@@ -943,6 +1227,7 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Tournament OS")
     .addItem("Clear Settings Cache", "clearSettingsCache")
+    .addItem("Setup Enrichment Cron", "setupEnrichmentCron")
     .addSeparator()
     .addItem("Schedule Match Time", "showTimeScheduler")
     .addItem("Setup Brackets Sheet", "setupBracketsSheet")
@@ -953,6 +1238,25 @@ function onOpen() {
 function clearSettingsCache() {
   DatabaseAdapter.clearConfigCache();
   SpreadsheetApp.getActiveSpreadsheet().toast("Configuration cache successfully cleared!", "Tournament OS");
+}
+
+function setupEnrichmentCron() {
+  const triggers = ScriptApp.getProjectTriggers();
+  triggers.forEach(t => {
+    if (t.getHandlerFunction() === "processEnrichmentQueue") {
+      ScriptApp.deleteTrigger(t);
+    }
+  });
+  ScriptApp.newTrigger("processEnrichmentQueue")
+           .timeBased()
+           .everyMinutes(1)
+           .create();
+  SpreadsheetApp.getActiveSpreadsheet().toast("1-minute cron worker trigger successfully configured!", "Tournament OS");
+}
+
+function processEnrichmentQueue() {
+  const workerId = "WRK-" + Utilities.getUuid().substring(0, 8).toUpperCase();
+  EnrichmentQueueService.processQueue(workerId);
 }
 
 function showTimeScheduler() {
