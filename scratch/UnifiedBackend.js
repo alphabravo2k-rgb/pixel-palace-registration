@@ -83,7 +83,7 @@ function doPost(e) {
     let payload;
     try {
       payload = JSON.parse(postData);
-    } catch(jsonErr) {
+    } catch (jsonErr) {
       return generateResponse({ error: ERROR_CODES.INVALID_JSON.message, errorCode: ERROR_CODES.INVALID_JSON.code }, 400);
     }
 
@@ -126,7 +126,7 @@ function executeRequest(action, payload, lockTime, serviceFn) {
     const duration = Date.now() - startTime;
     Logger.log("Action: " + action + " executed in " + duration + "ms");
     return generateResponse(result);
-  } catch(err) {
+  } catch (err) {
     const duration = Date.now() - startTime;
     Logger.log("Action: " + action + " failed after " + duration + "ms: " + err);
     return generateResponse({ error: err.toString(), errorCode: ERROR_CODES.UNKNOWN.code }, 500);
@@ -148,17 +148,17 @@ function checkSystemHealth_() {
   try {
     SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     spreadsheetOk = true;
-  } catch(e) {}
+  } catch (e) { }
 
   try {
     DriveApp.getRootFolder();
     driveOk = true;
-  } catch(e) {}
+  } catch (e) { }
 
   try {
     CacheService.getScriptCache().put("health_test", "1", 10);
     cacheOk = CacheService.getScriptCache().get("health_test") === "1";
-  } catch(e) {}
+  } catch (e) { }
 
   return {
     status: (spreadsheetOk && driveOk && cacheOk) ? "ok" : "degraded",
@@ -185,7 +185,7 @@ function generateResponse(data, statusCode) {
  * The ONLY layer allowed to touch SpreadsheetApp
  */
 const DatabaseAdapter = {
-  getTournamentConfig: function(tournamentId) {
+  getTournamentConfig: function (tournamentId) {
     if (!tournamentId) return null;
     const cacheKey = "config_" + tournamentId;
     const cached = CacheService.getScriptCache().get(cacheKey);
@@ -199,7 +199,7 @@ const DatabaseAdapter = {
       const data = sheet.getDataRange().getValues();
       const headers = data[0].map(h => h.toString().trim().toLowerCase());
       const idIdx = headers.indexOf("tournamentid");
-      
+
       for (let i = 1; i < data.length; i++) {
         if (data[i][idIdx] === tournamentId) {
           const config = {};
@@ -216,12 +216,12 @@ const DatabaseAdapter = {
     return this.getDefaultConfig_(tournamentId);
   },
 
-  clearConfigCache: function() {
+  clearConfigCache: function () {
     CacheService.getScriptCache().remove("config_community-cup-2");
     CacheService.getScriptCache().remove("config_chaos-ii");
   },
 
-  getDefaultConfig_: function(tournamentId) {
+  getDefaultConfig_: function (tournamentId) {
     return {
       tournamentid: tournamentId,
       name: tournamentId === "chaos-ii" ? "Wingman Chaos II" : "Pixel Palace Community Cup 2",
@@ -230,8 +230,8 @@ const DatabaseAdapter = {
       playersperteam: tournamentId === "chaos-ii" ? 2 : 5,
       substitutesmax: tournamentId === "chaos-ii" ? 1 : 2,
       logofolderid: "1HYrpFCvd4f4K26NtukB2Dq05lTaHyk6e",
-      adminspreadsheetid: tournamentId === "chaos-ii" 
-        ? "YOUR_CHAOS_SPREADSHEET_ID_HERE" 
+      adminspreadsheetid: tournamentId === "chaos-ii"
+        ? "YOUR_CHAOS_SPREADSHEET_ID_HERE"
         : "YOUR_SPREADSHEET_ID_HERE",
       currentphase: "Registration Open",
       workerbatchsize: 10,
@@ -239,7 +239,7 @@ const DatabaseAdapter = {
     };
   },
 
-  appendRawRegistration: function(rowArray) {
+  appendRawRegistration: function (rowArray) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("MASTER_RAW_REGISTRATIONS");
     if (!sheet) {
@@ -261,7 +261,7 @@ const DatabaseAdapter = {
     }
     sheet.appendRow(rowArray);
     SpreadsheetApp.flush();
-    
+
     // Add row index to script cache
     const newIdx = sheet.getLastRow();
     const subId = rowArray[0];
@@ -270,14 +270,14 @@ const DatabaseAdapter = {
     CacheService.getScriptCache().put("idx_reg_" + regId, String(newIdx), 1800);
   },
 
-  getRawRegistrations: function() {
+  getRawRegistrations: function () {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     const sheet = doc.getSheetByName("MASTER_RAW_REGISTRATIONS");
     if (!sheet) return [];
     return sheet.getDataRange().getValues();
   },
 
-  getRowBySubmissionId: function(subId) {
+  getRowBySubmissionId: function (subId) {
     const cachedRow = CacheService.getScriptCache().get("idx_sub_" + subId);
     if (cachedRow) {
       const idx = parseInt(cachedRow);
@@ -285,7 +285,7 @@ const DatabaseAdapter = {
       const sheet = doc.getSheetByName("MASTER_RAW_REGISTRATIONS");
       return sheet.getRange(idx, 1, 1, sheet.getLastColumn()).getValues()[0];
     }
-    
+
     // Fallback scan
     const data = this.getRawRegistrations();
     if (data.length <= 1) return null;
@@ -300,39 +300,39 @@ const DatabaseAdapter = {
     return null;
   },
 
-  seedTeamToAdminOps: function(adminSpreadsheetId, rows) {
+  seedTeamToAdminOps: function (adminSpreadsheetId, rows) {
     const doc = SpreadsheetApp.openById(adminSpreadsheetId);
     const sheet = doc.getSheetByName("Admin_Ops") || doc.getSheets()[0];
     const startRow = sheet.getLastRow() + 1;
     const numPlayers = rows.length;
-    
+
     sheet.getRange(startRow, 1, numPlayers, 36).setValues(rows);
-    
+
     // Merge team-level columns vertically
     [1, 2, 3, 4, 5, 14, 15, 16, 17, 34].forEach(col => {
-       sheet.getRange(startRow, col, numPlayers, 1).merge()
-            .setVerticalAlignment("middle")
-            .setHorizontalAlignment("center");
+      sheet.getRange(startRow, col, numPlayers, 1).merge()
+        .setVerticalAlignment("middle")
+        .setHorizontalAlignment("center");
     });
     sheet.setRowHeightsForced(startRow, numPlayers, 28);
     SpreadsheetApp.flush();
   },
 
-  getBracketSettings: function(adminSpreadsheetId) {
+  getBracketSettings: function (adminSpreadsheetId) {
     const adminDoc = SpreadsheetApp.openById(adminSpreadsheetId);
     const settingsSheet = adminDoc.getSheetByName("Settings");
     if (!settingsSheet) return null;
     return settingsSheet.getDataRange().getValues();
   },
 
-  getBracketMatches: function(adminSpreadsheetId) {
+  getBracketMatches: function (adminSpreadsheetId) {
     const adminDoc = SpreadsheetApp.openById(adminSpreadsheetId);
     const bracketsSheet = adminDoc.getSheetByName("Brackets");
     if (!bracketsSheet) return null;
     return bracketsSheet.getDataRange().getValues();
   },
 
-  logRosterChangeRequest: function(row) {
+  logRosterChangeRequest: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("Roster_Change_Requests");
     if (!sheet) {
@@ -344,7 +344,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  appendEventLog: function(row) {
+  appendEventLog: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("EVENT_LOG");
     if (!sheet) {
@@ -356,7 +356,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  appendAuditLog: function(row) {
+  appendAuditLog: function (row) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     let logSheet = ss.getSheetByName("Audit_Log");
     if (!logSheet) {
@@ -368,21 +368,21 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  getInviteCodes: function() {
+  getInviteCodes: function () {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     const inviteSheet = doc.getSheetByName("InviteCodes");
     if (!inviteSheet) return [];
     return inviteSheet.getDataRange().getValues();
   },
 
-  appendEnrichmentJob: function(row) {
+  appendEnrichmentJob: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
     if (!sheet) {
       sheet = doc.insertSheet("ENRICHMENT_QUEUE");
       sheet.appendRow([
-        "Queue ID", "Team ID", "Player ID", "Job Type", "Queue Status", 
-        "Priority", "Retry Count", "Next Run Time", "Last Heartbeat", 
+        "Queue ID", "Team ID", "Player ID", "Job Type", "Queue Status",
+        "Priority", "Retry Count", "Next Run Time", "Last Heartbeat",
         "Reserved By Worker", "Last Error"
       ]);
       sheet.setFrozenRows(1);
@@ -391,7 +391,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  getPendingJobs: function(batchSize) {
+  getPendingJobs: function (batchSize) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
     if (!sheet) return [];
@@ -428,7 +428,7 @@ const DatabaseAdapter = {
     return jobs.slice(0, batchSize);
   },
 
-  reserveJob: function(rowIdx, workerId) {
+  reserveJob: function (rowIdx, workerId) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
     const now = new Date().toISOString();
@@ -438,7 +438,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  updateJobStatus: function(rowIdx, status, errorMsg) {
+  updateJobStatus: function (rowIdx, status, errorMsg) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     const sheet = doc.getSheetByName("ENRICHMENT_QUEUE");
     sheet.getRange(rowIdx, 5).setValue(status);
@@ -448,14 +448,14 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  logPlayerHistory: function(row) {
+  logPlayerHistory: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("PLAYER_HISTORY");
     if (!sheet) {
       sheet = doc.insertSheet("PLAYER_HISTORY");
       sheet.appendRow([
-        "Timestamp", "Registration ID", "Tournament ID", "Player Slot", 
-        "Steam64", "Faceit ID", "Source", "Field", "Old Value", 
+        "Timestamp", "Registration ID", "Tournament ID", "Player Slot",
+        "Steam64", "Faceit ID", "Source", "Field", "Old Value",
         "New Value", "Sync Type", "Worker Version"
       ]);
       sheet.setFrozenRows(1);
@@ -464,7 +464,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  logTeamHistory: function(row) {
+  logTeamHistory: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("TEAM_HISTORY");
     if (!sheet) {
@@ -476,7 +476,7 @@ const DatabaseAdapter = {
     SpreadsheetApp.flush();
   },
 
-  logWorkerStats: function(row) {
+  logWorkerStats: function (row) {
     const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
     let sheet = doc.getSheetByName("WORKER_STATS");
     if (!sheet) {
@@ -493,7 +493,7 @@ const DatabaseAdapter = {
  * 3. TRANSACTION RECOVERY QUEUE
  */
 const FailedTransactionsQueue = {
-  enqueue: function(submissionId, payload, errorMsg) {
+  enqueue: function (submissionId, payload, errorMsg) {
     try {
       const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
       let sheet = doc.getSheetByName("FAILED_TRANSACTIONS");
@@ -502,7 +502,7 @@ const FailedTransactionsQueue = {
         sheet.appendRow(["Submission ID", "Timestamp", "Payload", "Retries", "Last Error", "Status"]);
         sheet.setFrozenRows(1);
       }
-      
+
       sheet.appendRow([
         submissionId,
         new Date().toISOString(),
@@ -512,7 +512,7 @@ const FailedTransactionsQueue = {
         "PENDING_RETRY"
       ]);
       SpreadsheetApp.flush();
-    } catch(e) {
+    } catch (e) {
       Logger.log("Failed to enqueue transaction: " + e);
     }
   }
@@ -523,7 +523,7 @@ const FailedTransactionsQueue = {
  * Provider agnostic upload abstraction
  */
 const StorageService = {
-  upload: function(payload) {
+  upload: function (payload) {
     const provider = payload.storageProvider || "Drive";
     if (provider === "Drive") {
       return this.uploadToDrive_(payload);
@@ -531,7 +531,7 @@ const StorageService = {
     throw new Error("UNSUPPORTED_STORAGE_PROVIDER");
   },
 
-  uploadToDrive_: function(payload) {
+  uploadToDrive_: function (payload) {
     const base64Data = payload.base64Data || payload.fileData;
     const mimeType = payload.mimeType || "image/png";
     const filename = payload.filename || payload.fileName || "logo.png";
@@ -544,20 +544,20 @@ const StorageService = {
     const bytes = Utilities.base64Decode(base64Data);
     const blob = Utilities.newBlob(bytes, mimeType, filename);
     const file = folder.createFile(blob);
-    
+
     // Set file sharing access
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
+
     const fileId = file.getId();
     const url = "https://lh3.googleusercontent.com/d/" + fileId;
-    
+
     // Get file MD5 checksum
     let checksum = "N/A";
     try {
       const fileBytes = file.getBlob().getBytes();
       const hashBytes = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, fileBytes);
       checksum = hashBytes.map(b => ("0" + (b & 0xff).toString(16)).slice(-2)).join("");
-    } catch(hashErr) {
+    } catch (hashErr) {
       Logger.log("Hash generation failed: " + hashErr);
     }
 
@@ -582,7 +582,7 @@ const StorageService = {
  * Handles PreValidation, BusinessValidation splits, and immutable ledger writes.
  */
 const RegistrationService = {
-  registerTeam: function(payload) {
+  registerTeam: function (payload) {
     const tournamentId = payload.tournament_id;
     const submissionId = payload.submission_id || Utilities.getUuid();
     const config = DatabaseAdapter.getTournamentConfig(tournamentId);
@@ -604,7 +604,7 @@ const RegistrationService = {
     if (!logoFileId && logoUrl.includes("/d/")) {
       try {
         logoFileId = logoUrl.split("/d/")[1].split(/[/?#]/)[0];
-      } catch(e) {}
+      } catch (e) { }
     }
 
     // Year-based Registration ID (e.g. PP-CC2-2026-000145)
@@ -646,7 +646,7 @@ const RegistrationService = {
       const steamVal = payload[`p${p}Steam`] || "";
       if (steamVal) {
         const playerId = Utilities.getUuid();
-        
+
         // Queue FACEIT & Steam sync jobs separately
         DatabaseAdapter.appendEnrichmentJob([
           Utilities.getUuid(), teamId, playerId, "FACEIT_SYNC", "QUEUED",
@@ -661,11 +661,11 @@ const RegistrationService = {
 
     // Log the lifecycle action
     AuditService.recordEvent(
-      tournamentId, 
-      "REGISTRATION_RECEIVED", 
-      "NONE", 
-      status, 
-      "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")", 
+      tournamentId,
+      "REGISTRATION_RECEIVED",
+      "NONE",
+      status,
+      "Roster submitted for " + payload.team_name + " (Success: " + isSuccess + ")",
       "System"
     );
 
@@ -676,7 +676,7 @@ const RegistrationService = {
     return { success: true, submissionId: submissionId, registrationId: registrationId };
   },
 
-  validatePreConditions_: function(payload) {
+  validatePreConditions_: function (payload) {
     if (!payload.team_name || payload.team_name.trim().length < 3) {
       return { valid: false, error: "Team Name must be at least 3 characters." };
     }
@@ -689,7 +689,7 @@ const RegistrationService = {
     return { valid: true };
   },
 
-  validateBusinessRules_: function(payload, config) {
+  validateBusinessRules_: function (payload, config) {
     // Check Phase
     if (config.currentphase === "Registration Closed" || config.currentphase === "Archived") {
       return { valid: false, error: "REGISTRATION_CLOSED" };
@@ -698,16 +698,16 @@ const RegistrationService = {
     // Duplicate Check
     const rawData = DatabaseAdapter.getRawRegistrations();
     const newTeamName = payload.team_name.trim().toUpperCase();
-    
+
     if (rawData.length > 1) {
       const headers = rawData[0].map(h => h.toString().toLowerCase());
       const statusIdx = headers.indexOf("status");
       const nameIdx = headers.indexOf("team name");
-      
+
       for (let i = 1; i < rawData.length; i++) {
         const status = rawData[i][statusIdx];
         if (status === "REJECTED" || status === "FAILED_VALIDATION") continue;
-        
+
         const teamName = String(rawData[i][nameIdx]).trim().toUpperCase();
         if (teamName === newTeamName) {
           return { valid: false, error: "DUPLICATE_TEAM_NAME" };
@@ -718,21 +718,21 @@ const RegistrationService = {
     return { valid: true };
   },
 
-  getApprovedTeams: function(tournamentId, config) {
+  getApprovedTeams: function (tournamentId, config) {
     try {
       const adminDoc = SpreadsheetApp.openById(config.adminspreadsheetid);
       const sheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
       const sheetData = sheet.getDataRange().getValues();
       const teams = [];
       const rowsPerTeam = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
-      
+
       const teamNameIdx = 1;
       const statusIdx = 14;
       const regionIdx = 4;
       const logoIdx = 3;
       const avgEloIdx = 13;
       const seedIdx = 15;
-      
+
       const pNameIdx = 5;
       const discordIdx = 6;
       const steamIdx = 7;
@@ -742,7 +742,7 @@ const RegistrationService = {
       for (let i = 1; i < sheetData.length; i += rowsPerTeam) {
         const teamName = (sheetData[i][teamNameIdx] || "").toString().trim();
         if (!teamName || teamName === "Team Name") continue;
-        
+
         const status = (sheetData[i][statusIdx] || "").toString().trim().toUpperCase();
         if (status === "REJECTED" || status === "DISQUALIFIED" || status === "") continue;
 
@@ -760,7 +760,7 @@ const RegistrationService = {
         for (let p = 0; p < rowsPerTeam; p++) {
           const rowIdx = i + p;
           if (rowIdx >= sheetData.length) break;
-          
+
           const pName = (sheetData[rowIdx][pNameIdx] || "").toString().trim();
           if (pName && pName !== "" && pName !== "N/A") {
             let role = "Player " + (p + 1);
@@ -795,7 +795,7 @@ const RegistrationService = {
     }
   },
 
-  getSlotsCount: function(tournamentId, config) {
+  getSlotsCount: function (tournamentId, config) {
     const teams = this.getApprovedTeams(tournamentId, config);
     const approvedCount = teams.filter(t => t.status === "APPROVED" || t.status === "ROSTER_LOCKED").length;
     const maxTeams = parseInt(config.maxteams);
@@ -812,7 +812,7 @@ const RegistrationService = {
  * Consolidates approvals, roster change requests, and operational state changes.
  */
 const TournamentService = {
-  approveTeam: function(submissionId, tournamentId) {
+  approveTeam: function (submissionId, tournamentId) {
     const config = DatabaseAdapter.getTournamentConfig(tournamentId);
     const teamRow = DatabaseAdapter.getRowBySubmissionId(submissionId);
     if (!teamRow) throw new Error("REGISTRATION_NOT_FOUND");
@@ -825,7 +825,7 @@ const TournamentService = {
     const region = teamRow[headers.indexOf("region")];
     const fileId = teamRow[headers.indexOf("logo file id")];
     const logoUrl = "https://lh3.googleusercontent.com/d/" + fileId;
-    
+
     const maxPlayers = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
     const rowsToAppend = [];
     const seedId = "PP-" + tournamentId.toUpperCase().replace(/[^a-zA-Z0-9]/g, "") + "-TBD";
@@ -835,22 +835,22 @@ const TournamentService = {
       const discordIdx = headers.indexOf(`p${pNum} discord`);
       const steamIdx = headers.indexOf(`p${pNum} steam`);
       const faceitIdx = headers.indexOf(`p${pNum} faceit`);
-      
+
       const discord = discordIdx > -1 ? teamRow[discordIdx] : "";
       const steam = steamIdx > -1 ? teamRow[steamIdx] : "";
       const faceit = faceitIdx > -1 ? teamRow[faceitIdx] : "";
 
       const r = new Array(36).fill("");
-      r[0]  = p === 0 ? "TBD" : "";                   // Col A (1): S.N
-      r[1]  = p === 0 ? teamName : "";               // Col B (2): Team Name
-      r[2]  = p === 0 ? teamTag : "";                // Col C (3): Team Tag
-      r[3]  = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
-      r[4]  = p === 0 ? region : "";                 // Col E (5): Region
-      r[5]  = faceit ? faceit.replace(/\/$/, "").split("/").pop() : (discord || ""); // Col F (6): IGN
-      r[6]  = discord || "N/A";                      // Col G (7): Discord
-      r[7]  = steam || "N/A";                        // Col H (8): Steam URL
-      r[8]  = "⏳";                                  // Col I (9): Joined Discord
-      r[9]  = "⏳";                                  // Col J (10): Role Issued
+      r[0] = p === 0 ? "TBD" : "";                   // Col A (1): S.N
+      r[1] = p === 0 ? teamName : "";               // Col B (2): Team Name
+      r[2] = p === 0 ? teamTag : "";                // Col C (3): Team Tag
+      r[3] = p === 0 ? `=IMAGE("${logoUrl}")` : ""; // Col D (4): Logo
+      r[4] = p === 0 ? region : "";                 // Col E (5): Region
+      r[5] = faceit ? faceit.replace(/\/$/, "").split("/").pop() : (discord || ""); // Col F (6): IGN
+      r[6] = discord || "N/A";                      // Col G (7): Discord
+      r[7] = steam || "N/A";                        // Col H (8): Steam URL
+      r[8] = "⏳";                                  // Col I (9): Joined Discord
+      r[9] = "⏳";                                  // Col J (10): Role Issued
       r[10] = "⏳";                                  // Col K (11): Private VC
       r[11] = faceit || "N/A";                       // Col L (12): FACEIT URL
       r[12] = "⏳";                                  // Col M (13): Live ELO
@@ -858,7 +858,7 @@ const TournamentService = {
       r[14] = p === 0 ? "PENDING" : "";              // Col O (15): Reg. Status
       r[15] = p === 0 ? seedId : "";                 // Col P (16): Team Seed
       r[16] = "";                                    // Col Q (17): Remarks
-      
+
       // Metadata columns (Versioning & Optimistic Concurrency)
       r[33] = p === 0 ? 1 : "";                      // Col AH (34): Version
       r[34] = p === 0 ? new Date().toISOString() : ""; // Col AI (35): Updated At
@@ -871,7 +871,7 @@ const TournamentService = {
     AuditService.recordEvent(tournamentId, "ROSTER_SEEDED", "PENDING", "APPROVED", "Seeded roster for " + teamName, "Admin");
   },
 
-  submitChangeRequest: function(payload) {
+  submitChangeRequest: function (payload) {
     const tournamentId = payload.tournament_id;
     const config = DatabaseAdapter.getTournamentConfig(tournamentId);
 
@@ -901,13 +901,13 @@ const TournamentService = {
  * Player level worker processing under LockService transactions
  */
 const EnrichmentQueueService = {
-  processQueue: function(workerId) {
+  processQueue: function (workerId) {
     const config = DatabaseAdapter.getTournamentConfig("chaos-ii") || DatabaseAdapter.getTournamentConfig("community-cup-2");
     const batchSize = config.workerbatchsize || 10;
-    
+
     const lock = LockService.getScriptLock();
     let jobs = [];
-    
+
     try {
       lock.waitLock(10000); // Wait up to 10 seconds to lock queue
       jobs = DatabaseAdapter.getPendingJobs(batchSize);
@@ -917,7 +917,7 @@ const EnrichmentQueueService = {
       jobs.forEach(job => {
         DatabaseAdapter.reserveJob(job.rowIdx, workerId);
       });
-    } catch(err) {
+    } catch (err) {
       Logger.log("Worker failed to acquire queue reservation lock: " + err);
       return { error: "LOCK_TIMEOUT" };
     } finally {
@@ -932,7 +932,7 @@ const EnrichmentQueueService = {
       try {
         let success = false;
         let resultMsg = "";
-        
+
         if (job.jobType === "FACEIT_SYNC") {
           success = EnrichmentQueueService.enrichFaceitPlayer_(job.playerId);
         } else if (job.jobType === "STEAM_SYNC") {
@@ -947,7 +947,7 @@ const EnrichmentQueueService = {
           DatabaseAdapter.updateJobStatus(job.rowIdx, "RETRY", "Enrichment step returned false");
           failedCount++;
         }
-      } catch(jobErr) {
+      } catch (jobErr) {
         DatabaseAdapter.updateJobStatus(job.rowIdx, "FAILED", jobErr.toString());
         failedCount++;
       }
@@ -971,24 +971,24 @@ const EnrichmentQueueService = {
     return { processed: jobs.length, completed: completedCount, failed: failedCount };
   },
 
-  enrichFaceitPlayer_: function(playerId) {
+  enrichFaceitPlayer_: function (playerId) {
     // Mock connector simulating external API retrieval
-    Utilities.sleep(100); 
+    Utilities.sleep(100);
     const randomElo = Math.floor(Math.random() * 1000) + 1200;
-    
+
     // Log player history via DatabaseAdapter
     DatabaseAdapter.logPlayerHistory([
-      new Date().toISOString(), "N/A", "N/A", "Player Slot", "N/A", playerId, 
+      new Date().toISOString(), "N/A", "N/A", "Player Slot", "N/A", playerId,
       "FACEIT", "ELO", "N/A", String(randomElo), "AUTO", BACKEND_CONFIG.version
     ]);
     return true;
   },
 
-  enrichSteamPlayer_: function(playerId) {
+  enrichSteamPlayer_: function (playerId) {
     Utilities.sleep(100);
-    
+
     DatabaseAdapter.logPlayerHistory([
-      new Date().toISOString(), "N/A", "N/A", "Player Slot", playerId, "N/A", 
+      new Date().toISOString(), "N/A", "N/A", "Player Slot", playerId, "N/A",
       "STEAM", "VAC Ban", "N/A", "False", "AUTO", BACKEND_CONFIG.version
     ]);
     return true;
@@ -1000,7 +1000,7 @@ const EnrichmentQueueService = {
  * Static bracket rendering and localizing time updates.
  */
 const MatchService = {
-  getBracketData: function(tournamentId, config) {
+  getBracketData: function (tournamentId, config) {
     const settings = DatabaseAdapter.getBracketSettings(config.adminspreadsheetid);
     let bracketMode = "BETA";
     let bracketUrl = "";
@@ -1067,7 +1067,7 @@ const MatchService = {
  * FACEIT lookups, Steam bans validation, and invite codes checks.
  */
 const ValidationService = {
-  validateInviteCode: function(code) {
+  validateInviteCode: function (code) {
     if (!code) return false;
     const inviteData = DatabaseAdapter.getInviteCodes();
     for (let i = 1; i < inviteData.length; i++) {
@@ -1085,47 +1085,47 @@ const ValidationService = {
  * Standardized logging facade writing only via the DatabaseAdapter
  */
 const AuditService = {
-  recordEvent: function(tournamentId, eventType, oldState, newState, desc, userEmail) {
+  recordEvent: function (tournamentId, eventType, oldState, newState, desc, userEmail) {
     try {
       const eventId = "EVT-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
       const row = [eventId, time, tournamentId, eventType, oldState, newState, desc, userEmail];
       DatabaseAdapter.appendEventLog(row);
-    } catch(e) {
+    } catch (e) {
       Logger.log("Event write failed: " + e);
     }
   },
 
-  recordAudit: function(sheetName, range, teamId, teamName, field, oldValue, newValue, source, reason, userEmail, action) {
+  recordAudit: function (sheetName, range, teamId, teamName, field, oldValue, newValue, source, reason, userEmail, action) {
     try {
       const auditId = "AUD-" + Utilities.getUuid().substring(0, 8).toUpperCase();
       const time = Utilities.formatDate(new Date(), "GMT+5", "yyyy-MM-dd HH:mm:ss");
       const row = [
-        auditId, 
-        time, 
-        sheetName, 
-        range, 
-        teamId, 
-        teamName, 
-        field, 
-        oldValue, 
-        newValue, 
-        source, 
-        action || "UPDATE", 
-        reason || "N/A", 
+        auditId,
+        time,
+        sheetName,
+        range,
+        teamId,
+        teamName,
+        field,
+        oldValue,
+        newValue,
+        source,
+        action || "UPDATE",
+        reason || "N/A",
         userEmail
       ];
       DatabaseAdapter.appendAuditLog(row);
-    } catch(e) {
+    } catch (e) {
       Logger.log("Audit write failed: " + e);
     }
   },
 
   // Retain legacy bindings
-  logEvent: function(t, ev, o, n, d, u) {
+  logEvent: function (t, ev, o, n, d, u) {
     this.recordEvent(t, ev, o, n, d, u);
   },
-  logAudit: function(sh, rg, tid, tnm, f, old, nw, src, usr) {
+  logAudit: function (sh, rg, tid, tnm, f, old, nw, src, usr) {
     this.recordAudit(sh, rg, tid, tnm, f, old, nw, src, "Manual edit", usr, "UPDATE");
   }
 };
@@ -1136,13 +1136,13 @@ const AuditService = {
  */
 function onEdit(e) {
   if (!e || !e.range) return;
-  
+
   const range = e.range;
   const sheet = range.getSheet();
   const sheetName = sheet.getName();
-  
+
   if (sheetName !== "Admin_Ops" && sheetName !== "Brackets") return;
-  
+
   const row = range.getRow();
   if (row <= 1) return; // Skip headers
 
@@ -1155,12 +1155,12 @@ function onEdit(e) {
   if (newValue === oldValue) return;
 
   const adminUser = Session.getActiveUser().getEmail() || "Admin";
-  
+
   // Single Cell Change Audit
   if (range.getNumRows() === 1 && range.getNumColumns() === 1) {
     let teamName = "";
     let teamId = "N/A";
-    
+
     if (sheetName === "Admin_Ops") {
       // Find Team Name and Team ID row by reading column B
       teamName = sheet.getRange(row, 2).getValue().toString().trim();
@@ -1170,24 +1170,24 @@ function onEdit(e) {
           if (teamName) break;
         }
       }
-      
+
       // Update version metadata in operational workspace
       try {
         const rowsPerTeam = 7;
         const startTeamRow = Math.floor((row - 2) / rowsPerTeam) * rowsPerTeam + 2;
         const verRange = sheet.getRange(startTeamRow, 34); // Column AH (34)
         const oldVer = parseInt(verRange.getValue()) || 1;
-        
+
         sheet.getRange(startTeamRow, 34).setValue(oldVer + 1); // Increment Version
         sheet.getRange(startTeamRow, 35).setValue(new Date().toISOString()); // Updated At
         sheet.getRange(startTeamRow, 36).setValue(adminUser); // Updated By
-      } catch(verErr) {}
+      } catch (verErr) { }
     } else if (sheetName === "Brackets") {
       const matchId = sheet.getRange(row, 1).getValue().toString().trim();
       teamId = "Match " + matchId;
       teamName = sheet.getRange(row, 3).getValue() + " vs " + sheet.getRange(row, 4).getValue();
     }
-    
+
     AuditService.recordAudit(
       sheetName,
       "R" + row + "C" + col,
@@ -1248,9 +1248,9 @@ function setupEnrichmentCron() {
     }
   });
   ScriptApp.newTrigger("processEnrichmentQueue")
-           .timeBased()
-           .everyMinutes(1)
-           .create();
+    .timeBased()
+    .everyMinutes(1)
+    .create();
   SpreadsheetApp.getActiveSpreadsheet().toast("1-minute cron worker trigger successfully configured!", "Tournament OS");
 }
 
@@ -1261,8 +1261,8 @@ function processEnrichmentQueue() {
 
 function showTimeScheduler() {
   const html = HtmlService.createHtmlOutputFromFile('TimeScheduler')
-      .setTitle('Match Scheduler')
-      .setWidth(350);
+    .setTitle('Match Scheduler')
+    .setWidth(350);
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
@@ -1273,13 +1273,13 @@ function getActiveMatchDetails() {
     if (sheet.getName() !== "Brackets") {
       return { error: "Please open and select a row in the 'Brackets' sheet first." };
     }
-    
+
     const activeCell = sheet.getActiveCell();
     const rowIdx = activeCell.getRow();
     if (rowIdx <= 1) {
       return { error: "Please select a valid Match row (Row 2 or below)." };
     }
-    
+
     const rowData = sheet.getRange(rowIdx, 1, 1, 13).getValues()[0];
     const matchId = (rowData[0] || "").toString().trim();
     const team1 = (rowData[2] || "").toString().trim();
@@ -1287,24 +1287,24 @@ function getActiveMatchDetails() {
     const timeStr = (rowData[7] || "").toString().trim();
     const formatStr = (rowData[11] || "BO1").toString().trim();
     const mapsStr = (rowData[12] || "").toString().trim();
-    
+
     if (!matchId) {
       return { error: "Selected row does not contain a valid Match ID." };
     }
-    
+
     let dateVal = "";
     let timeVal = "";
     let offsetVal = "+5";
-    
+
     if (timeStr && timeStr.includes("T")) {
       const parts = timeStr.split("T");
       dateVal = parts[0];
-      
+
       const timeParts = parts[1].split(/[+-]/);
       if (timeParts[0]) {
         timeVal = timeParts[0].substring(0, 5); // HH:MM
       }
-      
+
       const hasPlus = parts[1].includes("+");
       const hasMinus = parts[1].includes("-");
       if (hasPlus || hasMinus) {
@@ -1317,7 +1317,7 @@ function getActiveMatchDetails() {
         offsetVal = String(val);
       }
     }
-    
+
     return {
       id: matchId,
       team1: team1 || "TBD",
@@ -1339,26 +1339,26 @@ function saveMatchTime(dateVal, timeVal, offsetVal, formatVal, mapsVal) {
   if (sheet.getName() !== "Brackets") {
     throw new Error("Please open the 'Brackets' sheet first.");
   }
-  
+
   const activeCell = sheet.getActiveCell();
   const rowIdx = activeCell.getRow();
   if (rowIdx <= 1) {
     throw new Error("Please select a valid Match row.");
   }
-  
+
   const val = parseFloat(offsetVal);
   const sign = val >= 0 ? "+" : "-";
   const absVal = Math.abs(val);
   const hrs = Math.floor(absVal);
   const mins = Math.round((absVal - hrs) * 60);
   const offsetFormatted = sign + String(hrs).padStart(2, "0") + ":" + String(mins).padStart(2, "0");
-  
+
   const timestamp = dateVal + "T" + timeVal + ":00" + offsetFormatted;
-  
+
   sheet.getRange(rowIdx, 8).setValue(timestamp);
   sheet.getRange(rowIdx, 12).setValue(formatVal || "BO1");
   sheet.getRange(rowIdx, 13).setValue(mapsVal || "");
-  
+
   SpreadsheetApp.flush();
 }
 
@@ -1368,19 +1368,19 @@ function setupBracketsSheet() {
   if (!sheet) {
     sheet = ss.insertSheet("Brackets");
   }
-  
+
   const headers = [
     "Match ID", "Round", "Team 1", "Team 2", "Status", "Winner", "Score", "Time (e.g. 20:00 +5 GMT)", "Stream Link", "Source Match 1", "Source Match 2", "Format", "Selected Maps"
   ];
   sheet.getRange(1, 1, 1, headers.length).setValues([headers])
-       .setFontWeight("bold")
-       .setBackground("#1D4ED8")
-       .setFontColor("white")
-       .setHorizontalAlignment("center")
-       .setVerticalAlignment("middle");
-       
+    .setFontWeight("bold")
+    .setBackground("#1D4ED8")
+    .setFontColor("white")
+    .setHorizontalAlignment("center")
+    .setVerticalAlignment("middle");
+
   sheet.setFrozenRows(1);
-  
+
   if (sheet.getLastRow() <= 1) {
     const matches = [];
     for (let i = 1; i <= 8; i++) {
@@ -1400,10 +1400,10 @@ function setupBracketsSheet() {
       matches.push([id, "Semifinals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", src1, src2, "BO3", ""]);
     }
     matches.push(["M15", "Grand Finals", "", "", "SCHEDULED", "TBD", "", "20:00 +5 GMT", "", "M13", "M14", "BO3", ""]);
-    
+
     sheet.getRange(2, 1, matches.length, headers.length).setValues(matches);
   }
-  
+
   const statusRange = sheet.getRange(2, 5, sheet.getMaxRows() - 1, 1);
   const statusRule = SpreadsheetApp.newDataValidation()
     .requireValueInList(["SCHEDULED", "LIVE", "ON HOLD", "COMPLETED", "BYE"], true)
@@ -1417,7 +1417,7 @@ function setupBracketsSheet() {
     .setAllowInvalid(false)
     .build();
   formatRange.setDataValidation(formatRule);
-  
+
   updateBracketDropdowns();
   ss.toast("Brackets sheet setup complete!", "Tournament OS", 5);
 }
@@ -1430,7 +1430,7 @@ function updateBracketDropdowns() {
 
   const adminData = adminSheet.getDataRange().getValues();
   const teamsList = ["TBD", "BYE"];
-  
+
   for (let i = 1; i < adminData.length; i++) {
     const name = (adminData[i][1] || "").toString().trim(); // Column B
     if (name && name !== "Team Name" && !teamsList.includes(name)) {
@@ -1455,7 +1455,7 @@ function updateBracketDropdowns() {
     const wOptions = ["TBD"];
     if (t1Val && t1Val !== "TBD") wOptions.push(t1Val);
     if (t2Val && t2Val !== "TBD") wOptions.push(t2Val);
-    
+
     const winnerRule = SpreadsheetApp.newDataValidation()
       .requireValueInList(wOptions, true)
       .setAllowInvalid(false)

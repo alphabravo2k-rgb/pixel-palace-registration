@@ -702,22 +702,10 @@ export const TournamentForm = ({ tournament, slots }) => {
                         onBlur={(e) => handleSteamBlur(index, e.target.value)}
                       />
                     </div>
-                    {/* Resolution Status Display */}
-                    <div className="mt-1 min-h-[16px] flex items-center">
-                    {steamStatus[index] === 'RESOLVING...' && <span className="text-zinc-400 text-[9px] font-bold font-body tracking-wider">RESOLVING ID...</span>}
-                    {steamStatus[index] === 'SUCCESS' && <span className="text-neon-cyan text-[9px] font-bold font-body tracking-wider">STEAM ID VERIFIED ✓ ({getValues(`players.${index}.steam64`)})</span>}
-                    {steamStatus[index] === 'FAILED' && <span className="text-red-500 text-[9px] font-bold font-body tracking-wider">RESOLUTION FAILED — Enter ID manually below</span>}
-                    {steamStatus[index] === 'VANITY' && <span className="text-yellow-400 text-[9px] font-bold font-body tracking-wider">⚠ CUSTOM URL — Use your /profiles/76561... URL, or enter Steam64 ID below</span>}
-                    </div>
-                    
-                    {(steamStatus[index] === 'FAILED' || steamStatus[index] === 'VANITY') && (
-                        <input
-                           {...register(`players.${index}.steam64`)}
-                           type="text"
-                           placeholder="Steam64 ID (17 digits) — find it at steamidfinder.com"
-                           className={`input-ghost mt-1 font-mono text-xs ${steamStatus[index] === 'VANITY' ? 'border border-yellow-500/30 text-yellow-100' : 'border border-red-500/30 text-red-100'}`}
-                        />
-                    )}
+                    <input
+                      {...register(`players.${index}.steam64`)}
+                      type="hidden"
+                    />
                   </div>
 
                   {/* FACEIT URL */}
