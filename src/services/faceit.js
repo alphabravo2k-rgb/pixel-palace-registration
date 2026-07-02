@@ -23,6 +23,20 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
       }
     }
 
+    // Try to load from localStorage cache first (10 min TTL)
+    const cacheKey = `faceit_cache_${username.toLowerCase()}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.expiresAt > Date.now()) {
+          return parsed.data;
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to read FACEIT cache:', e);
+    }
+
     if (!faceitApiKey) {
       throw new Error('NO_API_KEY');
     }
@@ -44,7 +58,7 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
     const source = data.games?.cs2 ? 'cs2' : (data.games?.csgo ? 'csgo' : 'none');
     const cs2Data = data.games?.cs2 || data.games?.csgo; 
 
-    return {
+    const result = {
       nickname: data.nickname || username,
       faceitLevel: cs2Data?.skill_level || 'N/A',
       faceitElo: cs2Data?.faceit_elo || 'N/A',
@@ -55,6 +69,18 @@ export const fetchFaceitProfile = async (profileUrl, faceitApiKey) => {
       _source: source,
       _fetchedAt: Date.now()
     };
+
+    // Save to cache
+    try {
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data: result,
+        expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
+      }));
+    } catch (e) {
+      console.warn('Failed to write FACEIT cache:', e);
+    }
+
+    return result;
 
   } catch (error) {
     console.error('Faceit fetch error:', error);

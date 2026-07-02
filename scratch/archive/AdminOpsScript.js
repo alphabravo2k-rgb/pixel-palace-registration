@@ -444,8 +444,11 @@ function updateFaceitData() {
         "https://open.faceit.com/data/v4/players?nickname=" + encodeURIComponent(nickname), opts
       );
 
-      if (pRes.getResponseCode() !== 200) {
-        sheet.getRange(i + 1, C.LIVE_ELO).setValue("Not Found");
+      var respCode = pRes.getResponseCode();
+      if (respCode !== 200) {
+        var respBody = pRes.getContentText();
+        Logger.log("FACEIT API non-200 for row " + (i + 1) + ": Status " + respCode + " - " + respBody);
+        sheet.getRange(i + 1, C.LIVE_ELO).setValue("Error " + respCode + " (API)");
         if (i === data.length - 1) finalizeTeamStats(sheet, teamStartIdx, teamElos);
         continue;
       }
@@ -503,7 +506,8 @@ function updateFaceitData() {
       }
 
     } catch (e) {
-      sheet.getRange(i + 1, C.LIVE_ELO).setValue("Error");
+      Logger.log("FACEIT fetch error for row " + (i + 1) + ": " + e.toString());
+      sheet.getRange(i + 1, C.LIVE_ELO).setValue("Error: " + e.message);
     }
 
     if (i === data.length - 1) finalizeTeamStats(sheet, teamStartIdx, teamElos);
@@ -936,16 +940,12 @@ function isValidSteam64(id) {
   return id && /^[0-9]{17}$/.test(id.toString().trim());
 }
 
-function getCS2RankBadge(skillLvl) {
+function getCS2RankBadge(skillLvl, row) {
   var lvl = parseInt(skillLvl);
   if (isNaN(lvl) || lvl === 0) return "Unranked";
-  if (lvl === 1) return "Level 1 (Silver)";
-  if (lvl <= 3) return "Level " + lvl + " (Gold Nova)";
-  if (lvl <= 6) return "Level " + lvl + " (Master Guardian)";
-  if (lvl <= 8) return "Level " + lvl + " (LE / Supreme)";
-  if (lvl === 9) return "Level 9 (Global Elite)";
-  if (lvl >= 10) return "Level 10 (Challenger)";
-  return "Level " + lvl;
+  
+  // Return dynamic =IMAGE(...) formula referencing Column S (Skill Lvl) for this row
+  return '=IMAGE("' + WEB_APP_URL + '?endpoint=/api/v1/badge&level=" & S' + row + ')';
 }
 
 function colorSkillCell(range, level) {

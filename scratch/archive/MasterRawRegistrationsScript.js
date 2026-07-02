@@ -88,7 +88,7 @@ function doPost(e) {
       if (!codeValid) return generateResponse({ "error": "Invalid Access Code." });
     }
 
-    // 3. DUPLICATE VERIFICATION (STEAM & FACEIT AT GATE)
+    // 3. DUPLICATE VERIFICATION (PREVENT DOUBLE-ROSTERING)
     let rawSheet = doc.getSheetByName("Sheet1");
     if (!rawSheet) throw new Error("Could not find Sheet1.");
     
@@ -97,21 +97,27 @@ function doPost(e) {
     const cols = getRawColMap_(headers);
     
     const newTeamName = payload.team_name.trim().toUpperCase();
+    const newDiscords = [];
+    const newSteams = [];
     const newSteam64s = [];
     const newFaceitUrls = [];
     
     for (let p = 1; p <= 7; p++) {
+      const discord = payload[`p${p}Discord`];
+      const steam = payload[`p${p}Steam`];
       const steam64 = payload[`p${p}Steam64`];
       const faceit = payload[`p${p}Faceit`];
+      if (discord) newDiscords.push(String(discord).trim().toLowerCase());
+      if (steam) newSteams.push(String(steam).trim().toLowerCase().replace(/\/$/, ""));
       if (steam64) newSteam64s.push(String(steam64).trim());
-      if (faceit) newFaceitUrls.push(String(faceit).trim().toLowerCase());
+      if (faceit) newFaceitUrls.push(String(faceit).trim().toLowerCase().replace(/\/$/, ""));
     }
 
     for (let i = 1; i < rows.length; i++) {
       // Check status if column exists
       if (cols.status !== undefined) {
         const existingStatus = (rows[i][cols.status] || "").toString().trim().toUpperCase();
-        if (existingStatus === "REJECTED") continue;
+        if (existingStatus === "REJECTED" || existingStatus === "FAILED_VALIDATION") continue;
       }
 
       // Check team name if column exists
@@ -122,19 +128,38 @@ function doPost(e) {
         }
       }
 
-      // Scan starting from playerBase for matching steam/faceit
+      // Scan player columns for duplicates
       const startCol = cols.playerBase !== undefined ? cols.playerBase : 9;
-      for (let c = startCol; c < rows[i].length; c++) {
-        const cellVal = String(rows[i][c]).trim();
-        if (!cellVal) continue;
+      for (let pIdx = 0; pIdx < 7; pIdx++) {
+        const baseIdx = startCol + pIdx * 4;
+        if (baseIdx >= rows[i].length) break;
 
-        if (newSteam64s.indexOf(cellVal) !== -1) {
-          return generateResponse({ error: "DUPLICATE_PLAYER_STEAM: One of your players (Steam64: " + cellVal + ") is already registered." });
+        const cellDiscord = String(rows[i][baseIdx] || "").trim();
+        const cellSteam = String(rows[i][baseIdx + 1] || "").trim();
+        const cellFaceit = String(rows[i][baseIdx + 2] || "").trim();
+
+        if (cellDiscord && cellDiscord !== "N/A") {
+          const cleanDiscord = cellDiscord.toLowerCase();
+          if (newDiscords.indexOf(cleanDiscord) !== -1) {
+            return generateResponse({ error: `Player with Discord username "${cellDiscord}" is already registered on another team!` });
+          }
         }
 
-        const cleanCellVal = cellVal.toLowerCase();
-        if (newFaceitUrls.indexOf(cleanCellVal) !== -1) {
-          return generateResponse({ error: "DUPLICATE_PLAYER_FACEIT: One of your players (FACEIT: " + cellVal + ") is already registered." });
+        if (cellSteam && cellSteam !== "N/A") {
+          const cleanSteam = cellSteam.toLowerCase().replace(/\/$/, "");
+          if (newSteams.indexOf(cleanSteam) !== -1) {
+            return generateResponse({ error: `Player with Steam URL "${cellSteam}" is already registered on another team!` });
+          }
+          if (/^[0-9]{17}$/.test(cellSteam) && newSteam64s.indexOf(cellSteam) !== -1) {
+            return generateResponse({ error: `Player with Steam64 ID "${cellSteam}" is already registered on another team!` });
+          }
+        }
+
+        if (cellFaceit && cellFaceit !== "N/A") {
+          const cleanFaceit = cellFaceit.toLowerCase().replace(/\/$/, "");
+          if (newFaceitUrls.indexOf(cleanFaceit) !== -1) {
+            return generateResponse({ error: `Player with FACEIT profile "${cellFaceit}" is already registered on another team!` });
+          }
         }
       }
     }

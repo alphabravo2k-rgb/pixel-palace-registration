@@ -700,10 +700,11 @@ const RegistrationService = {
     const newTeamName = payload.team_name.trim().toUpperCase();
 
     if (rawData.length > 1) {
-      const headers = rawData[0].map(h => h.toString().toLowerCase());
+      const headers = rawData[0].map(h => h.toString().toLowerCase().trim());
       const statusIdx = headers.indexOf("status");
       const nameIdx = headers.indexOf("team name");
 
+      // Verify team name duplicate
       for (let i = 1; i < rawData.length; i++) {
         const status = rawData[i][statusIdx];
         if (status === "REJECTED" || status === "FAILED_VALIDATION") continue;
@@ -711,6 +712,58 @@ const RegistrationService = {
         const teamName = String(rawData[i][nameIdx]).trim().toUpperCase();
         if (teamName === newTeamName) {
           return { valid: false, error: "DUPLICATE_TEAM_NAME" };
+        }
+      }
+
+      // Collect all active players' details from existing registrations to prevent double-rostering
+      const activeDiscords = new Set();
+      const activeSteams = new Set();
+      const activeFaceits = new Set();
+
+      const discordIndices = [];
+      const steamIndices = [];
+      const faceitIndices = [];
+
+      for (let h = 0; h < headers.length; h++) {
+        const header = headers[h];
+        if (header.includes("discord")) discordIndices.push(h);
+        if (header.includes("steam")) steamIndices.push(h);
+        if (header.includes("faceit")) faceitIndices.push(h);
+      }
+
+      for (let i = 1; i < rawData.length; i++) {
+        const status = rawData[i][statusIdx];
+        if (status === "REJECTED" || status === "FAILED_VALIDATION") continue;
+
+        discordIndices.forEach(idx => {
+          const val = (rawData[i][idx] || "").toString().trim().toLowerCase();
+          if (val && val !== "n/a") activeDiscords.add(val);
+        });
+        steamIndices.forEach(idx => {
+          const val = (rawData[i][idx] || "").toString().trim().toLowerCase().replace(/\/$/, "");
+          if (val && val !== "n/a") activeSteams.add(val);
+        });
+        faceitIndices.forEach(idx => {
+          const val = (rawData[i][idx] || "").toString().trim().toLowerCase().replace(/\/$/, "");
+          if (val && val !== "n/a") activeFaceits.add(val);
+        });
+      }
+
+      // Check incoming payload players against active registrations
+      const maxPlayers = 7; // Captain + 4 Players + 2 Substitutes
+      for (let p = 1; p <= maxPlayers; p++) {
+        const pDiscord = (payload[`p${p}Discord`] || "").toString().trim().toLowerCase();
+        const pSteam = (payload[`p${p}Steam`] || "").toString().trim().toLowerCase().replace(/\/$/, "");
+        const pFaceit = (payload[`p${p}Faceit`] || "").toString().trim().toLowerCase().replace(/\/$/, "");
+
+        if (pDiscord && pDiscord !== "n/a" && activeDiscords.has(pDiscord)) {
+          return { valid: false, error: `Player with Discord "${payload[`p${p}Discord`]}" is already registered on another team!` };
+        }
+        if (pSteam && pSteam !== "n/a" && activeSteams.has(pSteam)) {
+          return { valid: false, error: `Player with Steam URL "${payload[`p${p}Steam`]}" is already registered on another team!` };
+        }
+        if (pFaceit && pFaceit !== "n/a" && activeFaceits.has(pFaceit)) {
+          return { valid: false, error: `Player with FACEIT URL "${payload[`p${p}Faceit`]}" is already registered on another team!` };
         }
       }
     }
