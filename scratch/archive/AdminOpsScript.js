@@ -117,6 +117,8 @@ function onOpen() {
     .addItem("Sync New Teams Only", "syncRawToAdmin")
     .addItem("Refresh FACEIT Data", "updateFaceitData")
     .addItem("Refresh Steam Data", "updateSteamData")
+    .addItem("Force Refresh FACEIT (All)", "forceUpdateFaceitData")
+    .addItem("Force Refresh Steam (All)", "forceUpdateSteamData")
     .addSeparator()
     .addItem("Re-run Risk Flags", "flagAtRiskPlayers")
     .addItem("Rebuild Summary Sheet", "buildSummarySheet")
@@ -134,10 +136,18 @@ function syncAndFetch() {
   setupNewColumns();
   syncRawToAdmin();
   fillRolesFromNames();
-  updateFaceitData();
-  updateSteamData();
+  updateFaceitData(false); // Only fetch new/unresolved players to save quota
+  updateSteamData(false);  // Only fetch new/unresolved players to save quota
   buildSummarySheet();
   SpreadsheetApp.getActiveSpreadsheet().toast("Full sync complete!", "Admin Ops", 6);
+}
+
+function forceUpdateFaceitData() {
+  updateFaceitData(true); // Force refetch all players
+}
+
+function forceUpdateSteamData() {
+  updateSteamData(true);  // Force refetch all players
 }
 
 function setupTrigger() {
@@ -409,7 +419,7 @@ function fixMerges() {
 }
 
 // -- STEP 3: FACEIT FULL DATA FETCH ------------------------------------------
-function updateFaceitData() {
+function updateFaceitData(force) {
   var sheet = getAdminSheet_();
   if (!sheet || sheet.getLastRow() <= 1) return;
 
@@ -429,6 +439,14 @@ function updateFaceitData() {
       finalizeTeamStats(sheet, teamStartIdx, teamElos);
       teamStartIdx = i;
       teamElos = [];
+    }
+
+    // Skip if player already has a valid Live ELO (is a number > 0) to save API calls
+    var existingElo = parseInt(data[i][C.LIVE_ELO - 1]);
+    if (!force && !isNaN(existingElo) && existingElo > 0) {
+      teamElos.push(existingElo);
+      if (i === data.length - 1) finalizeTeamStats(sheet, teamStartIdx, teamElos);
+      continue;
     }
 
     var faceitUrl = (data[i][C.FACEIT_URL - 1] || "").toString().trim();
@@ -517,7 +535,7 @@ function updateFaceitData() {
 }
 
 // -- STEP 4: STEAM DATA FETCH ------------------------------------------------
-function updateSteamData() {
+function updateSteamData(force) {
   var sheet = getAdminSheet_();
   if (!sheet || sheet.getLastRow() <= 1) return;
   var data = sheet.getDataRange().getValues();
@@ -533,6 +551,15 @@ function updateSteamData() {
     if ((data[i][C.STEAM64 - 1] || "").toString() !== s64) {
       sheet.getRange(i + 1, C.STEAM64).setValue(s64);
     }
+
+    // Skip if Steam data is already fetched (Steam level and CS2 Hrs are set) to save API calls
+    var existingLvl = data[i][C.STEAM_LVL - 1];
+    var existingHrs = data[i][C.CS2_HRS - 1];
+    if (!force && existingLvl !== "" && existingLvl !== undefined && existingLvl !== null &&
+        existingHrs !== "" && existingHrs !== undefined && existingHrs !== null) {
+      continue;
+    }
+
     players.push({ rowIdx: i, steam64: s64 });
   }
 
