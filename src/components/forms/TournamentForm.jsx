@@ -158,11 +158,11 @@ export const TournamentForm = ({ tournament, slots }) => {
     // 1. Check for Dead-Letter Queue (LocalStorage, cross-session)
     const dlq = localStorage.getItem(`pp_dlq_${tournament.id}`);
     if (dlq) {
-       try {
-         setDlqItem(JSON.parse(dlq));
-       } catch (e) {
-         localStorage.removeItem(`pp_dlq_${tournament.id}`);
-       }
+      try {
+        setDlqItem(JSON.parse(dlq));
+      } catch (e) {
+        localStorage.removeItem(`pp_dlq_${tournament.id}`);
+      }
     }
 
     // 2. Check for Session Draft (SessionStorage, single-session failure)
@@ -266,26 +266,26 @@ export const TournamentForm = ({ tournament, slots }) => {
         setValue(`players.${index}.faceitLevel`, data.faceitLevel?.toString());
         setValue(`players.${index}.faceitElo`, data.faceitElo?.toString());
         setValue(`players.${index}.cs2RankLabel`, data.cs2RankLabel?.toString());
-        
+
         // Always extract IGN from FACEIT URL as a base fallback
         const urlIgn = value.replace(/\/$/, '').split('/').pop();
         if (urlIgn) setValue(`players.${index}.ign`, urlIgn, { shouldValidate: false });
-        
+
         if (data.nickname) {
           setValue(`players.${index}.ign`, data.nickname, { shouldValidate: false });
         }
         if (data.avatar) {
           setValue(`players.${index}.avatar`, data.avatar);
         }
-        
-        setFaceitMeta((prev) => ({ 
-          ...prev, 
-          [index]: { source: data._source, fetchedAt: data._fetchedAt } 
+
+        setFaceitMeta((prev) => ({
+          ...prev,
+          [index]: { source: data._source, fetchedAt: data._fetchedAt }
         }));
 
         // Auto-populate Steam if blank and Faceit provided it
         if (data.steam64 && !getValues(`players.${index}.steam64`)) {
-           setValue(`players.${index}.steam64`, data.steam64);
+          setValue(`players.${index}.steam64`, data.steam64);
         }
         setFaceitStatus((prev) => ({ ...prev, [index]: 'SUCCESS' }));
       } else {
@@ -312,7 +312,7 @@ export const TournamentForm = ({ tournament, slots }) => {
       setValue('agreeDiscord', true, { shouldValidate: true });
       setValue('agreeVoice', true, { shouldValidate: true });
       setValue('agreeSchedule', true, { shouldValidate: true });
-      
+
       const mockProfiles = [
         { ign: "s1mple", steam: "https://steamcommunity.com/id/s1mpleO", faceit: "https://www.faceit.com/en/players/s1mple", discord: "s1mple_test" },
         { ign: "ZywOo", steam: "https://steamcommunity.com/id/ZywOo_test", faceit: "https://www.faceit.com/en/players/ZywOo", discord: "zywoo_test" },
@@ -329,7 +329,7 @@ export const TournamentForm = ({ tournament, slots }) => {
         setValue(`players.${idx}.discord`, mock.discord, { shouldValidate: true });
         setValue(`players.${idx}.steam`, mock.steam, { shouldValidate: true });
         setValue(`players.${idx}.faceit`, mock.faceit, { shouldValidate: true });
-        
+
         handleSteamBlur(idx, mock.steam);
         handleFaceitBlur(idx, mock.faceit);
       });
@@ -345,7 +345,7 @@ export const TournamentForm = ({ tournament, slots }) => {
     if (res?.success) {
       setSubmissionId(res.submissionId);
       localStorage.removeItem(`pp_dlq_${tournament.id}`); // Clear DLQ on success
-      
+
       const activeTeamPayload = {
         tournamentId: tournament.id,
         teamName: formData.teamName,
@@ -353,14 +353,14 @@ export const TournamentForm = ({ tournament, slots }) => {
         logo: formData.logoUrl || '',
         submissionId: res.submissionId,
         registeredAt: new Date().toISOString(),
-        roster: formData.players.map((p, idx) => ({ 
-          ign: p.ign, 
-          discord: p.discord, 
-          avatar: p.avatar || '', 
+        roster: formData.players.map((p, idx) => ({
+          ign: p.ign,
+          discord: p.discord,
+          avatar: p.avatar || '',
           role: idx === 0 ? 'CAPTAIN' : (idx >= corePlayerCount ? 'SUBSTITUTE' : 'CORE PLAYER')
         }))
       };
-      
+
       localStorage.setItem(`pp_active_team_${tournament.id}`, JSON.stringify(activeTeamPayload));
       window.dispatchEvent(new CustomEvent('pp-registration-success', { detail: activeTeamPayload }));
     }
@@ -369,7 +369,7 @@ export const TournamentForm = ({ tournament, slots }) => {
   // ─── SUCCESS STATE ────────────────────────────────────────────────────────
   if (isSuccess) {
     const ticketId = submissionId ? `PP-${submissionId.split('-')[0].toUpperCase()}-${submissionId.split('-')[1].toUpperCase()}` : 'PP-UNKNOWN';
-    
+
     const handleCopy = () => {
       navigator.clipboard.writeText(submissionId || '');
       setCopiedId(true);
@@ -380,7 +380,7 @@ export const TournamentForm = ({ tournament, slots }) => {
       <div className="glass-panel p-8 md:p-16 text-center flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden group">
         <div className="absolute inset-0 bg-gradient-to-b from-neon-cyan/5 to-transparent pointer-events-none" />
         <div className="hud-crosshair tl"></div><div className="hud-crosshair tr"></div><div className="hud-crosshair bl"></div><div className="hud-crosshair br"></div>
-        
+
         <div className="relative mb-8">
           <div className="absolute inset-0 bg-neon-cyan blur-[60px] opacity-20 rounded-full animate-pulse" />
           <CheckCircle2 className="w-24 h-24 text-neon-cyan relative z-10 drop-shadow-[0_0_20px_rgba(0,240,255,0.5)]" />
@@ -397,28 +397,28 @@ export const TournamentForm = ({ tournament, slots }) => {
 
         <div className="w-full max-w-md bg-black/60 border border-white/10 rounded-lg p-6 mb-10 relative">
           <div className="flex flex-col items-center gap-4">
-             <div className="flex flex-col">
-               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">Official Submission ID</span>
-               <div className="flex items-center gap-3 bg-zinc-900 border border-white/5 px-4 py-3 rounded group/id cursor-pointer" onClick={handleCopy}>
-                 <span className="text-xl font-heading text-neon-cyan tracking-[0.2em] font-black">{ticketId}</span>
-                 {copiedId ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-600 group-hover/id:text-white transition-colors" />}
-               </div>
-             </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-1 font-body">Official Submission ID</span>
+              <div className="flex items-center gap-3 bg-zinc-900 border border-white/5 px-4 py-3 rounded group/id cursor-pointer" onClick={handleCopy}>
+                <span className="text-xl font-heading text-neon-cyan tracking-[0.2em] font-black">{ticketId}</span>
+                {copiedId ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4 text-zinc-600 group-hover/id:text-white transition-colors" />}
+              </div>
+            </div>
 
-             <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
-                <div className="text-left">
-                  <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Team</span>
-                  <span className="text-sm font-heading text-white uppercase tracking-wider">{getValues('teamName') || 'Squad'}</span>
-                </div>
-                <div className="text-right">
-                  <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Timestamp</span>
-                  <span className="text-sm font-heading text-white uppercase tracking-wider">
-                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
-                </div>
-             </div>
+            <div className="grid grid-cols-2 gap-4 w-full pt-4 border-t border-white/5">
+              <div className="text-left">
+                <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Team</span>
+                <span className="text-sm font-heading text-white uppercase tracking-wider">{getValues('teamName') || 'Squad'}</span>
+              </div>
+              <div className="text-right">
+                <span className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest block font-body">Timestamp</span>
+                <span className="text-sm font-heading text-white uppercase tracking-wider">
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+            </div>
           </div>
-          
+
           <div className="mt-6 p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded">
             <p className="text-[10px] text-neon-cyan font-bold uppercase tracking-widest leading-relaxed font-body">
               Take a screenshot or save this ID. It is required for check-in and appeals.
@@ -427,18 +427,18 @@ export const TournamentForm = ({ tournament, slots }) => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-           <button 
-             onClick={() => window.location.reload()} 
-             className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all font-body rounded"
-           >
-             REGISTER ANOTHER TEAM
-           </button>
-           <button 
-             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} // Assumes tab switching logic is handled by parent, this just helps UI feel cohesive
-             className="flex-1 py-4 bg-neon-cyan text-black font-bold uppercase tracking-widest text-xs hover:bg-white transition-all font-body rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2"
-           >
-             VIEW LIVE ROSTER <ExternalLink className="w-3 h-3" />
-           </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="flex-1 py-4 bg-white/5 border border-white/10 text-white font-bold uppercase tracking-widest text-xs hover:bg-white/10 transition-all font-body rounded"
+          >
+            REGISTER ANOTHER TEAM
+          </button>
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} // Assumes tab switching logic is handled by parent, this just helps UI feel cohesive
+            className="flex-1 py-4 bg-neon-cyan text-black font-bold uppercase tracking-widest text-xs hover:bg-white transition-all font-body rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2"
+          >
+            VIEW LIVE ROSTER <ExternalLink className="w-3 h-3" />
+          </button>
         </div>
       </div>
     );
@@ -455,10 +455,10 @@ export const TournamentForm = ({ tournament, slots }) => {
           Team Identity
         </h2>
         <div className="flex items-center px-6 gap-2 border-l border-white/10 bg-white/5">
-           <div className={`w-2 h-2 rounded-full ${!slots ? 'bg-zinc-500 animate-pulse' : slots === 'error' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'}`}></div>
-           <span className="text-[9px] font-black font-body text-zinc-500 uppercase tracking-widest leading-none">
-              {!slots ? 'SYNC...' : slots === 'error' ? 'OFFLINE' : 'ONLINE'}
-           </span>
+          <div className={`w-2 h-2 rounded-full ${!slots ? 'bg-zinc-500 animate-pulse' : slots === 'error' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : 'bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]'}`}></div>
+          <span className="text-[9px] font-black font-body text-zinc-500 uppercase tracking-widest leading-none">
+            {!slots ? 'SYNC...' : slots === 'error' ? 'OFFLINE' : 'ONLINE'}
+          </span>
         </div>
       </div>
 
@@ -470,13 +470,12 @@ export const TournamentForm = ({ tournament, slots }) => {
               Invite Code (Optional — unlocks priority slot)
             </label>
             <span
-              className={`text-[10px] font-bold uppercase font-body transition-colors ${
-                inviteStatus === 'PRIORITY SLOT'
+              className={`text-[10px] font-bold uppercase font-body transition-colors ${inviteStatus === 'PRIORITY SLOT'
                   ? 'text-neon-cyan'
                   : inviteStatus === 'QUERYING...'
-                  ? 'text-yellow-400 animate-pulse'
-                  : 'text-zinc-500'
-              }`}
+                    ? 'text-yellow-400 animate-pulse'
+                    : 'text-zinc-500'
+                }`}
             >
               {inviteStatus}
             </span>
@@ -547,18 +546,35 @@ export const TournamentForm = ({ tournament, slots }) => {
                 {...register('teamRegion')}
                 className="input-ghost appearance-none cursor-pointer"
               >
-                <option value="" disabled>
-                  Select Region...
-                </option>
-                <option value="IND" className="bg-black">
-                  India (IND)
-                </option>
-                <option value="PAK" className="bg-black">
-                  Pakistan (PAK)
-                </option>
-                <option value="ME" className="bg-black">
-                  Middle East (ME)
-                </option>
+                <option value="" disabled>Select Region...</option>
+
+                <optgroup label="South Asia">
+                  <option value="IND" className="bg-black">India (IND)</option>
+                  <option value="PAK" className="bg-black">Pakistan (PAK)</option>
+                  <option value="AFG" className="bg-black">Afghanistan (AFG)</option>
+                  <option value="BGD" className="bg-black">Bangladesh (BGD)</option>
+                  <option value="LKA" className="bg-black">Sri Lanka (LKA)</option>
+                  <option value="NPL" className="bg-black">Nepal (NPL)</option>
+                </optgroup>
+
+                <optgroup label="West Asia & Middle East">
+                  <option value="ARE" className="bg-black">United Arab Emirates (ARE)</option>
+                  <option value="SAU" className="bg-black">Saudi Arabia (SAU)</option>
+                  <option value="QAT" className="bg-black">Qatar (QAT)</option>
+                  <option value="BHR" className="bg-black">Bahrain (BHR)</option>
+                  <option value="KWT" className="bg-black">Kuwait (KWT)</option>
+                  <option value="OMN" className="bg-black">Oman (OMN)</option>
+                  <option value="TUR" className="bg-black">Turkey (TUR)</option>
+                </optgroup>
+
+                <optgroup label="Southeast Asia">
+                  <option value="SGP" className="bg-black">Singapore (SGP)</option>
+                  <option value="MYS" className="bg-black">Malaysia (MYS)</option>
+                  <option value="THA" className="bg-black">Thailand (THA)</option>
+                  <option value="IDN" className="bg-black">Indonesia (IDN)</option>
+                  <option value="PHL" className="bg-black">Philippines (PHL)</option>
+                  <option value="VNM" className="bg-black">Vietnam (VNM)</option>
+                </optgroup>
               </select>
             </div>
             {errors.teamRegion && (
@@ -568,8 +584,6 @@ export const TournamentForm = ({ tournament, slots }) => {
             )}
           </div>
         </div>
-
-
         {/* Logo Upload Component */}
         <LogoUploader
           tournament={tournament}
@@ -644,14 +658,14 @@ export const TournamentForm = ({ tournament, slots }) => {
                 <div className="flex justify-between items-center mb-5 border-b border-white/10 pb-3">
                   <div className="flex items-center gap-3">
                     {getValues(`players.${index}.avatar`) ? (
-                      <img 
-                        src={getValues(`players.${index}.avatar`)} 
-                        alt="Player Avatar" 
-                        className="w-8 h-8 rounded-full border border-white/10 object-cover" 
+                      <img
+                        src={getValues(`players.${index}.avatar`)}
+                        alt="Player Avatar"
+                        className="w-8 h-8 rounded-full border border-white/10 object-cover"
                       />
                     ) : (
                       <div className="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] text-zinc-600 font-bold uppercase">
-                        P{index+1}
+                        P{index + 1}
                       </div>
                     )}
                     <span className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-500 font-body">
@@ -724,9 +738,9 @@ export const TournamentForm = ({ tournament, slots }) => {
                       />
                     </div>
                     {faceitMeta[index]?.source === 'csgo' && (
-                       <p className="text-yellow-500 text-[9px] mt-1.5 font-bold uppercase tracking-wider font-body">
-                         ⚠ Legacy CS:GO data detected. Ensure your CS2 profile is linked to avoid seeding errors.
-                       </p>
+                      <p className="text-yellow-500 text-[9px] mt-1.5 font-bold uppercase tracking-wider font-body">
+                        ⚠ Legacy CS:GO data detected. Ensure your CS2 profile is linked to avoid seeding errors.
+                      </p>
                     )}
                   </div>
 
@@ -748,10 +762,10 @@ export const TournamentForm = ({ tournament, slots }) => {
         <span className="text-[10px] font-black font-body text-neon-pink uppercase tracking-widest block mb-1">
           Acknowledge & Confirm Roster Rules:
         </span>
-        
+
         <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             {...register('agreeDiscord')}
             className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
           />
@@ -765,8 +779,8 @@ export const TournamentForm = ({ tournament, slots }) => {
         )}
 
         <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             {...register('agreeVoice')}
             className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
           />
@@ -780,8 +794,8 @@ export const TournamentForm = ({ tournament, slots }) => {
         )}
 
         <label className="flex items-start gap-4 p-3 bg-black/60 border border-white/5 hover:border-white/15 rounded-sm cursor-pointer transition-all">
-          <input 
-            type="checkbox" 
+          <input
+            type="checkbox"
             {...register('agreeSchedule')}
             className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
           />
@@ -798,20 +812,20 @@ export const TournamentForm = ({ tournament, slots }) => {
       {error && (
         <div className={`border p-6 flex flex-col items-center gap-4 animate-in zoom-in duration-300 shadow-2xl ${error.includes('PLAYER_BANNED') ? 'bg-orange-500/10 border-orange-500 text-orange-400 shadow-orange-500/20' : 'bg-red-500/10 border-red-500 text-red-400 shadow-red-500/20'}`}>
           <div className="flex items-center gap-3">
-             <AlertOctagon className="w-6 h-6 flex-shrink-0" />
-             <span className="text-xs font-black uppercase tracking-[0.2em] leading-none">
-               {error.includes('PLAYER_BANNED') ? 'ELIGIBILITY RESTRICTED' : 'TRANSMISSION FAILED'}
-             </span>
+            <AlertOctagon className="w-6 h-6 flex-shrink-0" />
+            <span className="text-xs font-black uppercase tracking-[0.2em] leading-none">
+              {error.includes('PLAYER_BANNED') ? 'ELIGIBILITY RESTRICTED' : 'TRANSMISSION FAILED'}
+            </span>
           </div>
-          
+
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-center max-w-sm leading-relaxed opacity-90 font-body">
             {error.replace('PLAYER_BANNED: ', '')}
           </p>
 
           {error.includes('PLAYER_BANNED') ? (
-            <a 
-              href="https://discord.gg/xGMZ5wrgUd" 
-              target="_blank" 
+            <a
+              href="https://discord.gg/xGMZ5wrgUd"
+              target="_blank"
               rel="noopener noreferrer"
               className="mt-2 px-6 py-3 bg-orange-500 text-black font-black text-[10px] uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
             >
@@ -845,50 +859,50 @@ export const TournamentForm = ({ tournament, slots }) => {
     <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-8 pb-20">
       {dlqItem && !draftRestored && (
         <div className="glass-panel p-5 bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-700">
-           <div className="flex items-center gap-4">
-              <div className="p-2 bg-orange-500/20 rounded">
-                <ShieldAlert className="w-5 h-5 text-orange-400 animate-pulse" />
-              </div>
-              <div className="flex flex-col">
-                 <span className="text-xs font-black text-orange-400 uppercase tracking-widest leading-none">Unsent Registration Detected</span>
-                 <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">Found unsent data for "{dlqItem.teamName}" from {new Date(dlqItem.timestamp).toLocaleDateString()}.</span>
-              </div>
-           </div>
-           <div className="flex gap-2">
-             <button 
-               type="button" 
-               onClick={() => { localStorage.removeItem(`pp_dlq_${tournament.id}`); setDlqItem(null); }}
-               className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body px-3"
-             >
-               DISCARD
-             </button>
-             <button 
-               type="button" 
-               onClick={() => { reset(dlqItem.formData); setDlqItem(null); setDraftRestored(true); }}
-               className="bg-orange-500 text-black px-4 py-2 text-[9px] font-black uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105"
-             >
-               RESTORE & RETRY
-             </button>
-           </div>
+          <div className="flex items-center gap-4">
+            <div className="p-2 bg-orange-500/20 rounded">
+              <ShieldAlert className="w-5 h-5 text-orange-400 animate-pulse" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-xs font-black text-orange-400 uppercase tracking-widest leading-none">Unsent Registration Detected</span>
+              <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">Found unsent data for "{dlqItem.teamName}" from {new Date(dlqItem.timestamp).toLocaleDateString()}.</span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { localStorage.removeItem(`pp_dlq_${tournament.id}`); setDlqItem(null); }}
+              className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body px-3"
+            >
+              DISCARD
+            </button>
+            <button
+              type="button"
+              onClick={() => { reset(dlqItem.formData); setDlqItem(null); setDraftRestored(true); }}
+              className="bg-orange-500 text-black px-4 py-2 text-[9px] font-black uppercase tracking-widest hover:bg-white transition-all transform hover:scale-105"
+            >
+              RESTORE & RETRY
+            </button>
+          </div>
         </div>
       )}
 
       {draftRestored && (
         <div className="glass-panel p-4 bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
-           <div className="flex items-center gap-3">
-              <Zap className="w-5 h-5 text-neon-cyan animate-pulse" />
-              <div className="flex flex-col">
-                 <span className="text-xs font-bold text-neon-cyan uppercase tracking-widest leading-none">DRAFT RECOVERED</span>
-                 <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">We saved your previous attempt. Review and resubmit.</span>
-              </div>
-           </div>
-           <button 
-             type="button" 
-             onClick={() => { sessionStorage.removeItem('pp_form_draft'); setDraftRestored(false); }}
-             className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body p-2"
-           >
-             DISMISS
-           </button>
+          <div className="flex items-center gap-3">
+            <Zap className="w-5 h-5 text-neon-cyan animate-pulse" />
+            <div className="flex flex-col">
+              <span className="text-xs font-bold text-neon-cyan uppercase tracking-widest leading-none">DRAFT RECOVERED</span>
+              <span className="text-[10px] text-zinc-400 font-body uppercase mt-1">We saved your previous attempt. Review and resubmit.</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => { sessionStorage.removeItem('pp_form_draft'); setDraftRestored(false); }}
+            className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body p-2"
+          >
+            DISMISS
+          </button>
         </div>
       )}
       {TeamIdentity}
