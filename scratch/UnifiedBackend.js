@@ -701,11 +701,16 @@ const RegistrationService = {
 
     if (rawData.length > 1) {
       const headers = rawData[0].map(h => h.toString().toLowerCase().trim());
-      const statusIdx = headers.indexOf("status");
-      const nameIdx = headers.indexOf("team name");
+      const tournamentIdx = headers.indexOf("tournament id");
+      const targetTid = (payload.tournament_id || config.tournamentid || "").toString().trim();
 
       // Verify team name duplicate
       for (let i = 1; i < rawData.length; i++) {
+        if (tournamentIdx !== -1) {
+          const rowTid = (rawData[i][tournamentIdx] || "").toString().trim();
+          if (rowTid !== targetTid) continue;
+        }
+
         const status = rawData[i][statusIdx];
         if (status === "REJECTED" || status === "FAILED_VALIDATION") continue;
 
@@ -732,6 +737,11 @@ const RegistrationService = {
       }
 
       for (let i = 1; i < rawData.length; i++) {
+        if (tournamentIdx !== -1) {
+          const rowTid = (rawData[i][tournamentIdx] || "").toString().trim();
+          if (rowTid !== targetTid) continue;
+        }
+
         const status = rawData[i][statusIdx];
         if (status === "REJECTED" || status === "FAILED_VALIDATION") continue;
 

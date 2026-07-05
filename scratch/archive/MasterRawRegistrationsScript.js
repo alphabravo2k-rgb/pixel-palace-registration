@@ -113,7 +113,15 @@ function doPost(e) {
       if (faceit) newFaceitUrls.push(String(faceit).trim().toLowerCase().replace(/\/$/, ""));
     }
 
+    const incomingTid = (payload.tournament_id || payload.tournament || "").toString().trim();
+
     for (let i = 1; i < rows.length; i++) {
+      // Only verify duplicates for the SAME tournament to allow players to register in new events
+      if (cols.tournament !== undefined) {
+        const existingTid = (rows[i][cols.tournament] || "").toString().trim();
+        if (existingTid !== incomingTid) continue;
+      }
+
       // Check status if column exists
       if (cols.status !== undefined) {
         const existingStatus = (rows[i][cols.status] || "").toString().trim().toUpperCase();
