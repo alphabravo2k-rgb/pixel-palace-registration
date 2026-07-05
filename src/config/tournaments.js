@@ -10,7 +10,7 @@ export const tournaments = [
     maxTeams: 32,
     openSlots: 26,
     inviteSlots: 6,
-    region: "PAK / IND / ME",
+    region: "SEA & West Asia",
     startTime: "20:00 PKT ONWARDS",
     displayTime: "8PM Pakistan | 8:30PM India | 7PM UAE",
     serverLocation: "Dubai (DXB)",
