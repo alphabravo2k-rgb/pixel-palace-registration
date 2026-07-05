@@ -471,10 +471,10 @@ export const TournamentForm = ({ tournament, slots }) => {
             </label>
             <span
               className={`text-[10px] font-bold uppercase font-body transition-colors ${inviteStatus === 'PRIORITY SLOT'
-                  ? 'text-neon-cyan'
-                  : inviteStatus === 'QUERYING...'
-                    ? 'text-yellow-400 animate-pulse'
-                    : 'text-zinc-500'
+                ? 'text-neon-cyan'
+                : inviteStatus === 'QUERYING...'
+                  ? 'text-yellow-400 animate-pulse'
+                  : 'text-zinc-500'
                 }`}
             >
               {inviteStatus}
@@ -548,33 +548,28 @@ export const TournamentForm = ({ tournament, slots }) => {
               >
                 <option value="" disabled>Select Region...</option>
 
-                <optgroup label="South Asia">
-                  <option value="IND" className="bg-black">India (IND)</option>
-                  <option value="PAK" className="bg-black">Pakistan (PAK)</option>
-                  <option value="AFG" className="bg-black">Afghanistan (AFG)</option>
-                  <option value="BGD" className="bg-black">Bangladesh (BGD)</option>
-                  <option value="LKA" className="bg-black">Sri Lanka (LKA)</option>
-                  <option value="NPL" className="bg-black">Nepal (NPL)</option>
-                </optgroup>
+                <option value="IND" className="bg-black">India (IND)</option>
+                <option value="PAK" className="bg-black">Pakistan (PAK)</option>
+                <option value="AFG" className="bg-black">Afghanistan (AFG)</option>
+                <option value="BGD" className="bg-black">Bangladesh (BGD)</option>
+                <option value="LKA" className="bg-black">Sri Lanka (LKA)</option>
+                <option value="NPL" className="bg-black">Nepal (NPL)</option>
 
-                <optgroup label="West Asia & Middle East">
-                  <option value="ARE" className="bg-black">United Arab Emirates (ARE)</option>
-                  <option value="SAU" className="bg-black">Saudi Arabia (SAU)</option>
-                  <option value="QAT" className="bg-black">Qatar (QAT)</option>
-                  <option value="BHR" className="bg-black">Bahrain (BHR)</option>
-                  <option value="KWT" className="bg-black">Kuwait (KWT)</option>
-                  <option value="OMN" className="bg-black">Oman (OMN)</option>
-                  <option value="TUR" className="bg-black">Turkey (TUR)</option>
-                </optgroup>
+                <option value="ARE" className="bg-black">United Arab Emirates (ARE)</option>
+                <option value="SAU" className="bg-black">Saudi Arabia (SAU)</option>
+                <option value="QAT" className="bg-black">Qatar (QAT)</option>
+                <option value="BHR" className="bg-black">Bahrain (BHR)</option>
+                <option value="KWT" className="bg-black">Kuwait (KWT)</option>
+                <option value="OMN" className="bg-black">Oman (OMN)</option>
+                <option value="TUR" className="bg-black">Turkey (TUR)</option>
 
-                <optgroup label="Southeast Asia">
-                  <option value="SGP" className="bg-black">Singapore (SGP)</option>
-                  <option value="MYS" className="bg-black">Malaysia (MYS)</option>
-                  <option value="THA" className="bg-black">Thailand (THA)</option>
-                  <option value="IDN" className="bg-black">Indonesia (IDN)</option>
-                  <option value="PHL" className="bg-black">Philippines (PHL)</option>
-                  <option value="VNM" className="bg-black">Vietnam (VNM)</option>
-                </optgroup>
+                <option value="SGP" className="bg-black">Singapore (SGP)</option>
+                <option value="MYS" className="bg-black">Malaysia (MYS)</option>
+                <option value="THA" className="bg-black">Thailand (THA)</option>
+                <option value="IDN" className="bg-black">Indonesia (IDN)</option>
+                <option value="PHL" className="bg-black">Philippines (PHL)</option>
+                <option value="VNM" className="bg-black">Vietnam (VNM)</option>
+
               </select>
             </div>
             {errors.teamRegion && (
