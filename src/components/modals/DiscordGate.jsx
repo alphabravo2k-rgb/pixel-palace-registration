@@ -1,15 +1,16 @@
-import { 
+import {
   Award,
   Calendar,
   Clock,
-  ExternalLink, 
+  ExternalLink,
   Gamepad2,
   Globe,
-  MessageCircle, 
+  MessageCircle,
   Shield,
-  ShieldAlert, 
+  ShieldAlert,
   Trophy,
-  Users} from 'lucide-react';
+  Users
+} from 'lucide-react';
 import React, { useState } from 'react';
 
 import { formatEsportsDate, formatEsportsTime } from '../../utils/dateHelper';
@@ -20,35 +21,35 @@ export const DiscordGate = ({ tournament, onAccept }) => {
   // Parse verification items from the tournament config
   const verificationItems = tournament?.customVerification
     ? tournament.customVerification.map((str, i) => {
-        const parts = str.split(' — ');
-        return {
-          key: `custom-${i}`,
-          label: parts[0],
-          body: parts.length > 1 ? parts.slice(1).join(' — ') : ''
-        };
-      })
+      const parts = str.split(' — ');
+      return {
+        key: `custom-${i}`,
+        label: parts[0],
+        body: parts.length > 1 ? parts.slice(1).join(' — ') : ''
+      };
+    })
     : [
-        {
-          key: 'anticheat',
-          label: 'MANDATORY ANTI-CHEAT',
-          body: `Our team acknowledges that Akros Anti-Cheat must be installed by all players.`,
-        },
-        {
-          key: 'discord',
-          label: 'COMMUNICATION',
-          body: `All players have joined the Pixel Palace Discord server.`,
-        },
-        {
-          key: 'voicecomms',
-          label: 'VOICE COMMS',
-          body: `All players confirm to join Pixel Voice Channels during their matches.`,
-        },
-        {
-          key: 'schedule',
-          label: 'SCHEDULE',
-          body: `We confirm availability for the registration deadline and all tournament dates.`,
-        },
-      ];
+      {
+        key: 'anticheat',
+        label: 'MANDATORY ANTI-CHEAT',
+        body: `Our team acknowledges that Akros Anti-Cheat must be installed by all players.`,
+      },
+      {
+        key: 'discord',
+        label: 'COMMUNICATION',
+        body: `All players have joined the Pixel Palace Discord server.`,
+      },
+      {
+        key: 'voicecomms',
+        label: 'VOICE COMMS',
+        body: `All players confirm to join Pixel Voice Channels during their matches.`,
+      },
+      {
+        key: 'schedule',
+        label: 'SCHEDULE',
+        body: `We confirm availability for the registration deadline and all tournament dates.`,
+      },
+    ];
 
   const [checkedStates, setCheckedStates] = useState(
     Array(verificationItems.length).fill(false)
@@ -79,12 +80,12 @@ export const DiscordGate = ({ tournament, onAccept }) => {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#030305]/95 backdrop-blur-lg p-4 overflow-y-auto">
-      <div 
+      <div
         className={`bg-zinc-950 border border-neon-cyan/20 rounded-sm p-6 md:p-8 max-w-4xl w-full my-8 relative overflow-hidden shadow-[0_0_80px_rgba(0,240,255,0.08)] ${shake ? 'animate-shake' : ''}`}
       >
         <div className="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-neon-cyan via-neon-purple to-neon-pink" />
         <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
-        
+
         <div className="flex justify-center mb-4">
           <div className="w-12 h-12 rounded-full bg-neon-cyan/10 border border-neon-cyan/40 flex items-center justify-center shadow-[0_0_20px_rgba(0,240,255,0.2)]">
             <Award className="w-6 h-6 text-neon-cyan" />
@@ -109,7 +110,7 @@ export const DiscordGate = ({ tournament, onAccept }) => {
               <h3 className="text-xl font-heading text-white uppercase tracking-wider leading-none mb-5">
                 TOURNAMENT INTEL
               </h3>
-              
+
               <div className="space-y-4">
                 {/* Game Mode */}
                 <div className="flex items-center gap-3">
@@ -213,9 +214,9 @@ export const DiscordGate = ({ tournament, onAccept }) => {
                 <p className="text-zinc-400 text-xs font-body leading-relaxed mb-4">
                   Match lobbies, check-ins, and direct admin coordination will be managed strictly on our Discord server. All players must be present inside the server.
                 </p>
-                <a 
-                  href={tournament?.discordInviteUrl || "https://discord.gg/xGMZ5wrgUd"} 
-                  target="_blank" 
+                <a
+                  href={tournament?.discordInviteUrl || "https://discord.com/invite/pixelpalacee"}
+                  target="_blank"
                   rel="noreferrer"
                   className="flex items-center justify-center gap-2 w-full py-3 bg-[#5865F2] hover:bg-[#4752C4] text-white text-xs font-bold uppercase tracking-widest rounded-sm transition-colors shadow-lg font-body"
                 >
@@ -227,18 +228,17 @@ export const DiscordGate = ({ tournament, onAccept }) => {
                 <div className="text-[10px] font-black font-body text-neon-pink uppercase tracking-widest mb-1">
                   Acknowledge & Confirm Roster Rules:
                 </div>
-                
+
                 {verificationItems.map((item, i) => (
                   <label
                     key={item.key}
-                    className={`flex items-start gap-4 p-3 bg-black/60 border rounded-sm cursor-pointer transition-all duration-300 ${
-                      checkedStates[i] 
-                        ? 'border-neon-cyan/40 bg-neon-cyan/5 shadow-[inset_0_0_15px_rgba(0,240,255,0.03)]' 
+                    className={`flex items-start gap-4 p-3 bg-black/60 border rounded-sm cursor-pointer transition-all duration-300 ${checkedStates[i]
+                        ? 'border-neon-cyan/40 bg-neon-cyan/5 shadow-[inset_0_0_15px_rgba(0,240,255,0.03)]'
                         : 'border-white/5 hover:border-white/15'
-                    }`}
+                      }`}
                   >
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       className="mt-0.5 w-5 h-5 accent-neon-cyan flex-shrink-0 cursor-pointer"
                       checked={checkedStates[i]}
                       onChange={(e) => handleCheckboxChange(i, e.target.checked)}
@@ -254,13 +254,12 @@ export const DiscordGate = ({ tournament, onAccept }) => {
           </div>
         </div>
 
-        <button 
+        <button
           onClick={handleProceed}
-          className={`w-full py-4 font-bold uppercase tracking-widest text-xs transition-all duration-300 rounded-sm font-body ${
-            allChecked 
-              ? 'bg-neon-cyan text-black hover:bg-white hover:text-black shadow-[0_0_25px_rgba(0,240,255,0.3)] cursor-pointer' 
+          className={`w-full py-4 font-bold uppercase tracking-widest text-xs transition-all duration-300 rounded-sm font-body ${allChecked
+              ? 'bg-neon-cyan text-black hover:bg-white hover:text-black shadow-[0_0_25px_rgba(0,240,255,0.3)] cursor-pointer'
               : 'bg-zinc-900/50 text-zinc-600 cursor-not-allowed border border-zinc-800/50'
-          }`}
+            }`}
         >
           {allChecked ? 'Proceed to Registration Form' : 'Acknowledge all requirements to proceed'}
         </button>

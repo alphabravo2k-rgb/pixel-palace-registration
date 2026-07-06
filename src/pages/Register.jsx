@@ -1,6 +1,6 @@
 import { ChevronLeft, Copy, Instagram, MessageCircle, Shield, ShieldCheck, Sparkles, Trophy, Tv, Users } from 'lucide-react';
-import React, { useCallback,useEffect, useState } from 'react';
-import { Link,Navigate, useParams } from 'react-router-dom';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { DiscordGate } from '../components/modals/DiscordGate';
 import { TeamProfileModal } from '../components/modals/TeamProfileModal';
@@ -11,7 +11,7 @@ import { ResultsTab } from '../components/registration/ResultsTab';
 import { TrackerTab } from '../components/registration/TrackerTab';
 import { getTournamentBySlug } from '../config/tournaments';
 import { useAudio } from '../hooks/useAudio';
-import { fetchTournamentBracket,fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
+import { fetchTournamentBracket, fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
 import { formatEsportsDate } from '../utils/dateHelper';
 import { Terminal } from '../utils/logger';
 import { formatLocalTime } from '../utils/timezone';
@@ -38,7 +38,7 @@ export const Register = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [failedMapImages, setFailedMapImages] = useState(new Set());
-  
+
   const [activeTeam, setActiveTeam] = useState(() => {
     try {
       const stored = localStorage.getItem(`pp_active_team_${tournament?.id}`);
@@ -62,7 +62,7 @@ export const Register = () => {
   const handleMapImgError = useCallback((mapName) => {
     setFailedMapImages(prev => new Set([...prev, mapName]));
   }, []);
-  
+
   const [timeLeft, setTimeLeft] = useState('LOADING');
   const [copied, setCopied] = useState(false);
 
@@ -74,7 +74,7 @@ export const Register = () => {
 
   useEffect(() => {
     if (!tournament?.id || isArchived) return;
-    
+
     let active = true;
     let failCount = 0;
 
@@ -91,7 +91,7 @@ export const Register = () => {
           fetchTournamentTeams(tournament.id),
           tournament.bracketsEnabled ? fetchTournamentBracket(tournament.id) : Promise.resolve(null)
         ]);
-        
+
         if (!active) return;
         setSlots(liveSlots);
         setTeams(liveTeams?.teams || []);
@@ -110,7 +110,7 @@ export const Register = () => {
 
     loadData();
     const interval = setInterval(loadData, 60000); // Check every 60 seconds
-    
+
     return () => {
       active = false;
       clearInterval(interval);
@@ -138,7 +138,7 @@ export const Register = () => {
       return;
     }
     const deadline = new Date(deadlineStr).getTime();
-    
+
     const timer = setInterval(() => {
       const diff = deadline - new Date().getTime();
       if (diff < 0) {
@@ -150,9 +150,9 @@ export const Register = () => {
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
       const s = Math.floor((diff % 60000) / 1000);
-      setTimeLeft(`${String(d).padStart(2,'0')}:${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+      setTimeLeft(`${String(d).padStart(2, '0')}:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
     }, 1000);
-    
+
     return () => clearInterval(timer);
   }, [tournament]);
 
@@ -180,7 +180,7 @@ export const Register = () => {
           <div className="hud-crosshair tr opacity-50" />
           <div className="hud-crosshair bl opacity-50" />
           <div className="hud-crosshair br opacity-50" />
-          
+
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-5">
               <div className="w-16 h-16 bg-yellow-500/10 border border-yellow-500/30 rounded flex items-center justify-center text-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.2)] shrink-0">
@@ -198,14 +198,14 @@ export const Register = () => {
             </div>
 
             <div className="flex gap-3 w-full md:w-auto">
-              <button 
+              <button
                 onMouseEnter={playHover}
                 onClick={() => { playClick(); copyId(); }}
                 className="flex-grow md:flex-grow-0 bg-yellow-500/10 border border-yellow-500/30 hover:bg-yellow-500 hover:text-black text-yellow-500 text-xs font-bold uppercase tracking-widest py-3 px-6 transition-all duration-300 rounded font-body flex items-center justify-center gap-2"
               >
                 <Copy className="w-4 h-4" /> Copy Sub ID
               </button>
-              <button 
+              <button
                 onMouseEnter={playHover}
                 onClick={() => { playClick(); setIsRulesAccepted(false); setShowForm(true); }}
                 className="flex-grow md:flex-grow-0 bg-zinc-900 border border-white/10 hover:border-white/20 text-zinc-400 hover:text-white text-xs font-bold uppercase tracking-widest py-3 px-6 transition-all duration-300 rounded font-body"
@@ -217,7 +217,7 @@ export const Register = () => {
 
           <div className="mt-12 bg-black/40 border border-white/5 p-6 rounded-lg text-left">
             <h3 className="text-sm font-bold font-body uppercase text-zinc-400 mb-6 tracking-widest">REGISTRATION STATUS STATE</h3>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
               {statusSteps.map((step, idx) => (
                 <div key={idx} className="relative flex flex-col pl-4 border-l-2 border-l-zinc-800 last:border-0 pb-1 md:pb-0">
@@ -247,7 +247,7 @@ export const Register = () => {
             <h3 className="text-xl font-heading text-white uppercase mb-4 tracking-widest flex items-center gap-2">
               <Users className="w-5 h-5 text-yellow-500" /> Declared Squad Roster
             </h3>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {activeTeam.roster.map((player, idx) => (
                 <div key={idx} className="bg-black/30 border border-white/5 p-4 rounded flex items-center gap-3 relative hover:border-yellow-500/20 transition-all duration-300">
@@ -277,7 +277,7 @@ export const Register = () => {
         <DiscordGate tournament={tournament} onAccept={() => setIsRulesAccepted(true)} />
       )}
       {selectedTeam && <TeamProfileModal team={selectedTeam} isOpen={!!selectedTeam} onClose={() => setSelectedTeam(null)} />}
-      
+
       <div className="min-h-screen bg-[#050507] text-white selection:bg-neon-cyan/30 flex flex-col relative overflow-x-hidden">
         <div className="app-bg-void" />
         <div className="app-bg-scanlines" />
@@ -352,10 +352,10 @@ export const Register = () => {
             </div>
 
             <div className="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto relative z-10">
-              <a 
-                href="https://discord.gg/xGMZ5wrgUd" 
-                target="_blank" 
-                rel="noreferrer" 
+              <a
+                href="https://discord.com/invite/pixelpalacee"
+                target="_blank"
+                rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
                 className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-purple/20 transition-all duration-300"
@@ -363,10 +363,10 @@ export const Register = () => {
                 <MessageCircle className="w-5 h-5 text-neon-cyan group-hover:text-white transition-colors" />
                 <span className="font-bold text-lg uppercase tracking-widest text-white font-body">JOIN DISCORD SERVER</span>
               </a>
-              <a 
-                href="https://www.twitch.tv/pXpLgg" 
-                target="_blank" 
-                rel="noreferrer" 
+              <a
+                href="https://www.twitch.tv/pXpLgg"
+                target="_blank"
+                rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
                 className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20 transition-all duration-300"
@@ -374,10 +374,10 @@ export const Register = () => {
                 <Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" />
                 <span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span>
               </a>
-              <a 
-                href="https://www.instagram.com/pixelpalace.gg" 
-                target="_blank" 
-                rel="noreferrer" 
+              <a
+                href="https://www.instagram.com/pixelpalace.gg"
+                target="_blank"
+                rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
                 className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-pink/20 transition-all duration-300"
@@ -390,9 +390,9 @@ export const Register = () => {
             <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0 sticky top-4 z-40 bg-[#050507]/90 backdrop-blur-md pt-4 rounded-t-xl border-t border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
               <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10" />
               {tournament.tournamentComplete && (
-                <button 
+                <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('results'); }} 
+                  onClick={() => { playClick(); setActiveTab('results'); }}
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400 font-black' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Results<span className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest">FINAL</span>
@@ -400,18 +400,18 @@ export const Register = () => {
                 </button>
               )}
               {!isArchived && (
-                <button 
+                <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('register'); }} 
+                  onClick={() => { playClick(); setActiveTab('register'); }}
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Register Team
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
-              <button 
+              <button
                 onMouseEnter={playHover}
-                onClick={() => { playClick(); setActiveTab('teams'); }} 
+                onClick={() => { playClick(); setActiveTab('teams'); }}
                 className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'teams' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
               >
                 {isArchived ? 'All Teams' : 'Registered Teams'}
@@ -419,9 +419,9 @@ export const Register = () => {
                 <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'teams' ? 'w-full' : 'w-0'}`} />
               </button>
               {tournament.bracketsEnabled && (
-                <button 
+                <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('brackets'); }} 
+                  onClick={() => { playClick(); setActiveTab('brackets'); }}
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
                 >
                   Brackets
@@ -436,18 +436,18 @@ export const Register = () => {
               activeTeam && !showForm ? (
                 renderCommandDeck()
               ) : (
-                <RegistrationTab 
-                  tournament={tournament} 
-                  slots={slots} 
-                  timeLeft={timeLeft} 
-                  failedMapImages={failedMapImages} 
-                  handleMapImgError={handleMapImgError} 
+                <RegistrationTab
+                  tournament={tournament}
+                  slots={slots}
+                  timeLeft={timeLeft}
+                  failedMapImages={failedMapImages}
+                  handleMapImgError={handleMapImgError}
                 />
               )
             )}
 
             {(activeTab === 'tracker' || activeTab === 'teams') && (
-              <TrackerTab 
+              <TrackerTab
                 isArchived={isArchived}
                 handleManualRefresh={handleManualRefresh}
                 isRefreshing={isRefreshing}
@@ -460,7 +460,7 @@ export const Register = () => {
             )}
 
             {activeTab === 'brackets' && (
-              <BracketsTab 
+              <BracketsTab
                 bracketData={bracketData}
                 tournament={tournament}
                 isArchived={isArchived}
@@ -468,9 +468,9 @@ export const Register = () => {
                 teams={teams}
               />
             )}
-            
+
             {activeTab === 'results' && (
-              <ResultsTab 
+              <ResultsTab
                 tournament={tournament}
                 handleShare={handleShare}
                 copied={copied}

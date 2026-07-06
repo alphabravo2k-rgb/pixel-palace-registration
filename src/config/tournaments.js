@@ -345,7 +345,7 @@ export const tournaments = [
 // Fallback configuration for old tournaments so nothing breaks
 const defaultConfig = {
   discordRequired: false,
-  discordInviteUrl: "https://discord.gg/xGMZ5wrgUd",
+  discordInviteUrl: "https://discord.com/invite/pixelpalacee",
   sheetsEndpoint: "https://script.google.com/macros/s/AKfycbyaIDyEwLl7DD_1VS4Rd0QtLE8o9TPUJnrn-uHGZKemnX7x8ncSGEnjJf086F-JTCaF/exec",
   softBanEnabled: false,
   bracketsEnabled: false,

@@ -7,7 +7,7 @@ import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 const getFaceitLevelStyle = (lvlStr) => {
   const lvl = parseInt(lvlStr);
   if (isNaN(lvl) || lvl <= 0) return { bg: 'bg-zinc-800 text-zinc-500', text: 'text-zinc-500', label: '-' };
-  
+
   if (lvl === 1) {
     return { bg: 'bg-[#4D5356] text-white', text: 'text-[#4D5356]', label: '1' };
   }
@@ -29,13 +29,13 @@ const getFaceitLevelStyle = (lvlStr) => {
 const getSeedStyle = (seedName) => {
   const seed = (seedName || '').toString().trim().toUpperCase();
   const SEEDS_MAP = {
-    'IRON':     { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30', glow: 'shadow-[#607D8B]/20' },
-    'BRONZE':   { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30', glow: 'shadow-[#A0522D]/20' },
-    'SILVER':   { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30', glow: 'shadow-[#9E9E9E]/20' },
-    'GOLD':     { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30', glow: 'shadow-[#FFC107]/20' },
+    'IRON': { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30', glow: 'shadow-[#607D8B]/20' },
+    'BRONZE': { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30', glow: 'shadow-[#A0522D]/20' },
+    'SILVER': { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30', glow: 'shadow-[#9E9E9E]/20' },
+    'GOLD': { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30', glow: 'shadow-[#FFC107]/20' },
     'PLATINUM': { bg: 'bg-[#00ACC1]/10 text-[#00ACC1] border-[#00ACC1]/30', glow: 'shadow-[#00ACC1]/20' },
-    'DIAMOND':  { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30', glow: 'shadow-[#7B1FA2]/20' },
-    'ELITE':    { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30', glow: 'shadow-[#E91E63]/20' },
+    'DIAMOND': { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30', glow: 'shadow-[#7B1FA2]/20' },
+    'ELITE': { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30', glow: 'shadow-[#E91E63]/20' },
   };
   return SEEDS_MAP[seed] || { bg: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/40', glow: '' };
 };
@@ -47,13 +47,13 @@ export const TeamProfileModal = ({ team, onClose }) => {
 
   // ── Status configuration ───────────────────────────────────────────────
   const STATUS_CONFIG = {
-    'VERIFIED':       { label: 'VERIFIED',        color: 'bg-green-500/10 text-green-400 border-green-500/30',   icon: CheckCircle2,  glow: 'shadow-green-500/20' },
-    'PENDING REVIEW': { label: 'PENDING REVIEW',   color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', icon: Clock,         glow: 'shadow-yellow-500/20' },
-    'OBJECTION':      { label: 'ACTION REQUIRED',  color: 'bg-orange-500/10 text-orange-400 border-orange-500/40', icon: AlertTriangle,  glow: 'shadow-orange-500/30' },
-    'WAITLISTED':     { label: 'WAITLISTED',       color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', icon: Hourglass,     glow: 'shadow-purple-500/20' },
-    'REJECTED':       { label: 'NOT ACCEPTED',     color: 'bg-red-500/10 text-red-400 border-red-500/30',         icon: Ban,           glow: 'shadow-red-500/20' },
-    'DISQUALIFIED':   { label: 'DISQUALIFIED',     color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30',      icon: Shield,        glow: 'shadow-zinc-500/20' },
-    'CHAMPION':       { label: 'CHAMPION 🏆',      color: 'bg-yellow-400/10 text-yellow-300 border-yellow-400/40', icon: Trophy,        glow: 'shadow-yellow-400/30' },
+    'VERIFIED': { label: 'VERIFIED', color: 'bg-green-500/10 text-green-400 border-green-500/30', icon: CheckCircle2, glow: 'shadow-green-500/20' },
+    'PENDING REVIEW': { label: 'PENDING REVIEW', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', icon: Clock, glow: 'shadow-yellow-500/20' },
+    'OBJECTION': { label: 'ACTION REQUIRED', color: 'bg-orange-500/10 text-orange-400 border-orange-500/40', icon: AlertTriangle, glow: 'shadow-orange-500/30' },
+    'WAITLISTED': { label: 'WAITLISTED', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', icon: Hourglass, glow: 'shadow-purple-500/20' },
+    'REJECTED': { label: 'NOT ACCEPTED', color: 'bg-red-500/10 text-red-400 border-red-500/30', icon: Ban, glow: 'shadow-red-500/20' },
+    'DISQUALIFIED': { label: 'DISQUALIFIED', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30', icon: Shield, glow: 'shadow-zinc-500/20' },
+    'CHAMPION': { label: 'CHAMPION 🏆', color: 'bg-yellow-400/10 text-yellow-300 border-yellow-400/40', icon: Trophy, glow: 'shadow-yellow-400/30' },
   };
 
   const CONTACT_STATUSES = ['OBJECTION', 'REJECTED', 'DISQUALIFIED', 'WAITLISTED'];
@@ -65,13 +65,13 @@ export const TeamProfileModal = ({ team, onClose }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
       <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
-      
+
       <div className="relative w-full max-w-3xl glass-panel p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-300">
         {/* Header Background */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-neon-cyan/20 to-black pointer-events-none" />
         <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/10 blur-[100px] pointer-events-none" />
-        
-        <button 
+
+        <button
           onClick={onClose}
           className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-black/50 border border-white/10 rounded-full text-zinc-400 hover:text-white hover:border-neon-cyan/50 transition-all group"
         >
@@ -82,14 +82,14 @@ export const TeamProfileModal = ({ team, onClose }) => {
           {/* Logo */}
           <div className="w-32 h-32 rounded-xl bg-black border-2 border-white/10 p-2 shrink-0 shadow-2xl relative group">
             <div className="absolute inset-0 bg-neon-cyan/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl blur-xl" />
-            <img 
-              src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo} 
-              alt={team.name} 
+            <img
+              src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo}
+              alt={team.name}
               className={`w-full h-full object-contain relative z-10 ${logoFailed ? 'opacity-20 grayscale' : ''}`}
               onError={() => setLogoFailed(true)}
             />
           </div>
-          
+
           {/* Info */}
           <div className="text-center md:text-left flex-grow">
             <div className="inline-flex items-center gap-2 mb-2">
@@ -104,7 +104,7 @@ export const TeamProfileModal = ({ team, onClose }) => {
             <h2 className="text-4xl sm:text-5xl font-heading text-white uppercase tracking-widest leading-none drop-shadow-lg">
               {team.name}
             </h2>
-            
+
             <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-6">
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Average ELO</span>
@@ -130,26 +130,24 @@ export const TeamProfileModal = ({ team, onClose }) => {
 
             {/* Admin Remarks Notice */}
             {(team.adminRemarks || needsContact) && (
-              <div className={`mt-5 border rounded-lg p-4 flex flex-col gap-3 ${
-                statusKey === 'OBJECTION'    ? 'bg-orange-500/5 border-orange-500/30' :
-                statusKey === 'REJECTED'     ? 'bg-red-500/5 border-red-500/30' :
-                statusKey === 'WAITLISTED'   ? 'bg-purple-500/5 border-purple-500/30' :
-                'bg-zinc-800/50 border-white/10'
-              }`}>
+              <div className={`mt-5 border rounded-lg p-4 flex flex-col gap-3 ${statusKey === 'OBJECTION' ? 'bg-orange-500/5 border-orange-500/30' :
+                  statusKey === 'REJECTED' ? 'bg-red-500/5 border-red-500/30' :
+                    statusKey === 'WAITLISTED' ? 'bg-purple-500/5 border-purple-500/30' :
+                      'bg-zinc-800/50 border-white/10'
+                }`}>
                 {team.adminRemarks && (
                   <div>
                     <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1 font-body">Admin Remarks</p>
-                    <p className={`text-[11px] font-body leading-relaxed ${
-                      statusKey === 'OBJECTION'  ? 'text-orange-300' :
-                      statusKey === 'REJECTED'   ? 'text-red-300' :
-                      statusKey === 'WAITLISTED' ? 'text-purple-300' :
-                      'text-zinc-300'
-                    }`}>{team.adminRemarks}</p>
+                    <p className={`text-[11px] font-body leading-relaxed ${statusKey === 'OBJECTION' ? 'text-orange-300' :
+                        statusKey === 'REJECTED' ? 'text-red-300' :
+                          statusKey === 'WAITLISTED' ? 'text-purple-300' :
+                            'text-zinc-300'
+                      }`}>{team.adminRemarks}</p>
                   </div>
                 )}
                 {needsContact && (
                   <a
-                    href="https://discord.gg/xGMZ5wrgUd"
+                    href="https://discord.com/invite/pixelpalacee"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 self-start text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded border border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5 hover:bg-neon-cyan/10 hover:border-neon-cyan/60 transition-all"
@@ -167,7 +165,7 @@ export const TeamProfileModal = ({ team, onClose }) => {
           <h3 className="text-lg font-heading text-white uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3">
             <Crosshair className="w-5 h-5 text-neon-cyan" /> Registered Roster
           </h3>
-          
+
           {!team.roster || team.roster.length === 0 ? (
             <div className="text-center py-12 text-zinc-500 font-body text-xs uppercase tracking-widest bg-black/40 border border-dashed border-white/5 rounded-lg">
               Roster details are currently unavailable or pending verification.
