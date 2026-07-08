@@ -36,6 +36,7 @@ export const tournaments = [
     softBanEnabled: false,
     bracketsEnabled: false,
     supportsLogoUpload: true,
+    hideRegisteredTeamsDuringRegistration: true,
 
     // Results
     tournamentComplete: false,

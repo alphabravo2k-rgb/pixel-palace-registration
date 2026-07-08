@@ -1,5 +1,6 @@
-import { AlertOctagon, Layers, RefreshCw } from 'lucide-react';
-import React, { useState } from 'react';
+import { AlertOctagon, Layers, RefreshCw, Lock, Hourglass, Shield, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { formatEsportsDate } from '../../utils/dateHelper';
 
 
 const getSeedStyle = (seedName) => {
@@ -23,9 +24,55 @@ export const TrackerTab = ({
   teams,
   playHover,
   playClick,
-  setSelectedTeam
+  setSelectedTeam,
+  tournament,
+  onRegisterClick
 }) => {
   const [failedLogos, setFailedLogos] = useState({});
+
+  // Compute if registrations are active
+  const isRegistrationOpen = tournament?.registrationDeadline 
+    ? new Date().getTime() < new Date(tournament.registrationDeadline).getTime()
+    : false;
+
+  const shouldHideTeams = tournament?.hideRegisteredTeamsDuringRegistration && isRegistrationOpen;
+
+  const [timeLeft, setTimeLeft] = useState('LOADING');
+
+  useEffect(() => {
+    if (!shouldHideTeams || !tournament?.registrationDeadline) return;
+    const deadlineStr = tournament.registrationDeadline;
+    if (deadlineStr === 'TBD') {
+      setTimeLeft('TBD');
+      return;
+    }
+    const deadline = new Date(deadlineStr).getTime();
+
+    const updateTimer = () => {
+      const diff = deadline - new Date().getTime();
+      if (diff < 0) {
+        setTimeLeft('CLOSED');
+        return;
+      }
+      const d = Math.floor(diff / 86400000);
+      const h = Math.floor((diff % 86400000) / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      
+      let parts = [];
+      if (d > 0) parts.push(`${d}D`);
+      if (h > 0 || d > 0) parts.push(`${h}H`);
+      parts.push(`${m}M`);
+      parts.push(`${s}S`);
+      
+      setTimeLeft(parts.join(' '));
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+    return () => clearInterval(timer);
+  }, [shouldHideTeams, tournament?.registrationDeadline]);
+
   return (
     <div className="max-w-6xl mx-auto">
       <div className="glass-panel p-8 min-h-[600px]">
@@ -43,7 +90,104 @@ export const TrackerTab = ({
           )}
         </div>
 
-        {!teams ? (
+        {shouldHideTeams ? (
+          <div className="bg-gradient-to-b from-black/50 to-transparent p-12 border border-white/5 rounded-lg relative overflow-hidden flex flex-col items-center justify-center text-center min-h-[500px]">
+            <div className="hud-crosshair tl opacity-30" />
+            <div className="hud-crosshair tr opacity-30" />
+            <div className="hud-crosshair bl opacity-30" />
+            <div className="hud-crosshair br opacity-30" />
+
+            {/* RADAR SWEEP ANIMATION */}
+            <div className="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center">
+              <div className="absolute inset-0 rounded-full border border-neon-cyan/20 animate-ping [animation-duration:3s]" />
+              <div className="absolute w-20 h-20 rounded-full border border-neon-pink/20 animate-pulse" />
+              <div className="absolute w-12 h-12 rounded-full border border-white/5 flex items-center justify-center">
+                <Lock className="w-5 h-5 text-neon-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.6)]" />
+              </div>
+              <div className="absolute inset-0 rounded-full border border-dashed border-neon-cyan/10 animate-spin [animation-duration:8s]" />
+            </div>
+
+            {/* STATUS BADGE */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em] font-body rounded-full mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
+              Registrations Active
+            </div>
+
+            {/* DETAILS */}
+            <h3 className="text-2xl sm:text-3xl font-heading text-white uppercase tracking-wider leading-tight mb-4 max-w-2xl">
+              Registered Teams will be revealed after registrations close
+            </h3>
+            
+            <p className="text-zinc-400 font-body text-sm leading-relaxed max-w-xl mb-6">
+              Team rosters and profiles are temporarily hidden to encourage registrations and ensure a fair signup environment.
+            </p>
+
+            {/* COUNTDOWN TIMER */}
+            {timeLeft !== 'LOADING' && timeLeft !== 'CLOSED' && (
+              <div className="flex flex-col items-center bg-black/40 border border-white/5 px-6 py-3.5 rounded mb-6 w-full max-w-md relative">
+                <div className="absolute inset-0 bg-neon-pink/5 opacity-5 rounded" />
+                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-body mb-2 flex items-center gap-1.5 relative z-10">
+                  <Hourglass className="w-3.5 h-3.5 text-neon-pink animate-pulse" />
+                  Registration Closes In
+                </span>
+                <span className="text-2xl font-heading text-white tracking-[0.15em] font-black uppercase drop-shadow-[0_0_10px_rgba(240,0,255,0.4)] relative z-10 font-mono">
+                  {timeLeft}
+                </span>
+              </div>
+            )}
+
+            {/* SCARCITY COUNTER PANEL (THRESHOLD = 8) */}
+            {Array.isArray(teams) && teams.length >= 8 ? (
+              <div className="w-full max-w-md bg-black/40 border border-white/5 p-4 rounded mb-6 text-center relative">
+                <div className="absolute inset-0 bg-neon-pink/5 opacity-10 rounded" />
+                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-3 relative z-10">Ecosystem Status</p>
+                <div className="grid grid-cols-3 gap-2 relative z-10">
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Total Slots</span>
+                    <span className="text-base font-heading text-white tracking-widest mt-1">{tournament?.maxTeams || 32}</span>
+                  </div>
+                  <div className="flex flex-col border-x border-white/5">
+                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Secured</span>
+                    <span className="text-base font-heading text-neon-pink tracking-widest mt-1">{teams.length}</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Remaining</span>
+                    <span className="text-base font-heading text-neon-cyan tracking-widest mt-1">
+                      {Math.max(0, (tournament?.maxTeams || 32) - teams.length)}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[9px] text-zinc-400 font-bold uppercase mt-3 tracking-wider relative z-10 flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
+                  Secure your place before registrations close.
+                </p>
+              </div>
+            ) : (
+              <div className="w-full max-w-md bg-black/40 border border-white/5 p-4 rounded mb-6 text-center relative">
+                <p className="text-[9px] text-zinc-400 font-bold uppercase mt-1 tracking-wider flex items-center justify-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
+                  Registrations are open. Will your team answer the challenge?
+                </p>
+              </div>
+            )}
+
+            {/* CTA */}
+            {onRegisterClick && (
+              <button
+                onClick={() => { playClick(); onRegisterClick(); }}
+                onMouseEnter={playHover}
+                className="btn-ignite w-full max-w-xs mt-4 transition-all duration-300 relative z-10 flex items-center justify-center"
+              >
+                <span>Register Your Team</span>
+              </button>
+            )}
+
+            {/* SUB-TEXT */}
+            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.22em] mt-4 font-body">
+              Think you have what it takes? Test Yourself Against the Best.
+            </p>
+          </div>
+        ) : !teams ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-60">
             {[1, 2, 3, 4, 5, 6].map((idx) => (
               <div key={idx} className="glass-panel p-0 overflow-hidden border-white/5 animate-pulse">

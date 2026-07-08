@@ -456,6 +456,7 @@ export const Register = () => {
                 playClick={playClick}
                 setSelectedTeam={setSelectedTeam}
                 tournament={tournament}
+                onRegisterClick={() => setActiveTab('register')}
               />
             )}
 
