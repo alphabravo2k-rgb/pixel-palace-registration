@@ -16,4 +16,5 @@ export {
   fetchSlots as fetchTournamentSlots,
   fetchTeams as fetchTournamentTeams,
   fetchBracket as fetchTournamentBracket,
+  trackRegistration,
 } from './api/client';

@@ -137,4 +137,20 @@ export class GoogleSheetsRepository extends RegistrationRepository {
       throw err;
     }
   }
+
+  async trackRegistration(tournamentId, searchId) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) {
+      return { success: false, error: 'No endpoint configured' };
+    }
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/trackRegistration&action=trackRegistration&tournamentId=${encodeURIComponent(tournamentId)}&searchId=${encodeURIComponent(searchId)}&t=${Date.now()}`);
+      if (!res.ok) throw new Error("Tracking service offline");
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] trackRegistration failed:", err);
+      return { success: false, error: err.message };
+    }
+  }
 }

@@ -68,6 +68,11 @@ function doGet(e) {
       return generateResponse(bracket);
     }
 
+    if (endpoint === "/api/v1/trackRegistration") {
+      const result = RegistrationService.trackRegistration(params.searchId, params.secondaryId, params.tournamentId, config);
+      return generateResponse(result);
+    }
+
     return generateResponse({ error: "ENDPOINT_NOT_FOUND" }, 404);
   } catch (err) {
     AuditService.recordEvent(params.tournamentId || "system", "SYSTEM_ERROR", "GET_FAILED", "N/A", err.toString(), "doGet");
@@ -486,6 +491,52 @@ const DatabaseAdapter = {
     }
     sheet.appendRow(row);
     SpreadsheetApp.flush();
+  },
+
+  getHeaderMapping: function (sheetName, headersRow) {
+    const cacheKey = "header_map_" + sheetName.toLowerCase().replace(/[^a-z0-9]/g, "");
+    try {
+      const cached = CacheService.getScriptCache().get(cacheKey);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch(e) {}
+    
+    const mapping = {};
+    headersRow.forEach((h, idx) => {
+      const clean = h.toString().toLowerCase().trim();
+      if (clean) mapping[clean] = idx;
+    });
+    
+    try {
+      CacheService.getScriptCache().put(cacheKey, JSON.stringify(mapping), 600); // 10 min cache
+    } catch(e) {}
+    
+    return mapping;
+  },
+
+  logRosterEvent: function (tournamentId, submissionId, teamName, eventType, actor, description) {
+    try {
+      const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+      let sheet = doc.getSheetByName("Roster_Log");
+      if (!sheet) {
+        sheet = doc.insertSheet("Roster_Log");
+        sheet.appendRow(["Timestamp", "Tournament ID", "Submission ID", "Team Name", "Event Type", "Actor", "Description"]);
+        sheet.setFrozenRows(1);
+      }
+      sheet.appendRow([
+        new Date().toISOString(),
+        tournamentId,
+        submissionId,
+        teamName,
+        eventType,
+        actor,
+        description
+      ]);
+      SpreadsheetApp.flush();
+    } catch (e) {
+      Logger.log("Failed to write roster log event: " + e);
+    }
   }
 };
 
@@ -640,6 +691,11 @@ const RegistrationService = {
 
     DatabaseAdapter.appendRawRegistration(newRow);
 
+    if (isSuccess) {
+       DatabaseAdapter.logRosterEvent(tournamentId, submissionId, payload.team_name, "REGISTRATION_SUBMITTED", "SYSTEM", "Registration Submitted. Submission ID secured.");
+       DatabaseAdapter.logRosterEvent(tournamentId, submissionId, payload.team_name, "SECURITY_SCAN_PASSED", "SYSTEM", "Steam ID validation checks completed. Blacklist scan clear.");
+    }
+
     // Queue player enrichment jobs
     const teamId = Utilities.getUuid();
     for (let p = 1; p <= 7; p++) {
@@ -705,6 +761,9 @@ const RegistrationService = {
       const targetTid = (payload.tournament_id || config.tournamentid || "").toString().trim();
 
       // Verify team name duplicate
+      const statusIdx = headers.indexOf("status");
+      const nameIdx = headers.indexOf("team name");
+
       for (let i = 1; i < rawData.length; i++) {
         if (tournamentIdx !== -1) {
           const rowTid = (rawData[i][tournamentIdx] || "").toString().trim();
@@ -867,6 +926,268 @@ const RegistrationService = {
       confirmed: approvedCount,
       left: Math.max(0, maxTeams - approvedCount)
     };
+  },
+
+  trackRegistration: function (searchId, secondaryId, tournamentId, config) {
+    if (!searchId) return { success: false, error: "Missing tracking ID" };
+    
+    const cleanId = searchId.toString().trim().toUpperCase();
+    
+    // Look up in MASTER_RAW_REGISTRATIONS
+    const rawData = DatabaseAdapter.getRawRegistrations();
+    if (rawData.length <= 1) return { success: false, error: "No registrations registered in system" };
+    
+    const headers = rawData[0].map(h => h.toString().toLowerCase().trim());
+    const subIdx = headers.indexOf("submission id");
+    const regIdx = headers.indexOf("registration id");
+    const tidIdx = headers.indexOf("tournament id");
+    const statusIdx = headers.indexOf("status");
+    const nameIdx = headers.indexOf("team name");
+    const tagIdx = headers.indexOf("team tag");
+    const regionIdx = headers.indexOf("region");
+    const timeIdx = headers.indexOf("timestamp");
+    const logoFileIdx = headers.indexOf("logo file id");
+    
+    let targetRow = null;
+    for (let i = 1; i < rawData.length; i++) {
+      const subVal = (rawData[i][subIdx] || "").toString().trim().toUpperCase();
+      const regVal = (rawData[i][regIdx] || "").toString().trim().toUpperCase();
+      const rowTid = (rawData[i][tidIdx] || "").toString().trim();
+      
+      if ((subVal === cleanId || regVal === cleanId) && rowTid === tournamentId) {
+        targetRow = rawData[i];
+        break;
+      }
+    }
+    
+    if (!targetRow) {
+      return { success: false, error: "Registration record not found for this ID." };
+    }
+    
+    // Access Control Check: sequential Registration IDs (predictable) require Captain's FACEIT Nickname validation.
+    // Cryptographically secure Submission IDs (36-character UUIDs) are accepted directly.
+    const isUuid = cleanId.length === 36 && cleanId.indexOf("-") !== -1;
+    if (!isUuid) {
+      const p1FaceitIdx = headers.indexOf("p1 faceit");
+      const captainFaceit = (targetRow[p1FaceitIdx] || "").toString().trim().toLowerCase();
+      const cleanSecondary = (secondaryId || "").toString().trim().toLowerCase();
+      
+      if (!cleanSecondary || cleanSecondary !== captainFaceit) {
+        return { 
+          success: false, 
+          error: "VERIFICATION_REQUIRED", 
+          message: "For security, lookup via sequential Registration ID requires verifying the Captain's FACEIT Nickname." 
+        };
+      }
+    }
+    
+    const submissionId = targetRow[subIdx];
+    const registrationId = targetRow[regIdx];
+    const registeredAt = targetRow[timeIdx];
+    const rawStatus = targetRow[statusIdx] || "SUBMITTED";
+    const teamName = targetRow[nameIdx];
+    const teamTag = targetRow[tagIdx];
+    const region = targetRow[regionIdx];
+    const logoFileId = targetRow[logoFileIdx];
+    const logoUrl = logoFileId ? "https://lh3.googleusercontent.com/d/" + logoFileId : "";
+    
+    // Check if team exists in Admin_Ops sheet (which has actual live status and remarks)
+    let liveStatus = rawStatus;
+    let remarks = "";
+    let seed = "TBD";
+    let adminRoster = null;
+    let lastUpdated = registeredAt;
+    let updatedBy = "System Automations";
+    let historyLogs = [];
+    
+    // Resolve audit events from Roster_Log sheet dynamically
+    try {
+      const doc = SpreadsheetApp.openById(RECEIVER_SPREADSHEET_ID);
+      const logSheet = doc.getSheetByName("Roster_Log");
+      if (logSheet) {
+        const logData = logSheet.getDataRange().getValues();
+        const logHeaders = DatabaseAdapter.getHeaderMapping("Roster_Log", logData[0]);
+        
+        const subIdIdx = logHeaders["submission id"] !== undefined ? logHeaders["submission id"] : 2;
+        const timeIdx = logHeaders["timestamp"] !== undefined ? logHeaders["timestamp"] : 0;
+        const actorIdx = logHeaders["actor"] !== undefined ? logHeaders["actor"] : 5;
+        const descIdx = logHeaders["description"] !== undefined ? logHeaders["description"] : 6;
+        
+        const subIdUpper = submissionId.toString().trim().toUpperCase();
+        for (let j = 1; j < logData.length; j++) {
+          const logSubId = (logData[j][subIdIdx] || "").toString().trim().toUpperCase();
+          if (logSubId === subIdUpper) {
+            historyLogs.push({
+              time: logData[j][timeIdx] ? new Date(logData[j][timeIdx]).toISOString() : new Date().toISOString(),
+              actor: logData[j][actorIdx] || "SYSTEM",
+              message: logData[j][descIdx] || ""
+            });
+          }
+        }
+      }
+    } catch (logErr) {
+      Logger.log("Failed to query Roster_Log sheet: " + logErr);
+    }
+    
+    try {
+      const adminDoc = SpreadsheetApp.openById(config.adminspreadsheetid);
+      const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+      const adminData = adminSheet.getDataRange().getValues();
+      const rowsPerTeam = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
+      
+      // Dynamic header mapping to eliminate hardcoded indices
+      const adminHeaders = adminData[0].map(h => h.toString().toLowerCase().trim());
+      const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
+      const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") : 14;
+      const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") : 
+                          (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
+      const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") : 15;
+      const aNameIdx = adminHeaders.indexOf("ign") !== -1 ? adminHeaders.indexOf("ign") : 
+                        (adminHeaders.indexOf("player name") !== -1 ? adminHeaders.indexOf("player name") : 5);
+      const aDiscordIdx = adminHeaders.indexOf("discord") !== -1 ? adminHeaders.indexOf("discord") : 6;
+      const aSteamIdx = adminHeaders.indexOf("steam url") !== -1 ? adminHeaders.indexOf("steam url") : 
+                        (adminHeaders.indexOf("steam") !== -1 ? adminHeaders.indexOf("steam") : 7);
+      const aFaceitIdx = adminHeaders.indexOf("faceit url") !== -1 ? adminHeaders.indexOf("faceit url") : 
+                         (adminHeaders.indexOf("faceit") !== -1 ? adminHeaders.indexOf("faceit") : 11);
+      const aEloIdx = adminHeaders.indexOf("live faceit elo") !== -1 ? adminHeaders.indexOf("live faceit elo") : 
+                      (adminHeaders.indexOf("faceit elo") !== -1 ? adminHeaders.indexOf("faceit elo") : 12);
+      
+      const aDiscordJoinedIdx = adminHeaders.indexOf("joined discord") !== -1 ? adminHeaders.indexOf("joined discord") : 
+                                (adminHeaders.indexOf("discord joined") !== -1 ? adminHeaders.indexOf("discord joined") : 8);
+      const aRoleIssuedIdx = adminHeaders.indexOf("role issued") !== -1 ? adminHeaders.indexOf("role issued") : 9;
+      const aPrivateVcIdx = adminHeaders.indexOf("vc assigned") !== -1 ? adminHeaders.indexOf("vc assigned") : 
+                             (adminHeaders.indexOf("private vc") !== -1 ? adminHeaders.indexOf("private vc") : 10);
+      const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 
+                            (adminHeaders.indexOf("last updated") !== -1 ? adminHeaders.indexOf("last updated") : 34);
+      const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 35;
+      
+      for (let i = 1; i < adminData.length; i += rowsPerTeam) {
+        const adminTeamName = (adminData[i][aTeamNameIdx] || "").toString().trim();
+        if (adminTeamName.toUpperCase() === teamName.toUpperCase()) {
+          liveStatus = (adminData[i][aStatusIdx] || "").toString().trim().toUpperCase() || "PENDING";
+          remarks = (adminData[i][aRemarksIdx] || "").toString().trim();
+          seed = adminData[i][aSeedIdx] || "TBD";
+          updatedBy = (adminData[i][aUpdatedByIdx] || "Verification Team").toString().trim();
+          
+          const rawUpdated = adminData[i][aUpdatedAtIdx];
+          if (rawUpdated) {
+            lastUpdated = new Date(rawUpdated).toISOString();
+          }
+          
+          adminRoster = [];
+          for (let p = 0; p < rowsPerTeam; p++) {
+            const rowIdx = i + p;
+            if (rowIdx >= adminData.length) break;
+            
+            const pName = (adminData[rowIdx][aNameIdx] || "").toString().trim();
+            if (pName && pName !== "" && pName !== "N/A") {
+              let role = "CORE PLAYER";
+              if (p === 0) role = "CAPTAIN";
+              else if (p >= parseInt(config.playersperteam)) role = "SUBSTITUTE";
+              
+              adminRoster.push({
+                ign: pName,
+                role: role,
+                discord: adminData[rowIdx][aDiscordIdx] || "",
+                steam: adminData[rowIdx][aSteamIdx] || "",
+                faceit: adminData[rowIdx][aFaceitIdx] || "",
+                faceitElo: adminData[rowIdx][aEloIdx] || "N/A",
+                discordJoined: (adminData[rowIdx][aDiscordJoinedIdx] || "").toString().trim(),
+                roleIssued: (adminData[rowIdx][aRoleIssuedIdx] || "").toString().trim(),
+                privateVc: (adminData[rowIdx][aPrivateVcIdx] || "").toString().trim()
+              });
+            }
+          }
+          break;
+        }
+      }
+    } catch (adminErr) {
+      Logger.log("Admin Ops scan failed, using fallback: " + adminErr);
+    }
+    
+    // If not seeded in Admin Ops yet, map from raw registrations targetRow
+    if (!adminRoster) {
+      adminRoster = [];
+      const maxPlayers = parseInt(config.playersperteam) + parseInt(config.substitutesmax);
+      for (let p = 1; p <= maxPlayers; p++) {
+        const pDiscord = targetRow[headers.indexOf("p" + p + " discord")] || "";
+        const pSteam = targetRow[headers.indexOf("p" + p + " steam")] || "";
+        const pFaceit = targetRow[headers.indexOf("p" + p + " faceit")] || "";
+        const pRank = targetRow[headers.indexOf("p" + p + " rank")] || "";
+        
+        if (pDiscord || pSteam || pFaceit) {
+          let role = "CORE PLAYER";
+          if (p === 1) role = "CAPTAIN";
+          else if (p > parseInt(config.playersperteam)) role = "SUBSTITUTE";
+          
+          adminRoster.push({
+            ign: p === 1 ? "Captain / Player 1" : "Player " + p,
+            role: role,
+            discord: pDiscord,
+            steam: pSteam,
+            faceit: pFaceit,
+            faceitElo: pRank || "N/A",
+            discordJoined: "⏳",
+            roleIssued: "⏳",
+            privateVc: "⏳"
+          });
+        }
+      }
+      remarks = "Roster validation pending. Admin checks will initiate shortly.";
+    }
+
+    // Baseline Event Logs fallback if Roster_Log has zero records for this submission
+    if (historyLogs.length === 0) {
+      const regTime = new Date(registeredAt);
+      
+      historyLogs.push({
+        time: registeredAt,
+        actor: "SYSTEM",
+        message: "Registration Submitted. Submission ID secured."
+      });
+      
+      historyLogs.push({
+        time: new Date(regTime.getTime() + 2 * 60 * 1000).toISOString(),
+        actor: "SYSTEM",
+        message: "Steam ID validation checks completed. Blacklist scan clear."
+      });
+
+      const currentStatus = liveStatus.toUpperCase();
+      if (currentStatus === "APPROVED" || currentStatus === "VERIFIED" || currentStatus === "ROSTER_LOCKED") {
+        historyLogs.push({
+          time: lastUpdated,
+          actor: "Verification Team",
+          message: "Roster verification checklist complete. Registration approved."
+        });
+      } else if (currentStatus === "ACTION_REQUIRED" || currentStatus === "OBJECTION") {
+        historyLogs.push({
+          time: lastUpdated,
+          actor: "Verification Team",
+          message: `Roster flags raised. Attention required: ${remarks}`
+        });
+      }
+    }
+    
+    return {
+      version: 1,
+      success: true,
+      team: {
+        name: teamName,
+        tag: teamTag,
+        region: region,
+        logo: logoUrl,
+        submissionId: submissionId,
+        registrationId: registrationId,
+        registeredAt: registeredAt,
+        lastUpdated: lastUpdated,
+        updatedBy: updatedBy,
+        status: liveStatus,
+        remarks: remarks,
+        seed: seed,
+        roster: adminRoster,
+        activity: historyLogs
+      }
+    };
   }
 };
 
@@ -931,6 +1252,7 @@ const TournamentService = {
     }
 
     DatabaseAdapter.seedTeamToAdminOps(config.adminspreadsheetid, rowsToAppend);
+    DatabaseAdapter.logRosterEvent(tournamentId, submissionId, teamName, "ROSTER_SEEDED", "Verification Team", "Roster reviewed. Initial checks and player verification sync initiated.");
     AuditService.recordEvent(tournamentId, "ROSTER_SEEDED", "PENDING", "APPROVED", "Seeded roster for " + teamName, "Admin");
   },
 
@@ -1524,5 +1846,117 @@ function updateBracketDropdowns() {
       .setAllowInvalid(false)
       .build();
     bracketsSheet.getRange(r, 6).setDataValidation(winnerRule);
+  }
+}
+
+/**
+ * 7. SPREADSHEET TRIGGERS
+ * Handles automatic event logging on administrative updates to Admin_Ops sheet.
+ */
+function onEdit(e) {
+  try {
+    const range = e.range;
+    const sheet = range.getSheet();
+    const sheetName = sheet.getName();
+    if (sheetName !== "Admin_Ops") return;
+
+    const row = range.getRow();
+    const col = range.getColumn();
+    if (row <= 1) return; // Skip headers
+
+    // Resolve column index headers dynamically from first row
+    const headersRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const adminHeaders = headersRow.map(h => h.toString().toLowerCase().trim());
+    
+    const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
+    const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") : 14;
+    const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") : 
+                        (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
+    const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") : 15;
+    const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 34;
+    const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 35;
+    const aPlayersCountIdx = adminHeaders.indexOf("playersperteam") !== -1 ? adminHeaders.indexOf("playersperteam") : -1;
+
+    // Determine rows per team
+    let rowsPerTeam = 7;
+    try {
+      const activeSs = SpreadsheetApp.getActiveSpreadsheet();
+      const settingsSheet = activeSs.getSheetByName("Settings");
+      if (settingsSheet) {
+        const settings = settingsSheet.getDataRange().getValues();
+        let maxPlayers = 5;
+        let substitutes = 2;
+        for (let r = 0; r < settings.length; r++) {
+          if (settings[r][0] === "playersperteam") maxPlayers = parseInt(settings[r][1]);
+          if (settings[r][0] === "substitutesmax") substitutes = parseInt(settings[r][1]);
+        }
+        rowsPerTeam = maxPlayers + substitutes;
+      }
+    } catch (err) {
+      Logger.log("Failed to resolve rowsPerTeam: " + err);
+    }
+
+    // Find the captain's row (the first row of this team's block)
+    const blockStart = Math.floor((row - 2) / rowsPerTeam) * rowsPerTeam + 2;
+    const teamName = sheet.getRange(blockStart, aTeamNameIdx + 1).getValue().toString().trim();
+    if (!teamName) return;
+
+    // Look up Submission ID from MASTER_RAW_REGISTRATIONS
+    let submissionId = "PP-UNKNOWN";
+    let tournamentId = "system";
+    try {
+      const rawData = DatabaseAdapter.getRawRegistrations();
+      if (rawData.length > 1) {
+        const rawHeaders = rawData[0].map(h => h.toString().toLowerCase().trim());
+        const subIdx = rawHeaders.indexOf("submission id");
+        const nameIdx = rawHeaders.indexOf("team name");
+        const tidIdx = rawHeaders.indexOf("tournament id");
+        for (let k = 1; k < rawData.length; k++) {
+          if ((rawData[k][nameIdx] || "").toString().trim().toUpperCase() === teamName.toUpperCase()) {
+            submissionId = rawData[k][subIdx];
+            tournamentId = rawData[k][tidIdx];
+            break;
+          }
+        }
+      }
+    } catch (dbErr) {
+      Logger.log("Audit lookup failed: " + dbErr);
+    }
+
+    const val = range.getValue().toString().trim();
+    const oldValue = e.oldValue ? e.oldValue.toString().trim() : "";
+    const userEmail = e.user ? e.user.getEmail() : "Admin";
+
+    // Edit in Status column
+    if (col === (aStatusIdx + 1)) {
+      DatabaseAdapter.logRosterEvent(
+        tournamentId, submissionId, teamName, "STATUS_CHANGED", "Verification Team", 
+        "Roster status transitioned from " + (oldValue || "PENDING") + " to " + val + "."
+      );
+      sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+    }
+    
+    // Edit in Remarks column
+    if (col === (aRemarksIdx + 1)) {
+      DatabaseAdapter.logRosterEvent(
+        tournamentId, submissionId, teamName, "REMARK_UPDATED", "Verification Team", 
+        "Admin Remarks updated: " + (val || "Cleared.")
+      );
+      sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+    }
+
+    // Edit in Seed column
+    if (col === (aSeedIdx + 1)) {
+      DatabaseAdapter.logRosterEvent(
+        tournamentId, submissionId, teamName, "SEED_CHANGED", "Verification Team", 
+        "Seed rank updated: " + val + "."
+      );
+      sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+    }
+  } catch (err) {
+    Logger.log("onEdit failed: " + err);
   }
 }

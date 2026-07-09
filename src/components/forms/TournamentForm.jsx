@@ -421,7 +421,7 @@ export const TournamentForm = ({ tournament, slots }) => {
 
           <div className="mt-6 p-3 bg-neon-cyan/5 border border-neon-cyan/20 rounded">
             <p className="text-[10px] text-neon-cyan font-bold uppercase tracking-widest leading-relaxed font-body">
-              Take a screenshot or save this ID. It is required for check-in and appeals.
+              Save this Submission ID! Use it in the "Track Status" tab to verify player roles, Discord connections, and admin review remarks.
             </p>
           </div>
         </div>
@@ -434,10 +434,14 @@ export const TournamentForm = ({ tournament, slots }) => {
             REGISTER ANOTHER TEAM
           </button>
           <button
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} // Assumes tab switching logic is handled by parent, this just helps UI feel cohesive
+            onClick={() => {
+              localStorage.setItem(`pp_track_prefill_${tournament.id}`, submissionId);
+              window.dispatchEvent(new CustomEvent('pp-switch-tab', { detail: 'track' }));
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             className="flex-1 py-4 bg-neon-cyan text-black font-bold uppercase tracking-widest text-xs hover:bg-white transition-all font-body rounded shadow-[0_0_20px_rgba(0,240,255,0.3)] flex items-center justify-center gap-2"
           >
-            VIEW LIVE ROSTER <ExternalLink className="w-3 h-3" />
+            TEAM PORTAL <ExternalLink className="w-3 h-3" />
           </button>
         </div>
       </div>

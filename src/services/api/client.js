@@ -105,3 +105,10 @@ export const fetchTeams = async (tournamentId) => {
 export const fetchBracket = async (tournamentId) => {
   return repository.fetchBracket(tournamentId);
 };
+
+/**
+ * Track team registration by submission or registration ID.
+ */
+export const trackRegistration = async (tournamentId, searchId, secondaryId) => {
+  return repository.trackRegistration(tournamentId, searchId, secondaryId);
+};

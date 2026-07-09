@@ -33,7 +33,7 @@
 
 // -- CONFIGURATION ------------------------------------------------------------
 const RAW_SHEET_ID = "18v5CFox5pRSRNhEtx9kmkVJHNDwH2K84hvMIH-KZyEc";
-const FACEIT_API_KEY = "a77d0763-5fdd-4bde-a8a5-6e840408de2e";
+const FACEIT_API_KEY = "2b432802-a9b0-4672-be1f-8ce4c3dd19c2";
 const STEAM_API_KEY = "B0B73613E7724F046A860E9CC1DCF86B";
 const TARGET_TOURNAMENT = "community-cup-2";
 const ADMIN_SHEET_NAME = "Admin_Ops";  // Sheet tab name in this spreadsheet
@@ -199,7 +199,7 @@ function setupNewColumns() {
   var widths = {};
   widths[C.TEAM_NAME] = 160;
   widths[C.TEAM_TAG] = 90;
-  widths[C.LOGO] = 60;
+  widths[C.LOGO] = 160;
   widths[C.PLAYER_NAME] = 160;
   widths[C.RANK_BADGE] = 140;
   widths[C.STEAM64] = 150;
@@ -556,7 +556,7 @@ function updateSteamData(force) {
     var existingLvl = data[i][C.STEAM_LVL - 1];
     var existingHrs = data[i][C.CS2_HRS - 1];
     if (!force && existingLvl !== "" && existingLvl !== undefined && existingLvl !== null &&
-        existingHrs !== "" && existingHrs !== undefined && existingHrs !== null) {
+      existingHrs !== "" && existingHrs !== undefined && existingHrs !== null) {
       continue;
     }
 
@@ -695,7 +695,8 @@ function finalizeTeamStats(sheet, teamStartIdx, teamElos) {
     { max: 1530, label: "LEVEL 7", bg: "#FFC800", fg: "#000" },
     { max: 1750, label: "LEVEL 8", bg: "#FF5E00", fg: "#fff" },
     { max: 2000, label: "LEVEL 9", bg: "#FF5E00", fg: "#fff" },
-    { max: 999999999, label: "LEVEL 10", bg: "#FF1E27", fg: "#fff" }
+    { max: 2750, label: "LEVEL 10", bg: "#FF1E27", fg: "#fff" },
+    { max: 999999999, label: "LEVEL 10+", bg: "#FF1E27", fg: "#fff" }
   ];
 
   var seed = SEEDS[SEEDS.length - 1];
@@ -818,7 +819,7 @@ function buildSummarySheet() {
     ["== SEED DISTRIBUTION ==", ""]
   ];
 
-  var seedOrder = ["LEVEL 1", "LEVEL 2", "LEVEL 3", "LEVEL 4", "LEVEL 5", "LEVEL 6", "LEVEL 7", "LEVEL 8", "LEVEL 9", "LEVEL 10", "TBD"];
+  var seedOrder = ["LEVEL 1", "LEVEL 2", "LEVEL 3", "LEVEL 4", "LEVEL 5", "LEVEL 6", "LEVEL 7", "LEVEL 8", "LEVEL 9", "LEVEL 10", "LEVEL 10+", "TBD"];
   var seedKeys = Object.keys(seeds).sort(function (a, b) {
     return seedOrder.indexOf(a) - seedOrder.indexOf(b);
   });
@@ -970,7 +971,7 @@ function isValidSteam64(id) {
 function getCS2RankBadge(skillLvl, row) {
   var lvl = parseInt(skillLvl);
   if (isNaN(lvl) || lvl === 0) return "Unranked";
-  
+
   // Return dynamic =IMAGE(...) formula referencing Column S (Skill Lvl) for this row
   return '=IMAGE("' + WEB_APP_URL + '?endpoint=/api/v1/badge&level=" & S' + row + ')';
 }
@@ -1542,4 +1543,139 @@ function saveMatchTime(dateVal, timeVal, offsetVal, formatVal, mapsVal) {
   sheet.getRange(rowIdx, 8).setValue(timestamp);
   sheet.getRange(rowIdx, 12).setValue(formatVal || "BO1");
   sheet.getRange(rowIdx, 13).setValue(mapsVal || "");
+}
+
+/**
+ * 8. SPREADSHEET TRIGGERS
+ * Handles automatic event logging on administrative updates to Admin_Ops sheet.
+ */
+function onEdit(e) {
+  try {
+    const range = e.range;
+    const sheet = range.getSheet();
+    const sheetName = sheet.getName();
+    if (sheetName !== ADMIN_SHEET_NAME) return;
+
+    const row = range.getRow();
+    const col = range.getColumn();
+    if (row <= 1) return; // Skip headers
+
+    // Resolve column index headers dynamically from first row
+    const headersRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    const adminHeaders = headersRow.map(h => h.toString().toLowerCase().trim());
+
+    const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
+    const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") :
+      (adminHeaders.indexOf("reg. status") !== -1 ? adminHeaders.indexOf("reg. status") : 14);
+    const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") :
+      (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
+    const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") :
+      (adminHeaders.indexOf("team seed") !== -1 ? adminHeaders.indexOf("team seed") : 15);
+    const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 33;
+    const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 34;
+
+    // Determine rows per team
+    const rowsPerTeam = PLAYERS_PER_TEAM; // e.g. 7 (or 3 for Chaos II)
+    const blockStart = Math.floor((row - 2) / rowsPerTeam) * rowsPerTeam + 2;
+    const teamName = sheet.getRange(blockStart, aTeamNameIdx + 1).getValue().toString().trim();
+    if (!teamName) return;
+
+    // Look up Submission ID from RAW_SHEET_ID
+    let submissionId = "PP-UNKNOWN";
+    let tournamentId = TARGET_TOURNAMENT;
+    try {
+      const rawDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
+      const rawSheet = rawDoc.getSheetByName("Sheet1");
+      if (rawSheet) {
+        const rawData = rawSheet.getDataRange().getValues();
+        if (rawData.length > 1) {
+          const rawHeaders = rawData[0].map(h => h.toString().toLowerCase().trim());
+          const subIdx = rawHeaders.indexOf("submission id");
+          const nameIdx = rawHeaders.indexOf("team name");
+          const tidIdx = rawHeaders.indexOf("tournament id");
+          for (let k = 1; k < rawData.length; k++) {
+            if ((rawData[k][nameIdx] || "").toString().trim().toUpperCase() === teamName.toUpperCase()) {
+              submissionId = rawData[k][subIdx];
+              tournamentId = rawData[k][tidIdx] || TARGET_TOURNAMENT;
+              break;
+            }
+          }
+        }
+      }
+    } catch (dbErr) {
+      Logger.log("Audit lookup failed: " + dbErr);
+    }
+
+    const val = range.getValue().toString().trim();
+    const oldValue = e.oldValue ? e.oldValue.toString().trim() : "";
+    const userEmail = e.user ? e.user.getEmail() : "Admin";
+
+    // Edit in Status column
+    if (col === (aStatusIdx + 1)) {
+      logRosterEvent_(
+        RAW_SHEET_ID, tournamentId, submissionId, teamName, "STATUS_CHANGED", "Verification Team",
+        "Roster status transitioned from " + (oldValue || "PENDING") + " to " + val + "."
+      );
+      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      }
+      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+      }
+    }
+
+    // Edit in Remarks column
+    if (col === (aRemarksIdx + 1)) {
+      logRosterEvent_(
+        RAW_SHEET_ID, tournamentId, submissionId, teamName, "REMARK_UPDATED", "Verification Team",
+        "Admin Remarks updated: " + (val || "Cleared.")
+      );
+      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      }
+      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+      }
+    }
+
+    // Edit in Seed column
+    if (col === (aSeedIdx + 1)) {
+      logRosterEvent_(
+        RAW_SHEET_ID, tournamentId, submissionId, teamName, "SEED_CHANGED", "Verification Team",
+        "Seed rank updated: " + val + "."
+      );
+      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+      }
+      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
+        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+      }
+    }
+  } catch (err) {
+    Logger.log("onEdit failed: " + err);
+  }
+}
+
+function logRosterEvent_(rawSheetId, tournamentId, submissionId, teamName, eventType, actor, description) {
+  try {
+    const doc = SpreadsheetApp.openById(rawSheetId);
+    let sheet = doc.getSheetByName("Roster_Log");
+    if (!sheet) {
+      sheet = doc.insertSheet("Roster_Log");
+      sheet.appendRow(["Timestamp", "Tournament ID", "Submission ID", "Team Name", "Event Type", "Actor", "Description"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow([
+      new Date().toISOString(),
+      tournamentId,
+      submissionId,
+      teamName,
+      eventType,
+      actor,
+      description
+    ]);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    Logger.log("Failed to write roster log event: " + e);
+  }
 }

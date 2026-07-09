@@ -9,6 +9,7 @@ import { BracketsTab } from '../components/registration/BracketsTab';
 import { RegistrationTab } from '../components/registration/RegistrationTab';
 import { ResultsTab } from '../components/registration/ResultsTab';
 import { TrackerTab } from '../components/registration/TrackerTab';
+import { TrackTab } from '../components/registration/TrackTab';
 import { getTournamentBySlug } from '../config/tournaments';
 import { useAudio } from '../hooks/useAudio';
 import { fetchTournamentBracket, fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
@@ -58,6 +59,14 @@ export const Register = () => {
     window.addEventListener('pp-registration-success', handleSuccess);
     return () => window.removeEventListener('pp-registration-success', handleSuccess);
   }, [tournament]);
+
+  useEffect(() => {
+    const handleSwitchTab = (e) => {
+      setActiveTab(e.detail);
+    };
+    window.addEventListener('pp-switch-tab', handleSwitchTab);
+    return () => window.removeEventListener('pp-switch-tab', handleSwitchTab);
+  }, []);
 
   const handleMapImgError = useCallback((mapName) => {
     setFailedMapImages(prev => new Set([...prev, mapName]));
@@ -409,6 +418,16 @@ export const Register = () => {
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
+              {!isArchived && (
+                <button
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('track'); }}
+                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'track' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                >
+                  Team Portal
+                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'track' ? 'w-full' : 'w-0'}`} />
+                </button>
+              )}
               <button
                 onMouseEnter={playHover}
                 onClick={() => { playClick(); setActiveTab('teams'); }}
@@ -433,32 +452,40 @@ export const Register = () => {
 
           <div className="tab-content-wrapper mt-8">
             {activeTab === 'register' && (
-              activeTeam && !showForm ? (
-                renderCommandDeck()
-              ) : (
-                <RegistrationTab
-                  tournament={tournament}
-                  slots={slots}
-                  timeLeft={timeLeft}
-                  failedMapImages={failedMapImages}
-                  handleMapImgError={handleMapImgError}
-                />
-              )
-            )}
+               activeTeam && !showForm ? (
+                 renderCommandDeck()
+               ) : (
+                 <RegistrationTab
+                   tournament={tournament}
+                   slots={slots}
+                   timeLeft={timeLeft}
+                   failedMapImages={failedMapImages}
+                   handleMapImgError={handleMapImgError}
+                 />
+               )
+             )}
 
-            {(activeTab === 'tracker' || activeTab === 'teams') && (
-              <TrackerTab
-                isArchived={isArchived}
-                handleManualRefresh={handleManualRefresh}
-                isRefreshing={isRefreshing}
-                teams={teams}
-                playHover={playHover}
-                playClick={playClick}
-                setSelectedTeam={setSelectedTeam}
-                tournament={tournament}
-                onRegisterClick={() => setActiveTab('register')}
-              />
-            )}
+             {activeTab === 'track' && (
+               <TrackTab
+                 tournament={tournament}
+                 playHover={playHover}
+                 playClick={playClick}
+               />
+             )}
+
+             {(activeTab === 'tracker' || activeTab === 'teams') && (
+               <TrackerTab
+                 isArchived={isArchived}
+                 handleManualRefresh={handleManualRefresh}
+                 isRefreshing={isRefreshing}
+                 teams={teams}
+                 playHover={playHover}
+                 playClick={playClick}
+                 setSelectedTeam={setSelectedTeam}
+                 tournament={tournament}
+                 onRegisterClick={() => setActiveTab('register')}
+               />
+             )}
 
             {activeTab === 'brackets' && (
               <BracketsTab

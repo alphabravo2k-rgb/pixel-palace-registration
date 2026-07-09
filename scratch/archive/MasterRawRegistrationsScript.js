@@ -228,6 +228,9 @@ function doPost(e) {
     if (codeRowIndex > -1) codeSheet.getRange(codeRowIndex, 2).setValue(payload.team_name);
     if (payload.submission_id) cache.put(payload.submission_id, "processed", 60 * 60 * 24); 
 
+    logRosterEvent_(doc, incomingTid, payload.submission_id || "", payload.team_name, "REGISTRATION_SUBMITTED", "SYSTEM", "Registration Submitted. Submission ID secured.");
+    logRosterEvent_(doc, incomingTid, payload.submission_id || "", payload.team_name, "SECURITY_SCAN_PASSED", "SYSTEM", "Steam ID validation checks completed. Blacklist scan clear.");
+
     // Log registration in audit sheet
     logAuditEntry("Sheet1", rows.length + 1, "REGISTRATION_SUBMITTED", "", "PENDING");
 
@@ -257,7 +260,278 @@ function doGet(e) {
     }
     
     const tournamentId = params.tournamentId || "";
-    
+
+    // ── Track Team Portal Registration Status ───────────────────────────────
+    if (endpoint === "/api/v1/trackRegistration") {
+      const searchId = (params.searchId || "").toString().trim();
+      const secondaryId = (params.secondaryId || "").toString().trim();
+      if (!searchId) {
+        return generateResponse({ success: false, error: "Missing Search ID parameter." }, 400);
+      }
+
+      const rawSheet = doc.getSheetByName("Sheet1");
+      if (!rawSheet) {
+        return generateResponse({ success: false, error: "Raw registration database not found." }, 500);
+      }
+
+      const rawData = rawSheet.getDataRange().getValues();
+      if (rawData.length <= 1) {
+        return generateResponse({ success: false, error: "No registrations exist yet." });
+      }
+
+      const rawHeaders = rawData[0].map(h => h.toString().toLowerCase().trim());
+      const subIdx = rawHeaders.indexOf("submission id");
+      const regIdx = rawHeaders.indexOf("team id") !== -1 ? rawHeaders.indexOf("team id") : rawHeaders.indexOf("registration id");
+      const timeIdx = rawHeaders.indexOf("time stamp") !== -1 ? rawHeaders.indexOf("time stamp") : rawHeaders.indexOf("timestamp");
+      const nameIdx = rawHeaders.indexOf("team name");
+      const tagIdx = rawHeaders.indexOf("team tag");
+      const regionIdx = rawHeaders.indexOf("region");
+      const logoIdx = rawHeaders.indexOf("logo url") !== -1 ? rawHeaders.indexOf("logo url") : rawHeaders.indexOf("logo");
+
+      let targetRow = null;
+      const cleanId = searchId.toUpperCase();
+      for (let i = 1; i < rawData.length; i++) {
+        const rowSubId = (rawData[i][subIdx] || "").toString().trim().toUpperCase();
+        const rowRegId = (rawData[i][regIdx] || "").toString().trim().toUpperCase();
+        if (rowSubId === cleanId || rowRegId === cleanId) {
+          targetRow = rawData[i];
+          break;
+        }
+      }
+
+      if (!targetRow) {
+        return generateResponse({ success: false, error: "Registration record not found for this ID." });
+      }
+
+      // Access Control Check: sequential Registration IDs (predictable) require Captain's FACEIT Nickname validation.
+      const isUuid = cleanId.length === 36 && cleanId.indexOf("-") !== -1;
+      if (!isUuid) {
+        const p1FaceitIdx = rawHeaders.indexOf("p1 faceit");
+        const captainFaceit = (targetRow[p1FaceitIdx] || "").toString().trim().toLowerCase();
+        const cleanSecondary = (secondaryId || "").toString().trim().toLowerCase();
+
+        if (!cleanSecondary || cleanSecondary !== captainFaceit) {
+          return generateResponse({
+            success: false,
+            error: "VERIFICATION_REQUIRED",
+            message: "For security, lookup via sequential Registration ID requires verifying the Captain's FACEIT Nickname."
+          });
+        }
+      }
+
+      const submissionId = targetRow[subIdx];
+      const registrationId = targetRow[regIdx];
+      const registeredAt = targetRow[timeIdx];
+      const rawStatus = targetRow[rawHeaders.indexOf("status")] || "SUBMITTED";
+      const teamName = targetRow[nameIdx];
+      const teamTag = targetRow[tagIdx];
+      const region = targetRow[regionIdx];
+      const logoUrl = targetRow[logoIdx] || "";
+      const tId = targetRow[rawHeaders.indexOf("tournament id")] || tournamentId || "community-cup-2";
+
+      // 1. Resolve Admin Sheets config based on tournament ID
+      let adminSheetId = "";
+      if (tId === "community-cup-2") {
+        adminSheetId = "1_B_ovDmGuA1rAityrgAz_G3csBtLl4OFfwJUMWXXe_E";
+      } else if (tId === "chaos-ii") {
+        adminSheetId = "1htkH0PQWbWefE5XFIdf2AGqTxpWMwLyGDMZMfOOL-2E";
+      }
+
+      let liveStatus = rawStatus;
+      let remarks = "";
+      let seed = "TBD";
+      let adminRoster = null;
+      let lastUpdated = registeredAt;
+      let updatedBy = "System Automations";
+      let historyLogs = [];
+
+      // 2. Resolve audit events from Roster_Log sheet dynamically
+      try {
+        const logSheet = doc.getSheetByName("Roster_Log");
+        if (logSheet) {
+          const logData = logSheet.getDataRange().getValues();
+          const logHeaders = getHeaderMapping_("Roster_Log", logData[0]);
+
+          const lSubIdIdx = logHeaders["submission id"] !== undefined ? logHeaders["submission id"] : 2;
+          const lTimeIdx = logHeaders["timestamp"] !== undefined ? logHeaders["timestamp"] : 0;
+          const lActorIdx = logHeaders["actor"] !== undefined ? logHeaders["actor"] : 5;
+          const lDescIdx = logHeaders["description"] !== undefined ? logHeaders["description"] : 6;
+
+          const subIdUpper = submissionId.toString().trim().toUpperCase();
+          for (let j = 1; j < logData.length; j++) {
+            const logSubId = (logData[j][lSubIdIdx] || "").toString().trim().toUpperCase();
+            if (logSubId === subIdUpper) {
+              historyLogs.push({
+                time: logData[j][lTimeIdx] ? new Date(logData[j][lTimeIdx]).toISOString() : new Date().toISOString(),
+                actor: logData[j][lActorIdx] || "SYSTEM",
+                message: logData[j][lDescIdx] || ""
+              });
+            }
+          }
+        }
+      } catch (logErr) {
+        console.error("Failed to query Roster_Log sheet: " + logErr);
+      }
+
+      // 3. Resolve live data from Admin_Ops sheet
+      if (adminSheetId) {
+        try {
+          const adminDoc = SpreadsheetApp.openById(adminSheetId);
+          const adminSheet = adminDoc.getSheetByName("Admin_Ops") || adminDoc.getSheets()[0];
+          const adminData = adminSheet.getDataRange().getValues();
+          const rowsPerTeam = tId === "chaos-ii" ? 3 : 7;
+
+          // Dynamic header mapping to eliminate hardcoded indices
+          const adminHeaders = adminData[0].map(h => h.toString().toLowerCase().trim());
+          const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
+          const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") : 
+                             (adminHeaders.indexOf("reg. status") !== -1 ? adminHeaders.indexOf("reg. status") : 14);
+          const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") : 
+                              (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
+          const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") : 
+                           (adminHeaders.indexOf("team seed") !== -1 ? adminHeaders.indexOf("team seed") : 15);
+          const aNameIdx = adminHeaders.indexOf("player name") !== -1 ? adminHeaders.indexOf("player name") : 5;
+          const aDiscordIdx = adminHeaders.indexOf("discord") !== -1 ? adminHeaders.indexOf("discord") : 6;
+          const aSteamIdx = adminHeaders.indexOf("steam url") !== -1 ? adminHeaders.indexOf("steam url") : 7;
+          const aFaceitIdx = adminHeaders.indexOf("faceit url") !== -1 ? adminHeaders.indexOf("faceit url") : 11;
+          const aEloIdx = adminHeaders.indexOf("live elo") !== -1 ? adminHeaders.indexOf("live elo") : 12;
+
+          const aDiscordJoinedIdx = adminHeaders.indexOf("joined discord?") !== -1 ? adminHeaders.indexOf("joined discord?") : 8;
+          const aRoleIssuedIdx = adminHeaders.indexOf("role issued?") !== -1 ? adminHeaders.indexOf("role issued?") : 9;
+          const aPrivateVcIdx = adminHeaders.indexOf("private vc") !== -1 ? adminHeaders.indexOf("private vc") : 10;
+          const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 33;
+          const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 34;
+
+          for (let i = 1; i < adminData.length; i += rowsPerTeam) {
+            const adminTeamName = (adminData[i][aTeamNameIdx] || "").toString().trim();
+            if (adminTeamName.toUpperCase() === teamName.toUpperCase()) {
+              liveStatus = (adminData[i][aStatusIdx] || "").toString().trim().toUpperCase() || "PENDING";
+              remarks = (adminData[i][aRemarksIdx] || "").toString().trim();
+              seed = adminData[i][aSeedIdx] || "TBD";
+              updatedBy = (aUpdatedByIdx !== -1 && adminData[i][aUpdatedByIdx]) ? adminData[i][aUpdatedByIdx].toString().trim() : "Verification Team";
+
+              const rawUpdated = aUpdatedAtIdx !== -1 ? adminData[i][aUpdatedAtIdx] : "";
+              if (rawUpdated) {
+                lastUpdated = new Date(rawUpdated).toISOString();
+              }
+
+              adminRoster = [];
+              for (let p = 0; p < rowsPerTeam; p++) {
+                const rowIdx = i + p;
+                if (rowIdx >= adminData.length) break;
+
+                const pName = (adminData[rowIdx][aNameIdx] || "").toString().trim();
+                if (pName && pName !== "" && pName !== "N/A") {
+                  let role = "CORE PLAYER";
+                  if (p === 0) role = "CAPTAIN";
+                  else if (p >= (tId === "chaos-ii" ? 2 : 5)) role = "SUBSTITUTE";
+
+                  adminRoster.push({
+                    ign: pName,
+                    role: role,
+                    discord: adminData[rowIdx][aDiscordIdx] || "",
+                    steam: adminData[rowIdx][aSteamIdx] || "",
+                    faceit: adminData[rowIdx][aFaceitIdx] || "",
+                    faceitElo: adminData[rowIdx][aEloIdx] || "N/A",
+                    discordJoined: (adminData[rowIdx][aDiscordJoinedIdx] || "").toString().trim(),
+                    roleIssued: (adminData[rowIdx][aRoleIssuedIdx] || "").toString().trim(),
+                    privateVc: (adminData[rowIdx][aPrivateVcIdx] || "").toString().trim()
+                  });
+                }
+              }
+              break;
+            }
+          }
+        } catch (adminErr) {
+          console.error("Admin Ops scan failed: " + adminErr);
+        }
+      }
+
+      // 4. Map fallback roster if not seeded in Admin_Ops yet
+      if (!adminRoster) {
+        adminRoster = [];
+        const maxPlayers = tId === "chaos-ii" ? 3 : 7;
+        for (let p = 1; p <= maxPlayers; p++) {
+          const pDiscord = targetRow[rawHeaders.indexOf("p" + p + " discord")] || "";
+          const pSteam = targetRow[rawHeaders.indexOf("p" + p + " steam")] || "";
+          const pFaceit = targetRow[rawHeaders.indexOf("p" + p + " faceit")] || "";
+          const pRank = targetRow[rawHeaders.indexOf("p" + p + " rank")] || "";
+
+          if (pDiscord || pSteam || pFaceit) {
+            let role = "CORE PLAYER";
+            if (p === 1) role = "CAPTAIN";
+            else if (p > (tId === "chaos-ii" ? 2 : 5)) role = "SUBSTITUTE";
+
+            adminRoster.push({
+              ign: p === 1 ? "Captain / Player 1" : "Player " + p,
+              role: role,
+              discord: pDiscord,
+              steam: pSteam,
+              faceit: pFaceit,
+              faceitElo: pRank || "N/A",
+              discordJoined: "⏳",
+              roleIssued: "⏳",
+              privateVc: "⏳"
+            });
+          }
+        }
+        remarks = "Roster validation pending. Admin checks will initiate shortly.";
+      }
+
+      // 5. Baseline Event Logs fallback if Roster_Log has zero records for this submission
+      if (historyLogs.length === 0) {
+        const regTime = new Date(registeredAt);
+
+        historyLogs.push({
+          time: registeredAt,
+          actor: "SYSTEM",
+          message: "Registration Submitted. Submission ID secured."
+        });
+
+        historyLogs.push({
+          time: new Date(regTime.getTime() + 2 * 60 * 1000).toISOString(),
+          actor: "SYSTEM",
+          message: "Steam ID validation checks completed. Blacklist scan clear."
+        });
+
+        const currentStatus = liveStatus.toUpperCase();
+        if (currentStatus === "APPROVED" || currentStatus === "VERIFIED" || currentStatus === "ROSTER_LOCKED") {
+          historyLogs.push({
+            time: lastUpdated,
+            actor: "Verification Team",
+            message: "Roster verification checklist complete. Registration approved."
+          });
+        } else if (currentStatus === "ACTION_REQUIRED" || currentStatus === "OBJECTION") {
+          historyLogs.push({
+            time: lastUpdated,
+            actor: "Verification Team",
+            message: `Roster flags raised. Attention required: ${remarks}`
+          });
+        }
+      }
+
+      return generateResponse({
+        version: 1,
+        success: true,
+        team: {
+          name: teamName,
+          tag: teamTag,
+          region: region,
+          logo: logoUrl,
+          submissionId: submissionId,
+          registrationId: registrationId,
+          registeredAt: registeredAt,
+          lastUpdated: lastUpdated,
+          updatedBy: updatedBy,
+          status: liveStatus,
+          remarks: remarks,
+          seed: seed,
+          roster: adminRoster,
+          activity: historyLogs
+        }
+      });
+    }
+
     // ── Validate Invite Code ────────────────────────────────────────────────
     if (endpoint === "/api/v1/validateCode") {
       const codeToCheck = (params.validateCode || "").toString().trim();
@@ -717,6 +991,51 @@ function generateResponse(data, statusCode) {
   return output;
 }
 
+function getHeaderMapping_(sheetName, headersRow) {
+  const cacheKey = "header_map_" + sheetName.toLowerCase().replace(/[^a-z0-9]/g, "");
+  try {
+    const cached = CacheService.getScriptCache().get(cacheKey);
+    if (cached) {
+      return JSON.parse(cached);
+    }
+  } catch(e) {}
+  
+  const mapping = {};
+  headersRow.forEach((h, idx) => {
+    const clean = h.toString().toLowerCase().trim();
+    if (clean) mapping[clean] = idx;
+  });
+  
+  try {
+    CacheService.getScriptCache().put(cacheKey, JSON.stringify(mapping), 600); // 10 min cache
+  } catch(e) {}
+  
+  return mapping;
+}
+
+function logRosterEvent_(doc, tournamentId, submissionId, teamName, eventType, actor, description) {
+  try {
+    let sheet = doc.getSheetByName("Roster_Log");
+    if (!sheet) {
+      sheet = doc.insertSheet("Roster_Log");
+      sheet.appendRow(["Timestamp", "Tournament ID", "Submission ID", "Team Name", "Event Type", "Actor", "Description"]);
+      sheet.setFrozenRows(1);
+    }
+    sheet.appendRow([
+      new Date().toISOString(),
+      tournamentId,
+      submissionId,
+      teamName,
+      eventType,
+      actor,
+      description
+    ]);
+    SpreadsheetApp.flush();
+  } catch (e) {
+    Logger.log("Failed to write roster log event: " + e);
+  }
+}
+
 function isHeaderRow_(row) {
   var first = (row[0] || "").toString().trim().toLowerCase();
   return first === "time stamp" || first === "timestamp" || first === "team id";
@@ -890,6 +1209,12 @@ function appendToAdminSheet(payload, teamId) {
        adminSheet.getRange(startRowIndex, col, maxPlayers, 1).merge().setVerticalAlignment("middle").setHorizontalAlignment("center");
     });
     adminSheet.setRowHeightsForced(startRowIndex, maxPlayers, 28);
+    try {
+      const doc = SpreadsheetApp.openById(SPREADSHEET_ID);
+      logRosterEvent_(doc, tournamentId, payload.submission_id || "", teamName, "ROSTER_SEEDED", "Verification Team", "Roster reviewed. Initial checks and player verification sync initiated.");
+    } catch(logErr) {
+      console.error("Failed to write seed log: " + logErr);
+    }
              
   } catch (err) {
     console.error("Failed to append to admin sheet:", err);

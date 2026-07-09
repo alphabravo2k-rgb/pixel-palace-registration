@@ -59,4 +59,14 @@ export class RegistrationRepository {
   async fetchBracket(tournamentId) {
     throw new Error("Method 'fetchBracket' must be implemented.");
   }
+
+  /**
+   * Tracks a single team registration by Submission ID or Registration ID.
+   * @param {string} tournamentId
+   * @param {string} searchId
+   * @returns {Promise<any>}
+   */
+  async trackRegistration(tournamentId, searchId) {
+    throw new Error("Method 'trackRegistration' must be implemented.");
+  }
 }
