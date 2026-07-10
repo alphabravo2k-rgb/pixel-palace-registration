@@ -597,7 +597,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-body">Players Verified</span>
                 <p className="text-2xl font-heading tracking-widest mt-1 text-green-400 font-black">
-                  {derived.score === 100 ? '5 / 5' : `${derived.rosterSize - derived.itemsRemaining} / ${derived.rosterSize}`}
+                  {`${derived.faceitEloCount} / ${derived.rosterSize}`}
                 </p>
               </div>
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
@@ -984,7 +984,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                 <div className="border-b sm:border-b-0 md:border-r border-white/5 pb-4 sm:pb-0 sm:pr-6 md:pt-4">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Match Format</span>
                   <span className="text-white font-semibold text-sm block">
-                    {tournament.format || '5v5'} Swiss Bracket
+                    {tournament.matchFormat || 'Knockout Challenger (Bo1/Bo3/Bo5)'}
                   </span>
                 </div>
 

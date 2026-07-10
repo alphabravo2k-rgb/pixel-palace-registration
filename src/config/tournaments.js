@@ -6,6 +6,7 @@ export const tournaments = [
     status: "LIVE",
     format: "5v5",
     gameMode: "CS2 Competitive",
+    matchFormat: "Knockout Challenger (Bo1/Bo3/Bo5)",
     prizePool: "1st: $2000 | 2nd: $750",
     maxTeams: 32,
     openSlots: 26,
