@@ -15,6 +15,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
   const [error, setError] = useState(null);
   const [teamData, setTeamData] = useState(null);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
 
   // Detect if the entered ID is sequential (e.g. PP-CC2-2026-000005) or a secure UUID
   const isIdSequential = searchId.trim() && !(searchId.trim().length === 36 && searchId.trim().includes('-'));
@@ -37,6 +38,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
     setLoading(true);
     setError(null);
     setTeamData(null);
+    setLogoError(false);
     Terminal.log('API', 'Tracking team portal status...', { searchId: idToSearch, secondaryId });
 
     try {
@@ -282,15 +284,15 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
             {/* HEADER HERO */}
             <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-black/40 border border-white/5 p-6 rounded-lg relative overflow-hidden bg-gradient-to-b from-neon-cyan/5 to-transparent">
               <div className="flex items-center gap-5">
-                {teamData.logo ? (
+                {teamData.logo && !logoError ? (
                   <img
                     src={teamData.logo}
                     alt={teamData.name}
                     className="w-16 h-16 object-contain bg-zinc-900 border border-white/10 rounded p-1"
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    onError={() => setLogoError(true)}
                   />
                 ) : (
-                  <div className="w-16 h-16 bg-neon-cyan/5 rounded border border-neon-cyan/20 flex items-center justify-center font-heading text-neon-cyan font-black text-2xl">
+                  <div className="w-16 h-16 bg-neon-cyan/5 rounded border border-neon-cyan/20 flex items-center justify-center font-heading text-neon-cyan font-black text-2xl uppercase">
                     {teamData.tag}
                   </div>
                 )}

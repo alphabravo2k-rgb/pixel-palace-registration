@@ -326,7 +326,13 @@ function doGet(e) {
       const teamName = targetRow[nameIdx];
       const teamTag = targetRow[tagIdx];
       const region = targetRow[regionIdx];
-      const logoUrl = targetRow[logoIdx] || "";
+      let logoUrl = targetRow[logoIdx] || "";
+      if (logoUrl && logoUrl.includes("drive.google.com")) {
+        const driveIdMatch = logoUrl.match(/id=([a-zA-Z0-9_-]{25,})/) || logoUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+        if (driveIdMatch) {
+          logoUrl = "https://lh3.googleusercontent.com/d/" + driveIdMatch[1];
+        }
+      }
       const tId = targetRow[rawHeaders.indexOf("tournament id")] || tournamentId || "community-cup-2";
 
       // 1. Resolve Admin Sheets config based on tournament ID
