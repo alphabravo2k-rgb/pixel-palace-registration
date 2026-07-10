@@ -526,8 +526,13 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                     </div>
                   )}
                   <div className="space-y-2">
-                    <h3 className="text-4xl font-heading text-white uppercase tracking-widest leading-none">
+                    <h3 className="text-4xl font-heading text-white uppercase tracking-widest leading-none flex flex-wrap items-center gap-3">
                       {teamData.name}
+                      {teamData.tag && (
+                        <span className="text-neon-cyan text-2xl font-bold font-body">
+                          [{teamData.tag}]
+                        </span>
+                      )}
                     </h3>
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-zinc-500 font-bold uppercase font-body">Registration ID:</span>
