@@ -34,6 +34,7 @@ export const flattenForSheets = (canonicalPayload) => {
     submitted_at: metadata.submitted_at,
     sub_included: metadata.sub_included,
     status: metadata.status, // ADDED for Soft Bans
+    sessionUuid: metadata.sessionUuid ?? '',
 
     // Team fields
     team_name: team.team_name,

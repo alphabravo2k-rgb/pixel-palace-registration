@@ -8,6 +8,9 @@ import {
   clearSubmissionId,
   saveDraft,
   clearDraft,
+  getSessionUuid,
+  clearSessionUuid,
+  clearRevision,
 } from '../utils/idempotency';
 // checkBanStatus removed for security.
 
@@ -35,19 +38,43 @@ export const useFormSubmit = (tournamentId) => {
     setError(null);
     setIsSuccess(false);
 
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    const sessionUuid = getSessionUuid(tournamentId);
+    const lockOwner = localStorage.getItem(`pp_lock_owner_${tournamentId}`);
+    let revision = parseInt(localStorage.getItem(`pp_revision_${tournamentId}`)) || 1;
+
     try {
-      // ── Get tournament config ──────────────────────────────────────────
-      const tournament = tournaments.find((t) => t.id === tournamentId);
       if (!tournament) throw new Error(`Tournament "${tournamentId}" not found.`);
 
       // ── Save draft in case of failure (via idempotency.js helper) ───────
       saveDraft(tournamentId, formData);
 
+      // ── 1. FSM Transition: VALIDATING ────────────────────────────────────
+      if (sessionUuid && tournament.sessionManagementEnabled) {
+        try {
+          await saveDraftToSheets(tournamentId, {
+            sessionUuid,
+            lockOwner,
+            draftStatus: 'STATUS_VALIDATING',
+            formData: JSON.stringify(formData),
+            currentRevision: revision,
+            tournamentId,
+            teamName: formData.teamName,
+            p1IGN: formData.players?.[0]?.ign,
+            p1Discord: formData.players?.[0]?.discord,
+            p1Faceit: formData.players?.[0]?.faceit,
+            p1Steam64: formData.players?.[0]?.steam64
+          });
+        } catch (e) {
+          console.warn("Failed to transition to VALIDATING", e);
+        }
+      }
+
       // ── Idempotency: reuse or generate submission_id ───────────────────
       const submissionId = getOrCreateSubmissionId(tournamentId);
 
       // ── Transform form output → canonical structure ────────────────────
-      const canonicalData = transformToCanonical(tournament, formData, submissionId);
+      const canonicalData = transformToCanonical(tournament, formData, submissionId, sessionUuid);
 
       // ── Validate canonical structure before touching the network ───────
       const validation = CanonicalSchema.safeParse(canonicalData);
@@ -55,8 +82,6 @@ export const useFormSubmit = (tournamentId) => {
         const messages = validation.error.errors.map((e) => e.message).join(' · ');
         throw new Error(`Validation failed: ${messages}`);
       }
-
-      // Soft-ban check is handled server-side now to prevent leaking ban lists.
 
       // ── Bug #3: Final Race Condition Check ─────────────────────────────
       try {
@@ -69,15 +94,63 @@ export const useFormSubmit = (tournamentId) => {
         console.warn("[Gateway] Slot check failed, proceeding with caution", e);
       }
 
+      // ── 2. FSM Transition: SUBMITTING ────────────────────────────────────
+      if (sessionUuid && tournament.sessionManagementEnabled) {
+        try {
+          revision++;
+          await saveDraftToSheets(tournamentId, {
+            sessionUuid,
+            lockOwner,
+            draftStatus: 'STATUS_SUBMITTING',
+            formData: JSON.stringify(formData),
+            currentRevision: revision,
+            tournamentId,
+            teamName: formData.teamName,
+            p1IGN: formData.players?.[0]?.ign,
+            p1Discord: formData.players?.[0]?.discord,
+            p1Faceit: formData.players?.[0]?.faceit,
+            p1Steam64: formData.players?.[0]?.steam64
+          });
+          localStorage.setItem(`pp_revision_${tournamentId}`, revision);
+        } catch (e) {
+          console.warn("Failed to transition to SUBMITTING", e);
+        }
+      }
+
       // ── Submit via gateway ─────────────────────────────────────────────
       await submitRegistration(tournamentId, validation.data);
 
-      // ── Success: clear idempotency key & draft ─────────────────────────
+      // ── Success: clear idempotency key, draft, session & revision ──────
       clearSubmissionId(tournamentId);
       clearDraft(tournamentId);
+      clearSessionUuid(tournamentId);
+      clearRevision(tournamentId);
       setIsSuccess(true);
       return { success: true, submissionId };
     } catch (err) {
+      // ── 3. Rollback: Transition state back to ACTIVE ───────────────────────
+      if (sessionUuid && tournament?.sessionManagementEnabled) {
+        try {
+          revision++;
+          await saveDraftToSheets(tournamentId, {
+            sessionUuid,
+            lockOwner,
+            draftStatus: 'STATUS_ACTIVE',
+            formData: JSON.stringify(formData),
+            currentRevision: revision,
+            tournamentId,
+            teamName: formData.teamName,
+            p1IGN: formData.players?.[0]?.ign,
+            p1Discord: formData.players?.[0]?.discord,
+            p1Faceit: formData.players?.[0]?.faceit,
+            p1Steam64: formData.players?.[0]?.steam64
+          });
+          localStorage.setItem(`pp_revision_${tournamentId}`, revision);
+        } catch (e) {
+          console.warn("Failed to roll back to ACTIVE", e);
+        }
+      }
+
       // ── Bug #8: Dead-Letter Queue ──────────────────────────────────────
       // If we failed after all gateway retries, persist the final
       // canonical payload for cross-session recovery.

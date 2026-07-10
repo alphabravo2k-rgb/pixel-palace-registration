@@ -54,6 +54,7 @@ export const CanonicalSchema = z.object({
     schema_version: z.literal('1.1'),
     sub_included: z.boolean(),
     status: z.string().default('VERIFIED'),
+    sessionUuid: z.string().uuid().optional(),
     payment_status: z.enum(['NOT_REQUIRED', 'PENDING_PAYMENT', 'CONFIRMED', 'REFUNDED']).default('NOT_REQUIRED'),
     payment_tx_hash: z.string().optional().default(''),
     payment_confirmed_at: z.string().datetime().optional(),

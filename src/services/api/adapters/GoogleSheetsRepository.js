@@ -138,19 +138,195 @@ export class GoogleSheetsRepository extends RegistrationRepository {
     }
   }
 
-  async trackRegistration(tournamentId, searchId) {
+  async trackRegistration(tournamentId, searchId, secondaryId = "") {
     const endpoint = this._getEndpoint(tournamentId);
     if (!endpoint) {
       return { success: false, error: 'No endpoint configured' };
     }
 
     try {
-      const res = await fetch(`${endpoint}?endpoint=/api/v1/trackRegistration&action=trackRegistration&tournamentId=${encodeURIComponent(tournamentId)}&searchId=${encodeURIComponent(searchId)}&t=${Date.now()}`);
-      if (!res.ok) throw new Error("Tracking service offline");
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/trackRegistration&action=trackRegistration&tournamentId=${encodeURIComponent(tournamentId)}&searchId=${encodeURIComponent(searchId)}&secondaryId=${encodeURIComponent(secondaryId)}&t=${Date.now()}`);
+      if (!res.ok) {
+        const text = await res.text().catch(() => "");
+        throw new Error(`HTTP Error ${res.status}: ${res.statusText || 'Offline'} - ${text.substring(0, 100)}`);
+      }
       return res.json();
     } catch (err) {
       console.error("[GoogleSheetsRepository] trackRegistration failed:", err);
       return { success: false, error: err.message };
+    }
+  }
+
+  async saveDraft(tournamentId, payload) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: true };
+
+    const body = {
+      ...payload,
+      endpoint: '/api/v1/saveDraft',
+      _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] saveDraft failed:", err);
+      throw err;
+    }
+  }
+
+  async getDraft(tournamentId, sessionUuid) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: false, error: 'No endpoint configured' };
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/getDraft&sessionUuid=${encodeURIComponent(sessionUuid)}&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] getDraft failed:", err);
+      throw err;
+    }
+  }
+
+  async renewLock(tournamentId, sessionUuid, lockOwner) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: true };
+
+    const body = {
+      endpoint: '/api/v1/renewLock',
+      sessionUuid,
+      lockOwner,
+      _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.warn("[GoogleSheetsRepository] renewLock failed:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  async checkDuplicateDrafts(tournamentId, params) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { duplicate: false };
+
+    const queryStr = Object.keys(params)
+      .map(k => `${k}=${encodeURIComponent(params[k])}`)
+      .join('&');
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/checkDuplicateDrafts&tournamentId=${encodeURIComponent(tournamentId)}&${queryStr}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] checkDuplicateDrafts failed:", err);
+      return { duplicate: false };
+    }
+  }
+
+  async getAllDrafts(tournamentId) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: false, error: 'No endpoint configured' };
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/getAllDrafts&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] getAllDrafts failed:", err);
+      throw err;
+    }
+  }
+
+  async logEvents(tournamentId, sessionUuid, events) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: true };
+
+    const body = {
+      endpoint: '/api/v1/logEvents',
+      sessionUuid,
+      events,
+      _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.warn("[GoogleSheetsRepository] logEvents failed:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  async logDiagnostics(tournamentId, sessionUuid, diagnostics) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: true };
+
+    const body = {
+      endpoint: '/api/v1/logDiagnostics',
+      sessionUuid,
+      diagnostics,
+      _gateway_secret: import.meta.env.VITE_GATEWAY_AUTH_SECRET || ''
+    };
+
+    try {
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(body)
+      });
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.warn("[GoogleSheetsRepository] logDiagnostics failed:", err);
+      return { success: false, error: err.message };
+    }
+  }
+
+  async getMetrics(tournamentId) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: false, error: 'No endpoint configured' };
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/metrics&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] getMetrics failed:", err);
+      throw err;
+    }
+  }
+
+  async getCapabilities(tournamentId) {
+    const endpoint = this._getEndpoint(tournamentId);
+    if (!endpoint) return { success: false, error: 'No endpoint configured' };
+
+    try {
+      const res = await fetch(`${endpoint}?endpoint=/api/v1/capabilities&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      return res.json();
+    } catch (err) {
+      console.error("[GoogleSheetsRepository] getCapabilities failed:", err);
+      throw err;
     }
   }
 }

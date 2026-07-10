@@ -20,6 +20,8 @@ export const LogoUploader = ({
   onUploadSuccess,
   onUploadRemove,
   teamName = "team",
+  onUploadStart,
+  onUploadError
 }) => {
   const [dragActive, setDragActive] = useState(false);
   const [uploadState, setUploadState] = useState('EMPTY'); // EMPTY | UPLOADING | SUCCESS | ERROR
@@ -74,6 +76,7 @@ export const LogoUploader = ({
 
     setUploadState('UPLOADING');
     setProgress(15);
+    if (onUploadStart) onUploadStart(file);
 
     // Fake progress ticks while upload is in-flight
     const interval = setInterval(() => {
@@ -87,11 +90,12 @@ export const LogoUploader = ({
       setProgress(100);
       setPreviewData({ url, name: file.name });
       setUploadState('SUCCESS');
-      onUploadSuccess(url);
+      onUploadSuccess(url, file);
     } catch (err) {
       clearInterval(interval);
       setErrorText(err.message || 'Upload failed. Please try again.');
       setUploadState('ERROR');
+      if (onUploadError) onUploadError(err, file);
     }
   };
 

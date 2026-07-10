@@ -37,6 +37,7 @@ export const tournaments = [
     bracketsEnabled: false,
     supportsLogoUpload: true,
     hideRegisteredTeamsDuringRegistration: true,
+    sessionManagementEnabled: true,
 
     // Results
     tournamentComplete: false,

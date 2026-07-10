@@ -7,7 +7,7 @@ function getSupabase() {
   const url = import.meta.env.VITE_SUPABASE_URL;
   const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
   if (!url || !key) {
-    throw new Error('Supabase client is not configured. Please define VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+    return null;
   }
   supabaseInstance = createClient(url, key);
   return supabaseInstance;
@@ -15,15 +15,22 @@ function getSupabase() {
 
 export class SupabaseRepository {
   static getSession() {
-    return getSupabase().auth.getSession();
+    const sb = getSupabase();
+    if (!sb) return Promise.reject(new Error("Supabase client not configured."));
+    return sb.auth.getSession();
   }
 
   static onAuthStateChange(callback) {
-    return getSupabase().auth.onAuthStateChange(callback);
+    const sb = getSupabase();
+    if (!sb) return { data: { subscription: { unsubscribe: () => {} } } };
+    return sb.auth.onAuthStateChange(callback);
   }
 
   static async fetchMatches() {
-    const { data, error } = await getSupabase()
+    const sb = getSupabase();
+    if (!sb) return [];
+    
+    const { data, error } = await sb
       .from('matches')
       .select(`
         id, round, state, score, metadata,
@@ -38,7 +45,10 @@ export class SupabaseRepository {
   }
 
   static subscribeToMatches(callback) {
-    const channel = getSupabase()
+    const sb = getSupabase();
+    if (!sb) return { unsubscribe: () => {} };
+    
+    const channel = sb
       .channel('public:matches')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'matches' }, callback)
       .subscribe();
@@ -46,23 +56,32 @@ export class SupabaseRepository {
   }
 
   static unsubscribe(channel) {
-    getSupabase().removeChannel(channel);
+    const sb = getSupabase();
+    if (!sb || !channel) return;
+    sb.removeChannel(channel);
   }
 
   static loginViaDiscord() {
-    return getSupabase().auth.signInWithOAuth({ 
+    const sb = getSupabase();
+    if (!sb) return Promise.reject(new Error("Supabase client not configured."));
+    return sb.auth.signInWithOAuth({ 
       provider: 'discord',
       options: { redirectTo: window.location.origin }
     });
   }
 
   static logout() {
-    return getSupabase().auth.signOut();
+    const sb = getSupabase();
+    if (!sb) return Promise.resolve();
+    return sb.auth.signOut();
   }
 
   static async updateMatchVeto(matchId, vetoLog, currentMeta) {
+    const sb = getSupabase();
+    if (!sb) return;
+    
     const newMeta = { ...currentMeta, veto_log: vetoLog };
-    const { error } = await getSupabase()
+    const { error } = await sb
       .from('matches')
       .update({ metadata: newMeta })
       .eq('id', matchId);
@@ -70,7 +89,10 @@ export class SupabaseRepository {
   }
 
   static async forceWin(matchId) {
-    const { error } = await getSupabase()
+    const sb = getSupabase();
+    if (!sb) return;
+    
+    const { error } = await sb
       .from('matches')
       .update({ state: 'complete', score: '1-0 (Forced)' })
       .eq('id', matchId);

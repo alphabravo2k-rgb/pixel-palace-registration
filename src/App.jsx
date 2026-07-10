@@ -4,6 +4,7 @@ import { Home } from './pages/Home';
 import { Register } from './pages/Register';
 import { NotFound } from './pages/NotFound';
 import { AdminPreview } from './pages/AdminPreview';
+import DraftRegistrations from './pages/admin/DraftRegistrations';
 import { Footer } from './components/layout/Footer';
 import { BootSequence } from './components/ui/BootSequence';
 import { Terminal } from './utils/logger';
@@ -26,6 +27,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/register/:tournamentSlug" element={<Register />} />
           <Route path="/admin/preview/:tournamentSlug" element={<AdminPreview />} />
+          <Route path="/admin/drafts" element={<DraftRegistrations />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

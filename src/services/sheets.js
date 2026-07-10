@@ -17,4 +17,13 @@ export {
   fetchTeams as fetchTournamentTeams,
   fetchBracket as fetchTournamentBracket,
   trackRegistration,
+  saveDraft,
+  getDraft,
+  renewLock,
+  checkDuplicateDrafts,
+  getAllDrafts,
+  logEvents,
+  logDiagnostics,
+  getMetrics,
+  getCapabilities
 } from './api/client';

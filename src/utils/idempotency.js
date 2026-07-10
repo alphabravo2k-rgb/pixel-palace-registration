@@ -35,3 +35,56 @@ export const getDraft = (tournamentId) => {
     return null;
   }
 };
+
+// ─── Registration Session UUID Storage Helpers (LocalStorage) ──────────────
+const sessionUuidKey = (tournamentId) => `pp_session_uuid_${tournamentId}`;
+const revisionKey = (tournamentId) => `pp_revision_${tournamentId}`;
+
+export const getSessionUuid = (tournamentId) => {
+  try {
+    return localStorage.getItem(sessionUuidKey(tournamentId));
+  } catch {
+    return null;
+  }
+};
+
+export const setSessionUuid = (tournamentId, uuid) => {
+  try {
+    localStorage.setItem(sessionUuidKey(tournamentId), uuid);
+  } catch (e) {
+    console.error("Failed to write Session UUID to localStorage:", e);
+  }
+};
+
+export const clearSessionUuid = (tournamentId) => {
+  try {
+    localStorage.removeItem(sessionUuidKey(tournamentId));
+  } catch (e) {
+    console.error("Failed to clear Session UUID:", e);
+  }
+};
+
+export const getRevision = (tournamentId) => {
+  try {
+    const rev = localStorage.getItem(revisionKey(tournamentId));
+    return rev ? parseInt(rev, 10) : 0;
+  } catch {
+    return 0;
+  }
+};
+
+export const incrementRevision = (tournamentId) => {
+  try {
+    const nextRev = getRevision(tournamentId) + 1;
+    localStorage.setItem(revisionKey(tournamentId), String(nextRev));
+    return nextRev;
+  } catch {
+    return 1;
+  }
+};
+
+export const clearRevision = (tournamentId) => {
+  try {
+    localStorage.removeItem(revisionKey(tournamentId));
+  } catch {}
+};

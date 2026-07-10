@@ -106,9 +106,42 @@ export const fetchBracket = async (tournamentId) => {
   return repository.fetchBracket(tournamentId);
 };
 
-/**
- * Track team registration by submission or registration ID.
- */
 export const trackRegistration = async (tournamentId, searchId, secondaryId) => {
   return repository.trackRegistration(tournamentId, searchId, secondaryId);
+};
+
+export const saveDraft = async (tournamentId, payload) => {
+  return repository.saveDraft(tournamentId, payload);
+};
+
+export const getDraft = async (tournamentId, sessionUuid) => {
+  return repository.getDraft(tournamentId, sessionUuid);
+};
+
+export const renewLock = async (tournamentId, sessionUuid, lockOwner) => {
+  return repository.renewLock(tournamentId, sessionUuid, lockOwner);
+};
+
+export const checkDuplicateDrafts = async (tournamentId, params) => {
+  return repository.checkDuplicateDrafts(tournamentId, params);
+};
+
+export const getAllDrafts = async (tournamentId) => {
+  return repository.getAllDrafts(tournamentId);
+};
+
+export const logEvents = async (tournamentId, sessionUuid, events) => {
+  return repository.logEvents(tournamentId, sessionUuid, events);
+};
+
+export const logDiagnostics = async (tournamentId, sessionUuid, diagnostics) => {
+  return repository.logDiagnostics(tournamentId, sessionUuid, diagnostics);
+};
+
+export const getMetrics = async (tournamentId) => {
+  return repository.getMetrics(tournamentId);
+};
+
+export const getCapabilities = async (tournamentId) => {
+  return repository.getCapabilities(tournamentId);
 };

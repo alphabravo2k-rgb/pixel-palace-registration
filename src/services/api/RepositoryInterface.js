@@ -69,4 +69,85 @@ export class RegistrationRepository {
   async trackRegistration(tournamentId, searchId) {
     throw new Error("Method 'trackRegistration' must be implemented.");
   }
+
+  /**
+   * Saves a registration session draft and event telemetry logs.
+   * @param {string} tournamentId
+   * @param {object} payload
+   * @returns {Promise<any>}
+   */
+  async saveDraft(tournamentId, payload) {
+    throw new Error("Method 'saveDraft' must be implemented.");
+  }
+
+  /**
+   * Retrieves a saved registration session draft by UUID.
+   * @param {string} tournamentId
+   * @param {string} sessionUuid
+   * @returns {Promise<any>}
+   */
+  async getDraft(tournamentId, sessionUuid) {
+    throw new Error("Method 'getDraft' must be implemented.");
+  }
+
+  /**
+   * Heartbeat to renew lease lock on a session draft.
+   * @param {string} tournamentId
+   * @param {string} sessionUuid
+   * @param {string} lockOwner
+   * @returns {Promise<any>}
+   */
+  async renewLock(tournamentId, sessionUuid, lockOwner) {
+    throw new Error("Method 'renewLock' must be implemented.");
+  }
+
+  /**
+   * Searches for active duplicate registration drafts.
+   * @param {string} tournamentId
+   * @param {object} params
+   * @returns {Promise<any>}
+   */
+  async checkDuplicateDrafts(tournamentId, params) {
+    throw new Error("Method 'checkDuplicateDrafts' must be implemented.");
+  }
+
+  /**
+   * Pulls all draft sessions for the admin dashboard.
+   * @param {string} tournamentId
+   * @returns {Promise<any>}
+   */
+  async getAllDrafts(tournamentId) {
+    throw new Error("Method 'getAllDrafts' must be implemented.");
+  }
+
+  /**
+   * Batched fire-and-forget logging of taxonomy events.
+   * @param {string} tournamentId
+   * @param {string} sessionUuid
+   * @param {Array<any>} events
+   * @returns {Promise<any>}
+   */
+  async logEvents(tournamentId, sessionUuid, events) {
+    throw new Error("Method 'logEvents' must be implemented.");
+  }
+
+  /**
+   * Batched fire-and-forget logging of diagnostics telemetry.
+   * @param {string} tournamentId
+   * @param {string} sessionUuid
+   * @param {Array<any>} diagnostics
+   * @returns {Promise<any>}
+   */
+  async logDiagnostics(tournamentId, sessionUuid, diagnostics) {
+    throw new Error("Method 'logDiagnostics' must be implemented.");
+  }
+
+  /**
+   * Retrieves dynamically calculated funnel metrics and latencies.
+   * @param {string} tournamentId
+   * @returns {Promise<any>}
+   */
+  async getMetrics(tournamentId) {
+    throw new Error("Method 'getMetrics' must be implemented.");
+  }
 }

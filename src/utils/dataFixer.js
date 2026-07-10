@@ -32,7 +32,7 @@ const deriveRole = (idx, coreCount) => {
  * @param {string} [submissionId] - Pre-generated UUID (from sessionStorage)
  * @returns {import('../schemas/canonical').CanonicalSchema}
  */
-export const transformToCanonical = (tournament, formData, submissionId) => {
+export const transformToCanonical = (tournament, formData, submissionId, sessionUuid) => {
   const {
     inviteCode = '',
     teamName,
@@ -85,6 +85,7 @@ export const transformToCanonical = (tournament, formData, submissionId) => {
       schema_version: '1.1',
       sub_included: players.length > coreCount,
       status: 'VERIFIED',
+      sessionUuid: sessionUuid || formData.sessionUuid || undefined,
       payment_status: hasEntryFee ? 'PENDING_PAYMENT' : 'NOT_REQUIRED',
       payment_tx_hash: '',
       payment_confirmed_at: undefined,

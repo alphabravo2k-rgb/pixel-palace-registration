@@ -13,15 +13,35 @@
  *  - Invite code onBlur → side-effect lookup, NOT a Zod validator.
  */
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useFormSubmit } from '../../hooks/useFormSubmit';
-import { validateInviteCode } from '../../services/sheets';
+import { 
+  validateInviteCode, 
+  saveDraft, 
+  getDraft, 
+  renewLock, 
+  checkDuplicateDrafts, 
+  logEvents,
+  logDiagnostics 
+} from '../../services/sheets';
 import { resolveSteam64 } from '../../services/steam';
 import { fetchFaceitProfile } from '../../services/faceit';
 import { LogoUploader } from './LogoUploader';
+import { SYSTEM_CONFIG, FEATURES } from '../../config/systemConfig';
+import { migrateDraft, SCHEMA_VERSION } from '../../utils/draftMigrator';
+import { EVENT_SCHEMA_VERSION } from '../../constants/eventSchema';
+import { getCapabilities } from '../../services/sheets';
+import { 
+  getSessionUuid, 
+  setSessionUuid, 
+  clearSessionUuid, 
+  getRevision, 
+  incrementRevision,
+  clearRevision 
+} from '../../utils/idempotency';
 import {
   Loader2,
   CheckCircle2,
@@ -42,6 +62,10 @@ import {
   Activity,
   ShieldAlert,
   AlertOctagon,
+  Zap,
+  Lock,
+  CloudOff,
+  RefreshCw,
 } from 'lucide-react';
 
 // ─── Dynamic Zod Schema ────────────────────────────────────────────────────────
@@ -134,6 +158,7 @@ export const TournamentForm = ({ tournament, slots }) => {
     handleSubmit,
     setValue,
     getValues,
+    watch,
     reset,
     formState: { errors },
   } = useForm({
@@ -151,11 +176,178 @@ export const TournamentForm = ({ tournament, slots }) => {
     },
   });
 
+  // ── Session Management System States & Refs ───────────────────────────────
+  const lockOwnerId = useMemo(() => crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36), []);
+  const [sessionUuid, setSessionUuidState] = useState(() => getSessionUuid(tournament.id) || null);
+  const [lockAcquired, setLockAcquired] = useState(false);
+  const [isLockedOut, setIsLockedOut] = useState(false);
+  const [isRevisionConflict, setIsRevisionConflict] = useState(false);
+  
+  // Autosave HUD states
+  const [autosaveStatus, setAutosaveStatus] = useState(null); // 'SAVING', 'SAVED', 'SAVED_OFFLINE', 'ERROR'
+  const [lastSavedText, setLastSavedText] = useState('');
+  
+  // Recovery overlays
+  const [draftRestorePrompt, setDraftRestorePrompt] = useState(null); // holds { formData, ageText }
+  const [duplicateDraftPrompt, setDuplicateDraftPrompt] = useState(null); // holds matching session info
   const [draftRestored, setDraftRestored] = useState(false);
 
-  // ── Draft Restoration on Mount ──────────────────────────────────────────────
+  // Time & Diagnostics telemetry refs
+  const activeEditingTimeRef = useRef(0);
+  const idleTimeRef = useRef(0);
+  const offlineTimeRef = useRef(0);
+  const totalSessionDurationRef = useRef(0);
+  
+  const lastActivityTimestampRef = useRef(Date.now());
+  const eventQueueRef = useRef([]);
+  const diagnosticsQueueRef = useRef([]);
+  const lastSavedPayloadRef = useRef('');
+  const isTypingRef = useRef(false);
+
+  // Diagnostics counters
+  const lookupFailuresCountRef = useRef(0);
+  const validationFailuresCountRef = useRef(0);
+  const resumeCountRef = useRef(0);
+  const idleCountRef = useRef(0);
+  const offlineCountRef = useRef(0);
+  const retryCountRef = useRef(0);
+  const apiFailuresCountRef = useRef(0);
+
+  // Logo upload diagnostics
+  const logoDiagnosticsRef = useRef({
+    fileSize: 0,
+    dimensions: '',
+    compression: '',
+    uploadDuration: 0,
+    failureReason: '',
+    retryCount: 0
+  });
+
+  // Watch all values to detect form updates
+  const watchedValues = watch();
+
+  // Helper to log events locally to batch flush
+  const pushTelemetryEvent = (eventType, frictionStage, details = {}) => {
+    if (!FEATURES.eventTelemetry) return;
+    const eventId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+    eventQueueRef.current.push({
+      eventId,
+      requestId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+      timestamp: new Date().toISOString(),
+      frictionStage,
+      eventType,
+      taxonomyVersion: String(EVENT_SCHEMA_VERSION),
+      details
+    });
+  };
+
+  const pushDiagnostic = (apiStatus, saveDuration, errDetails = "") => {
+    const ua = navigator.userAgent;
+    let browser = "BR_UNKNOWN";
+    let os = "OS_UNKNOWN";
+    let deviceType = "DEV_DESKTOP";
+
+    if (/chrome|crios/i.test(ua) && !/edge|edg/i.test(ua)) browser = "BR_CHROME";
+    else if (/firefox|iceweasel/i.test(ua)) browser = "BR_FIREFOX";
+    else if (/safari/i.test(ua) && !/chrome|crios/i.test(ua)) browser = "BR_SAFARI";
+    else if (/edge|edg/i.test(ua)) browser = "BR_EDGE";
+
+    if (/android/i.test(ua)) {
+      os = "OS_ANDROID";
+      deviceType = "DEV_MOBILE";
+    } else if (/ipad|iphone|ipod/i.test(ua)) {
+      os = "OS_IOS";
+      deviceType = "DEV_MOBILE";
+    } else if (/windows/i.test(ua)) os = "OS_WINDOWS";
+    else if (/macintosh|mac os x/i.test(ua)) os = "OS_MAC";
+    else if (/linux/i.test(ua)) os = "OS_LINUX";
+
+    diagnosticsQueueRef.current.push({
+      diagnosticId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+      requestId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+      timestamp: new Date().toISOString(),
+      saveDuration,
+      lookupDuration: lookupFailuresCountRef.current * 120,
+      uploadDuration: logoDiagnosticsRef.current.uploadDuration || 0,
+      apiStatus,
+      retryCount: retryCountRef.current,
+      networkStatus: navigator.onLine ? "NET_ONLINE" : "NET_OFFLINE",
+      deviceType,
+      browser,
+      os,
+      screenWidth: window.innerWidth,
+      screenHeight: window.innerHeight,
+      errorDetails: errDetails
+    });
+  };
+
+  // ── Calculate Form Completion metrics ───────────────────────────────
+  const completionStats = useMemo(() => {
+    const { teamName, teamTag, teamRegion, logoLink, players = [], agreeDiscord, agreeVoice, agreeSchedule } = watchedValues;
+    const required = [];
+    required.push({ name: "Team Name", val: teamName });
+    required.push({ name: "Team Tag", val: teamTag });
+    required.push({ name: "Server Region", val: teamRegion });
+    required.push({ name: "Team Logo", val: logoLink });
+    
+    for (let i = 0; i < corePlayerCount; i++) {
+      const p = players[i] || {};
+      required.push({ name: `Player ${i+1} Discord`, val: p.discord });
+      required.push({ name: `Player ${i+1} Steam`, val: p.steam });
+      required.push({ name: `Player ${i+1} FACEIT`, val: p.faceit });
+    }
+    
+    required.push({ name: "Agree Discord", val: agreeDiscord });
+    required.push({ name: "Agree Voice Channel", val: agreeVoice });
+    required.push({ name: "Agree Schedule", val: agreeSchedule });
+
+    const totalRequired = required.length;
+    const completed = required.filter(f => {
+      if (typeof f.val === 'boolean') return f.val === true;
+      return f.val && String(f.val).trim() !== '';
+    });
+    
+    const missing = required
+      .filter(f => {
+        if (typeof f.val === 'boolean') return f.val !== true;
+        return !f.val || String(f.val).trim() === '';
+      })
+      .map(f => f.name);
+
+    let frictionStage = "STAGE_TEAM_DETAILS";
+    if (!teamName || !teamTag || !teamRegion) {
+      frictionStage = "STAGE_TEAM_DETAILS";
+    } else if (!logoLink) {
+      frictionStage = "STAGE_LOGO_UPLOAD";
+    } else {
+      let firstIncompletePlayer = -1;
+      for (let i = 0; i < corePlayerCount; i++) {
+        const p = players[i] || {};
+        if (!p.discord || !p.steam || !p.faceit) {
+          firstIncompletePlayer = i;
+          break;
+        }
+      }
+      if (firstIncompletePlayer !== -1) {
+        frictionStage = firstIncompletePlayer === 0 ? "STAGE_CAPTAIN_INFO" : `STAGE_PLAYER_${firstIncompletePlayer + 1}`;
+      } else if (!agreeDiscord || !agreeVoice || !agreeSchedule) {
+        frictionStage = "STAGE_REVIEW";
+      } else {
+        frictionStage = "STAGE_SUBMIT";
+      }
+    }
+
+    return {
+      completedCount: completed.length,
+      totalRequired,
+      missingFields: missing.join(", "),
+      frictionStage
+    };
+  }, [watchedValues, corePlayerCount]);
+
+  // ── Session Mount Restoration & Init ──────────────────────────────────────
   useEffect(() => {
-    // 1. Check for Dead-Letter Queue (LocalStorage, cross-session)
+    // 1. Check for Dead-Letter Queue (DLQ fallback)
     const dlq = localStorage.getItem(`pp_dlq_${tournament.id}`);
     if (dlq) {
       try {
@@ -165,20 +357,367 @@ export const TournamentForm = ({ tournament, slots }) => {
       }
     }
 
-    // 2. Check for Session Draft (SessionStorage, single-session failure)
-    const draftKey = `pp_draft_${tournament.id}`;
-    const draft = sessionStorage.getItem(draftKey);
-    if (draft) {
+    if (!FEATURES.sessionTracking) return;
+
+    // 2. Fetch or Load session state
+    const loadSession = async () => {
+      // Negotiate Capabilities
       try {
-        const parsed = JSON.parse(draft);
-        reset(parsed);
-        setDraftRestored(true);
-        Terminal.success('Recovered form draft from previous failed session.');
+        const caps = await getCapabilities(tournament.id);
+        if (caps && caps.success) {
+          Terminal.log('CAPABILITIES', `Negotiated API: ${caps.apiVersion}, max payload: ${caps.maxPayloadSize}`);
+        }
       } catch (e) {
-        sessionStorage.removeItem(draftKey);
+        console.warn("Failed to check capabilities:", e);
       }
+
+      const storedSessionUuid = getSessionUuid(tournament.id);
+      if (storedSessionUuid) {
+        try {
+          const res = await getDraft(tournament.id, storedSessionUuid);
+          if (res?.success && res.draft) {
+            const draftData = res.draft;
+            
+            // If already submitted, archive or clear session
+            if (draftData.status === 'STATUS_SUBMITTED' || draftData.status === 'STATUS_PURGED') {
+              clearSessionUuid(tournament.id);
+              clearRevision(tournament.id);
+              return;
+            }
+
+            // Calculate age and show warn banner
+            const deltaMs = Date.now() - new Date(draftData.lastActivityTime).getTime();
+            const daysOld = Math.floor(deltaMs / 86400000);
+            let ageText = '';
+            if (daysOld >= 3) {
+              ageText = `This registration draft was last updated ${daysOld} days ago. Roster rules or map pools may have changed.`;
+            }
+
+            setDraftRestorePrompt({
+              sessionUuid: storedSessionUuid,
+              formData: draftData.formData,
+              ageText,
+              schemaVersion: draftData.schemaVersion
+            });
+          } else {
+            // Draft not found on server (purged or different environment)
+            clearSessionUuid(tournament.id);
+            clearRevision(tournament.id);
+          }
+        } catch (e) {
+          console.warn("Failed to check active draft session on mount:", e);
+        }
+      }
+    };
+
+    loadSession();
+
+    // 3. Setup Telemetry listeners (online/offline, visibility change)
+    const handleOnline = () => {
+      setAutosaveStatus(null);
+      pushTelemetryEvent('NETWORK_ONLINE', completionStats.frictionStage);
+    };
+    const handleOffline = () => {
+      setAutosaveStatus('SAVED_OFFLINE');
+      offlineCountRef.current += 1;
+      pushTelemetryEvent('NETWORK_OFFLINE', completionStats.frictionStage);
+    };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        pushTelemetryEvent('TAB_HIDDEN', completionStats.frictionStage);
+      } else {
+        pushTelemetryEvent('TAB_VISIBLE', completionStats.frictionStage);
+        lastActivityTimestampRef.current = Date.now();
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // 4. Timer to count active editing vs idle time
+    const secondTimer = setInterval(() => {
+      totalSessionDurationRef.current += 1;
+      const now = Date.now();
+      const sinceLastActivity = now - lastActivityTimestampRef.current;
+
+      if (sinceLastActivity > 1800000) { // 30 minutes
+        // Idle state
+        idleTimeRef.current += 1;
+      } else {
+        if (!document.hidden && document.hasFocus() && isTypingRef.current) {
+          activeEditingTimeRef.current += 1;
+        } else {
+          idleTimeRef.current += 1;
+        }
+      }
+
+      if (!navigator.onLine) {
+        offlineTimeRef.current += 1;
+      }
+    }, 1000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      clearInterval(secondTimer);
+    };
+  }, [tournament.id, completionStats.frictionStage]);
+
+  // ── Heartbeat lease lock renewal timer ────────────────────────────────────
+  useEffect(() => {
+    if (!sessionUuid || !lockAcquired || isLockedOut || !FEATURES.sessionTracking) return;
+
+    const renewLease = async () => {
+      try {
+        const res = await renewLock(tournament.id, sessionUuid, lockOwnerId);
+        if (res && res.success === false && res.errorCode === 'ERR_LOCK_LOST') {
+          setIsLockedOut(true);
+          pushTelemetryEvent('LOOKUP_FAILED', completionStats.frictionStage, { reason: 'LOCK_LOST' });
+          Terminal.error('LOCK', 'Session lock taken over by another window.');
+        }
+      } catch (err) {
+        console.warn("Heartbeat lock renewal failed:", err);
+      }
+    };
+
+    const leaseInterval = setInterval(renewLease, SYSTEM_CONFIG.LOCK_HEARTBEAT_INTERVAL);
+    return () => clearInterval(leaseInterval);
+  }, [sessionUuid, lockAcquired, isLockedOut, tournament.id, lockOwnerId, completionStats.frictionStage]);
+
+  // ── Telemetry & Diagnostics Background Flusher (Every 60 seconds) ────────────
+  useEffect(() => {
+    if (!sessionUuid || !FEATURES.eventTelemetry) return;
+
+    const flushQueue = async () => {
+      // 1. Events flush
+      const events = [...eventQueueRef.current];
+      if (events.length > 0) {
+        const batchId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+        const eventsWithBatch = events.map(e => ({ ...e, batchId }));
+        eventQueueRef.current = []; // optimistic clear
+        try {
+          await logEvents(tournament.id, sessionUuid, eventsWithBatch);
+        } catch (err) {
+          eventQueueRef.current = [...events, ...eventQueueRef.current];
+        }
+      }
+
+      // 2. Diagnostics flush
+      const diags = [...diagnosticsQueueRef.current];
+      if (diags.length > 0) {
+        diagnosticsQueueRef.current = []; // optimistic clear
+        try {
+          await logDiagnostics(tournament.id, sessionUuid, diags);
+        } catch (err) {
+          diagnosticsQueueRef.current = [...diags, ...diagnosticsQueueRef.current];
+        }
+      }
+    };
+
+    const flushInterval = setInterval(flushQueue, 60000);
+
+    const handleUnload = () => {
+      flushQueue();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
+    return () => {
+      clearInterval(flushInterval);
+      window.removeEventListener('beforeunload', handleUnload);
+    };
+  }, [sessionUuid, tournament.id]);
+
+  // ── Watch form value changes and trigger debounced autosave ───────────────────
+  useEffect(() => {
+    if (!sessionUuid || isLockedOut || !FEATURES.draftRecovery) return;
+
+    // Filter default values from checking
+    const stringified = JSON.stringify(watchedValues);
+    if (!lastSavedPayloadRef.current) {
+      lastSavedPayloadRef.current = stringified;
+      return;
     }
-  }, [reset, tournament.id]);
+    if (stringified === lastSavedPayloadRef.current) return;
+
+    isTypingRef.current = true;
+    lastActivityTimestampRef.current = Date.now();
+    setAutosaveStatus('SAVING');
+
+    const debouncedSave = setTimeout(async () => {
+      isTypingRef.current = false;
+      
+      const currentRev = incrementRevision(tournament.id);
+      
+      // Parse device info and acquisition params
+      const ua = navigator.userAgent;
+      let browser = "BR_UNKNOWN";
+      let os = "OS_UNKNOWN";
+      let deviceType = "DEV_DESKTOP";
+
+      if (/chrome|crios/i.test(ua) && !/edge|edg/i.test(ua)) browser = "BR_CHROME";
+      else if (/firefox|iceweasel/i.test(ua)) browser = "BR_FIREFOX";
+      else if (/safari/i.test(ua) && !/chrome|crios/i.test(ua)) browser = "BR_SAFARI";
+      else if (/edge|edg/i.test(ua)) browser = "BR_EDGE";
+
+      if (/android/i.test(ua)) {
+        os = "OS_ANDROID";
+        deviceType = "DEV_MOBILE";
+      } else if (/ipad|iphone|ipod/i.test(ua)) {
+        os = "OS_IOS";
+        deviceType = "DEV_MOBILE";
+      } else if (/windows/i.test(ua)) os = "OS_WINDOWS";
+      else if (/macintosh|mac os x/i.test(ua)) os = "OS_MAC";
+      else if (/linux/i.test(ua)) os = "OS_LINUX";
+
+      const params = new URLSearchParams(window.location.search);
+      const utm_source = params.get("utm_source") || "";
+      const utm_medium = params.get("utm_medium") || "";
+      const utm_campaign = params.get("utm_campaign") || "";
+
+      let referralSource = "REF_UNKNOWN";
+      const ref = document.referrer ? new URL(document.referrer).hostname.toLowerCase() : "";
+      if (ref.includes("discord")) referralSource = "REF_DISCORD";
+      else if (ref.includes("instagram")) referralSource = "REF_INSTAGRAM";
+      else if (ref.includes("twitter") || ref.includes("t.co")) referralSource = "REF_TWITTER";
+      else if (!ref) referralSource = "REF_DIRECT";
+
+      const startSaveTime = Date.now();
+
+      const savePayload = {
+        sessionUuid,
+        currentRevision: currentRev,
+        expectedRevision: currentRev - 1,
+        tournamentId: tournament.id,
+        teamName: watchedValues.teamName || '',
+        p1IGN: watchedValues.players?.[0]?.ign || '',
+        p1Discord: watchedValues.players?.[0]?.discord || '',
+        p1Faceit: watchedValues.players?.[0]?.faceit || '',
+        p1Steam64: watchedValues.players?.[0]?.steam64 || '',
+        country: watchedValues.teamRegion || '',
+        currentStep: completionStats.frictionStage,
+        lastCompletedStep: completionStats.frictionStage,
+        frictionStage: completionStats.frictionStage,
+        completedRequiredFieldsCount: completionStats.completedCount,
+        totalRequiredFieldsCount: completionStats.totalRequired,
+        missingFields: completionStats.missingFields,
+        totalPlayersAdded: watchedValues.players?.length || 0,
+        activeEditingTime: activeEditingTimeRef.current,
+        idleTime: idleTimeRef.current,
+        offlineTime: offlineTimeRef.current,
+        totalSessionDuration: totalSessionDurationRef.current,
+        referralSource,
+        utm_source,
+        utm_medium,
+        utm_campaign,
+        draftStatus: 'STATUS_ACTIVE',
+        lockOwner: lockOwnerId,
+        formData: stringified,
+        lookupFailuresCount: lookupFailuresCountRef.current,
+        validationFailuresCount: validationFailuresCountRef.current,
+        resumeCount: resumeCountRef.current,
+        idleCount: idleCountRef.current,
+        offlineCount: offlineCountRef.current,
+        logoDiagnostics: logoDiagnosticsRef.current,
+        schemaVersion: SCHEMA_VERSION
+      };
+
+      try {
+        const res = await saveDraft(tournament.id, savePayload);
+        const duration = Date.now() - startSaveTime;
+        
+        if (res && res.success) {
+          setAutosaveStatus('SAVED');
+          const timeString = new Date(res.serverTime || new Date()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+          setLastSavedText(`Saved at ${timeString}`);
+          lastSavedPayloadRef.current = stringified;
+          pushDiagnostic('STATUS_SUCCESS', duration);
+        } else {
+          pushDiagnostic('STATUS_ERROR', duration, res?.message || 'Lock lease lost or save rejected');
+          if (res?.errorCode === 'ERR_LOCK_LOST' || res?.error?.includes('ERR_LOCK_LOST')) {
+            setIsLockedOut(true);
+            setAutosaveStatus(null);
+          } else if (res?.errorCode === 'ERR_REVISION_MISMATCH' || res?.error?.includes('ERR_REVISION_MISMATCH') || String(res?.errorCode) === '409') {
+            setIsRevisionConflict(true);
+            setAutosaveStatus(null);
+          } else {
+            setAutosaveStatus('ERROR');
+            retryCountRef.current += 1;
+          }
+        }
+      } catch (e) {
+        const duration = Date.now() - startSaveTime;
+        pushDiagnostic('STATUS_ERROR', duration, e.message);
+        setAutosaveStatus('ERROR');
+        retryCountRef.current += 1;
+      }
+    }, SYSTEM_CONFIG.AUTO_SAVE_INTERVAL ? 3000 : 3000); // Debounce save timer (3s)
+
+    return () => clearTimeout(debouncedSave);
+  }, [watchedValues, sessionUuid, isLockedOut, tournament.id, lockOwnerId, completionStats]);
+
+  // ── Trigger dynamic duplicate draft check on blur ─────────────────────────
+  const handleDuplicateCheck = async () => {
+    if (sessionUuid || !FEATURES.duplicateDetection) return;
+
+    const teamName = getValues('teamName');
+    const captainDiscord = getValues('players.0.discord');
+    const captainSteam = getValues('players.0.steam64');
+    const captainFaceit = getValues('players.0.faceit');
+
+    if (!teamName && !captainDiscord && !captainSteam && !captainFaceit) return;
+
+    try {
+      const res = await checkDuplicateDrafts(tournament.id, {
+        teamName: teamName || '',
+        discord: captainDiscord || '',
+        steam64: captainSteam || '',
+        faceit: captainFaceit || ''
+      });
+
+      if (res && res.duplicate && res.session) {
+        setDuplicateDraftPrompt({
+          sessionUuid: res.session.sessionUuid,
+          teamName: res.session.teamName,
+          captainName: res.session.captainName,
+          confidence: res.confidence
+        });
+      }
+    } catch (e) {
+      console.warn("Failed to check duplicate drafts:", e);
+    }
+  };
+
+  // ── Auto-generate session UUID when user starts typing ──────────────────────
+  useEffect(() => {
+    if (sessionUuid || !FEATURES.sessionTracking) return;
+
+    const teamName = watchedValues.teamName;
+    const captainDiscord = watchedValues.players?.[0]?.discord;
+    const logoLink = watchedValues.logoLink;
+
+    if (teamName || captainDiscord || logoLink) {
+      const newUuid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2) + Date.now().toString(36);
+      setSessionUuid(tournament.id, newUuid);
+      setSessionUuidState(newUuid);
+      setLockAcquired(true);
+      
+      // Seed first event log
+      const eventId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2);
+      eventQueueRef.current.push({
+        eventId,
+        requestId: crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2),
+        timestamp: new Date().toISOString(),
+        frictionStage: completionStats.frictionStage,
+        eventType: 'SESSION_STARTED',
+        taxonomyVersion: 'v1',
+        details: { message: "User began typing form details" }
+      });
+      
+      setAutosaveStatus('SAVING');
+    }
+  }, [watchedValues, sessionUuid, tournament.id, completionStats]);
 
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
 
@@ -506,6 +1045,10 @@ export const TournamentForm = ({ tournament, slots }) => {
             <Users className="ml-3 w-4 h-4 text-white/30" />
             <input
               {...register('teamName')}
+              onBlur={(e) => {
+                register('teamName').onBlur(e);
+                handleDuplicateCheck();
+              }}
               type="text"
               placeholder="e.g. Natus Vincere"
               className="input-ghost text-lg"
@@ -589,8 +1132,48 @@ export const TournamentForm = ({ tournament, slots }) => {
           formRegister={register}
           errorMessage={errors.logoLink?.message}
           teamName={getValues('teamName') || 'team'}
-          onUploadSuccess={(url) => setValue('logoLink', url, { shouldValidate: true })}
-          onUploadRemove={() => setValue('logoLink', '', { shouldValidate: true })}
+          onUploadStart={(file) => {
+            logoDiagnosticsRef.current.startTime = Date.now();
+            logoDiagnosticsRef.current.fileSize = file.size;
+            pushTelemetryEvent('UPLOAD_STARTED', completionStats.frictionStage, { fileName: file.name, fileSize: file.size });
+          }}
+          onUploadSuccess={(url, file) => {
+            const duration = Date.now() - logoDiagnosticsRef.current.startTime;
+            logoDiagnosticsRef.current.uploadDuration = duration;
+            logoDiagnosticsRef.current.failureReason = '';
+            logoDiagnosticsRef.current.compression = file.type || 'COMP_NONE';
+            
+            setValue('logoLink', url, { shouldValidate: true });
+            
+            pushTelemetryEvent('UPLOAD_COMPLETED', completionStats.frictionStage, { 
+              durationMs: duration,
+              fileSize: file.size,
+              logoUrl: url
+            });
+            isTypingRef.current = false;
+            lastActivityTimestampRef.current = Date.now();
+          }}
+          onUploadError={(err, file) => {
+            logoDiagnosticsRef.current.failureReason = err.message || 'Unknown Upload Error';
+            logoDiagnosticsRef.current.retryCount += 1;
+            
+            pushTelemetryEvent('UPLOAD_FAILED', completionStats.frictionStage, {
+              error: err.message,
+              fileName: file.name
+            });
+          }}
+          onUploadRemove={() => {
+            logoDiagnosticsRef.current = {
+              fileSize: 0,
+              dimensions: '',
+              compression: '',
+              uploadDuration: 0,
+              failureReason: '',
+              retryCount: 0
+            };
+            setValue('logoLink', '', { shouldValidate: true });
+            pushTelemetryEvent('LOGO_REMOVED', completionStats.frictionStage);
+          }}
         />
       </div>
     </div>
@@ -680,6 +1263,22 @@ export const TournamentForm = ({ tournament, slots }) => {
                 </div>
 
                 <div className="space-y-3">
+                  {/* IGN */}
+                  <div>
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
+                      In-Game Name (IGN) <span className="text-red-500">*</span>
+                    </label>
+                    <div className="input-group">
+                      <Users className="ml-3 w-4 h-4 text-white/30" />
+                      <input
+                        {...register(`players.${index}.ign`)}
+                        type="text"
+                        placeholder="e.g. s1mple"
+                        className="input-ghost text-xs"
+                      />
+                    </div>
+                  </div>
+
                   {/* Discord */}
                   <div>
                     <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400 mb-1.5 block font-body">
@@ -689,6 +1288,10 @@ export const TournamentForm = ({ tournament, slots }) => {
                       <MessageSquare className="ml-3 w-4 h-4 text-white/30" />
                       <input
                         {...register(`players.${index}.discord`)}
+                        onBlur={(e) => {
+                          register(`players.${index}.discord`).onBlur(e);
+                          if (index === 0) handleDuplicateCheck();
+                        }}
                         type="text"
                         placeholder="username (no #0000)"
                         className="input-ghost text-xs"
@@ -712,7 +1315,10 @@ export const TournamentForm = ({ tournament, slots }) => {
                         type="url"
                         placeholder="https://steamcommunity.com/profiles/76561198..."
                         className="input-ghost text-xs"
-                        onBlur={(e) => handleSteamBlur(index, e.target.value)}
+                        onBlur={(e) => {
+                          handleSteamBlur(index, e.target.value);
+                          if (index === 0) handleDuplicateCheck();
+                        }}
                       />
                     </div>
                     <input
@@ -733,7 +1339,10 @@ export const TournamentForm = ({ tournament, slots }) => {
                         type="url"
                         placeholder="https://www.faceit.com/en/players/yourname"
                         className="input-ghost text-xs"
-                        onBlur={(e) => handleFaceitBlur(index, e.target.value)}
+                        onBlur={(e) => {
+                          handleFaceitBlur(index, e.target.value);
+                          if (index === 0) handleDuplicateCheck();
+                        }}
                       />
                     </div>
                     {faceitMeta[index]?.source === 'csgo' && (
@@ -742,9 +1351,6 @@ export const TournamentForm = ({ tournament, slots }) => {
                       </p>
                     )}
                   </div>
-
-
-
                 </div>
               </div>
             );
@@ -850,6 +1456,25 @@ export const TournamentForm = ({ tournament, slots }) => {
           <span>SUBMIT REGISTRATION</span>
         )}
       </button>
+
+      {/* Autosave Status HUD */}
+      {FEATURES.draftRecovery && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-black/40 border border-white/5 rounded mt-2 select-none">
+          <div className="flex items-center gap-2">
+            <Activity className={`w-3.5 h-3.5 ${autosaveStatus === 'SAVING' ? 'text-yellow-400 animate-spin' : autosaveStatus === 'ERROR' ? 'text-red-500 animate-pulse' : 'text-neon-cyan'}`} />
+            <span className="text-[9px] font-black font-body text-zinc-500 uppercase tracking-widest">
+              {autosaveStatus === 'SAVING' ? 'AUTOSAVING TELEMETRY...' : 
+               autosaveStatus === 'SAVED_OFFLINE' ? 'OFFLINE (AUTOSAVED LOCALLY)' :
+               autosaveStatus === 'ERROR' ? 'UPLINK ERROR' : 'AUTOSAVE ACTIVE'}
+            </span>
+          </div>
+          {lastSavedText && (
+            <span className="text-[9px] font-bold text-zinc-400 font-body uppercase">
+              {lastSavedText}
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 
@@ -886,6 +1511,170 @@ export const TournamentForm = ({ tournament, slots }) => {
         </div>
       )}
 
+      {isLockedOut && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6">
+          <div className="glass-panel p-8 max-w-md text-center border-red-500/50 flex flex-col items-center gap-6 relative">
+            <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+            <Lock className="w-16 h-16 text-red-500 animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white font-heading tracking-wider uppercase italic">SESSION LOCKED OUT</h3>
+              <p className="text-xs text-zinc-400 font-body uppercase leading-relaxed">
+                This registration session is currently active in another browser tab or window. Lock lease could not be acquired.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full h-12 bg-red-500 hover:bg-white text-black font-black text-xs uppercase tracking-widest transition-all cursor-pointer"
+            >
+              Reload Page
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isRevisionConflict && (
+        <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 backdrop-blur-md p-6">
+          <div className="glass-panel p-8 max-w-md text-center border-red-500/50 flex flex-col items-center gap-6 relative">
+            <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+            <AlertTriangle className="w-16 h-16 text-yellow-500 animate-pulse drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" />
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white font-heading tracking-wider uppercase italic">CONCURRENCY CONFLICT</h3>
+              <p className="text-xs text-zinc-400 font-body uppercase leading-relaxed">
+                This draft session has been updated in another tab or window. To prevent overwriting newer changes, this tab has been paused.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => window.location.reload()}
+              className="w-full h-12 bg-yellow-500 hover:bg-white text-black font-black text-xs uppercase tracking-widest transition-all cursor-pointer"
+            >
+              Restore Latest Draft
+            </button>
+          </div>
+        </div>
+      )}
+
+      {draftRestorePrompt && (
+        <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-6">
+          <div className="glass-panel p-8 max-w-md text-center border-neon-cyan/50 flex flex-col items-center gap-6 relative">
+            <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+            <Zap className="w-16 h-16 text-neon-cyan animate-pulse drop-shadow-[0_0_15px_rgba(0,240,255,0.5)]" />
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white font-heading tracking-wider uppercase italic">RESUME REGISTRATION?</h3>
+              <p className="text-xs text-zinc-400 font-body uppercase leading-relaxed">
+                We found an incomplete draft for "{draftRestorePrompt.formData ? JSON.parse(draftRestorePrompt.formData).teamName || 'Your Team' : 'Your Team'}". Would you like to continue?
+              </p>
+              {draftRestorePrompt.ageText && (
+                <div className="p-3 bg-yellow-500/10 border border-yellow-500/30 rounded mt-2 text-left flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-[10px] text-yellow-400 font-body uppercase leading-normal">
+                    {draftRestorePrompt.ageText}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-4 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  clearSessionUuid(tournament.id);
+                  clearRevision(tournament.id);
+                  setDraftRestorePrompt(null);
+                  pushTelemetryEvent('SESSION_STARTED', completionStats.frictionStage, { action: 'START_NEW' });
+                }}
+                className="flex-1 h-12 border border-zinc-700 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
+              >
+                Start New
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(draftRestorePrompt.formData);
+                    const migrated = migrateDraft(parsed, draftRestorePrompt.schemaVersion);
+                    reset(migrated);
+                    setSessionUuidState(draftRestorePrompt.sessionUuid);
+                    setLockAcquired(true);
+                    resumeCountRef.current += 1;
+                    
+                    setAutosaveStatus('SAVED');
+                    setLastSavedText('Draft restored');
+                    setDraftRestorePrompt(null);
+                    setDraftRestored(true);
+                    
+                    pushTelemetryEvent('SESSION_RESUMED', completionStats.frictionStage, { revision: getRevision(tournament.id) });
+                  } catch (e) {
+                    console.error("Failed to restore draft form data:", e);
+                    setDraftRestorePrompt(null);
+                  }
+                }}
+                className="flex-1 h-12 bg-neon-cyan hover:bg-white text-black font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_15px_rgba(0,240,255,0.3)] hover:shadow-none"
+              >
+                Resume Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {duplicateDraftPrompt && (
+        <div className="fixed inset-0 z-[9998] flex flex-col items-center justify-center bg-black/85 backdrop-blur-sm p-6">
+          <div className="glass-panel p-8 max-w-md text-center border-neon-pink/50 flex flex-col items-center gap-6 relative">
+            <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+            <AlertTriangle className="w-16 h-16 text-neon-pink animate-pulse drop-shadow-[0_0_15px_rgba(240,0,255,0.5)]" />
+            <div className="space-y-2">
+              <h3 className="text-2xl font-black text-white font-heading tracking-wider uppercase italic">DRAFT FOUND</h3>
+              <p className="text-xs text-zinc-400 font-body uppercase leading-relaxed">
+                An active registration session exists for team "{duplicateDraftPrompt.teamName}" (Captain: {duplicateDraftPrompt.captainName || 'Unknown'}) with {duplicateDraftPrompt.confidence}% match.
+              </p>
+            </div>
+            <div className="flex gap-4 w-full">
+              <button
+                type="button"
+                onClick={() => {
+                  setDuplicateDraftPrompt(null);
+                }}
+                className="flex-1 h-12 border border-zinc-700 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-widest transition-all cursor-pointer"
+              >
+                Keep Current
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    const matchedSessionUuid = duplicateDraftPrompt.sessionUuid;
+                    const res = await getDraft(tournament.id, matchedSessionUuid);
+                    if (res?.success && res.draft) {
+                      const draftData = res.draft;
+                      const migrated = migrateDraft(draftData.formData, draftData.schemaVersion);
+                      reset(migrated);
+                      setSessionUuid(tournament.id, matchedSessionUuid);
+                      setSessionUuidState(matchedSessionUuid);
+                      setLockAcquired(true);
+                      
+                      resumeCountRef.current += 1;
+                      setAutosaveStatus('SAVED');
+                      setLastSavedText('Draft restored');
+                      setDuplicateDraftPrompt(null);
+                      setDraftRestored(true);
+                      
+                      pushTelemetryEvent('SESSION_RESUMED', completionStats.frictionStage, { source: 'DUPLICATE_CHECK_RESUME' });
+                    }
+                  } catch (e) {
+                    console.error("Failed to load duplicate draft:", e);
+                    setDuplicateDraftPrompt(null);
+                  }
+                }}
+                className="flex-1 h-12 bg-neon-pink hover:bg-white text-black font-black text-xs uppercase tracking-widest transition-all cursor-pointer shadow-[0_0_15px_rgba(240,0,255,0.3)] hover:shadow-none"
+              >
+                Load Draft
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {draftRestored && (
         <div className="glass-panel p-4 bg-neon-cyan/10 border border-neon-cyan/30 flex items-center justify-between gap-4 animate-in slide-in-from-top duration-500">
           <div className="flex items-center gap-3">
@@ -897,8 +1686,8 @@ export const TournamentForm = ({ tournament, slots }) => {
           </div>
           <button
             type="button"
-            onClick={() => { sessionStorage.removeItem('pp_form_draft'); setDraftRestored(false); }}
-            className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body p-2"
+            onClick={() => { setDraftRestored(false); }}
+            className="text-[9px] font-bold text-zinc-600 hover:text-white uppercase tracking-widest transition-colors font-body p-2 cursor-pointer"
           >
             DISMISS
           </button>
