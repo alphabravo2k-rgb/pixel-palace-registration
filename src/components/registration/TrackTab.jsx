@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Search, Lock, CheckCircle2, XCircle, AlertCircle, Calendar, 
-  ChevronDown, ChevronUp, RefreshCw, User, ShieldCheck, 
+import {
+  Search, Lock, CheckCircle2, XCircle, AlertCircle, Calendar,
+  ChevronDown, ChevronUp, RefreshCw, User, ShieldCheck,
   ExternalLink, AlertOctagon, HelpCircle, Trophy, MessageSquare, Clock
 } from 'lucide-react';
 import { trackRegistration } from '../../services/sheets';
@@ -98,16 +98,16 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
 
   // ─── DATA-DERIVED VERIFICATION COUNTERS ────────────────────────────────────
   const rosterSize = teamData?.roster?.length || 0;
-  const discordJoinedCount = teamData?.roster?.filter(p => 
+  const discordJoinedCount = teamData?.roster?.filter(p =>
     p.discordJoined === '✔' || p.discordJoined === 'YES' || p.discordJoined === 'TRUE'
   ).length || 0;
-  const roleIssuedCount = teamData?.roster?.filter(p => 
+  const roleIssuedCount = teamData?.roster?.filter(p =>
     p.roleIssued === '✔' || p.roleIssued === 'YES' || p.roleIssued === 'TRUE'
   ).length || 0;
-  const vcAssignedCount = teamData?.roster?.filter(p => 
+  const vcAssignedCount = teamData?.roster?.filter(p =>
     p.privateVc === '✔' || p.privateVc === 'YES' || p.privateVc === 'TRUE'
   ).length || 0;
-  const faceitEloCount = teamData?.roster?.filter(p => 
+  const faceitEloCount = teamData?.roster?.filter(p =>
     p.faceitElo && p.faceitElo !== 'N/A' && p.faceitElo !== '⏳'
   ).length || 0;
 
@@ -135,30 +135,30 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
 
     const steps = [
       { label: 'Submitted', desc: 'Roster details received', done: true, active: false },
-      { 
-        label: 'Discord Joined', 
-        desc: `Server members (${discordJoinedCount}/${rosterSize})`, 
-        done: discordJoinedCount === rosterSize, 
-        active: discordJoinedCount < rosterSize && !isApproved 
+      {
+        label: 'Discord Joined',
+        desc: `Server members (${discordJoinedCount}/${rosterSize})`,
+        done: discordJoinedCount === rosterSize,
+        active: discordJoinedCount < rosterSize && !isApproved
       },
-      { 
-        label: 'FACEIT Checked', 
-        desc: `Accounts verified (${faceitEloCount}/${rosterSize})`, 
-        done: faceitEloCount === rosterSize, 
-        active: discordJoinedCount === rosterSize && faceitEloCount < rosterSize && !isApproved 
+      {
+        label: 'FACEIT Checked',
+        desc: `Accounts verified (${faceitEloCount}/${rosterSize})`,
+        done: faceitEloCount === rosterSize,
+        active: discordJoinedCount === rosterSize && faceitEloCount < rosterSize && !isApproved
       },
-      { 
-        label: 'Under Review', 
-        desc: isApproved ? 'Checks completed' : 'Operations review active', 
-        done: isApproved, 
+      {
+        label: 'Under Review',
+        desc: isApproved ? 'Checks completed' : 'Operations review active',
+        done: isApproved,
         active: faceitEloCount === rosterSize && !isApproved,
         error: isActionRequired
       },
-      { 
-        label: 'Approved', 
-        desc: isApproved ? 'Roster secured' : 'Pending final lock', 
-        done: isApproved, 
-        active: false 
+      {
+        label: 'Approved',
+        desc: isApproved ? 'Roster secured' : 'Pending final lock',
+        done: isApproved,
+        active: false
       }
     ];
 
@@ -177,12 +177,12 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
 
         <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
           <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase flex items-center gap-3">
-            <Lock className="w-8 h-8 text-neon-cyan" /> 
+            <Lock className="w-8 h-8 text-neon-cyan" />
             Team Portal
           </h2>
           {teamData && (
-            <button 
-              onClick={() => { playClick(); setTeamData(null); setError(null); setSecondaryId(''); }} 
+            <button
+              onClick={() => { playClick(); setTeamData(null); setError(null); setSecondaryId(''); }}
               className="text-zinc-500 hover:text-white flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors font-body"
             >
               ← Track Another
@@ -209,8 +209,8 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               <div className="space-y-3">
                 {/* PRIMARY ID INPUT */}
                 <div className="flex items-center bg-black/40 border border-white/10 rounded overflow-hidden p-1 focus-within:border-neon-cyan transition-colors">
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     value={searchId}
                     onChange={(e) => setSearchId(e.target.value)}
                     placeholder="ENTER SUBMISSION ID OR REG ID"
@@ -235,8 +235,8 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                       Captain's FACEIT Nickname (Required for verification)
                     </label>
                     <div className="flex items-center bg-black/40 border border-white/10 rounded overflow-hidden p-1 focus-within:border-neon-cyan transition-colors">
-                      <input 
-                        type="text" 
+                      <input
+                        type="text"
                         value={secondaryId}
                         onChange={(e) => setSecondaryId(e.target.value)}
                         placeholder="e.g. SultaaN-"
@@ -283,9 +283,9 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
             <div className="flex flex-col md:flex-row items-center md:items-start justify-between gap-6 bg-black/40 border border-white/5 p-6 rounded-lg relative overflow-hidden bg-gradient-to-b from-neon-cyan/5 to-transparent">
               <div className="flex items-center gap-5">
                 {teamData.logo ? (
-                  <img 
-                    src={teamData.logo} 
-                    alt={teamData.name} 
+                  <img
+                    src={teamData.logo}
+                    alt={teamData.name}
                     className="w-16 h-16 object-contain bg-zinc-900 border border-white/10 rounded p-1"
                     onError={(e) => { e.target.style.display = 'none'; }}
                   />
@@ -336,7 +336,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                   <h4 className="text-[10px] text-orange-400 font-bold uppercase tracking-widest font-body flex items-center gap-2">
                     <AlertOctagon className="w-4 h-4 text-orange-400" /> Action Required
                   </h4>
-                  
+
                   {/* Unresolved Verification Items Summary */}
                   <div className="space-y-2">
                     {missingDiscordPlayers.length > 0 && (
@@ -367,18 +367,18 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
 
                 {/* CALL-TO-ACTION BUTTONS FOR QUICK RESOLUTION */}
                 <div className="shrink-0 flex flex-col sm:flex-row md:flex-col gap-3 w-full md:w-auto">
-                  <a 
-                    href="https://discord.gg/pixelpalace" 
-                    target="_blank" 
-                    rel="noreferrer" 
+                  <a
+                    href="https://discord.gg/pixelpalacee"
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-5 py-3 bg-orange-500 text-black text-xs font-black uppercase tracking-widest font-heading hover:bg-white transition-all text-center rounded flex items-center justify-center gap-2"
                   >
                     <MessageSquare className="w-3.5 h-3.5" /> OPEN SUPPORT TICKET
                   </a>
-                  <a 
-                    href="https://discord.gg/pixelpalace" 
-                    target="_blank" 
-                    rel="noreferrer" 
+                  <a
+                    href="https://discord.gg/pixelpalacee"
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-5 py-3 bg-white/5 border border-white/10 text-white text-xs font-bold uppercase tracking-widest font-body hover:bg-white/10 transition-all text-center rounded flex items-center justify-center gap-2"
                   >
                     JOIN DISCORD SERVER
@@ -407,16 +407,14 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               <div className="grid grid-cols-1 md:grid-cols-5 gap-6 relative">
                 {getDerivedSteps(teamData.status).map((step, idx) => (
                   <div key={idx} className="relative flex flex-col pl-4 md:pl-0 border-l-2 md:border-l-0 md:border-t-2 border-zinc-800 pt-0 md:pt-4 last:border-0 pb-4 md:pb-0 font-body">
-                    <div className={`absolute left-[-6px] md:left-auto md:top-[-6px] w-2.5 h-2.5 rounded-full ${
-                      step.done 
-                        ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' 
-                        : (step.active 
-                          ? (step.error ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]') 
-                          : 'bg-zinc-800')
-                    }`} />
-                    <span className={`text-xs font-heading uppercase tracking-widest ${
-                      step.done ? 'text-green-400' : (step.active ? (step.error ? 'text-orange-400' : 'text-neon-cyan') : 'text-zinc-500')
-                    }`}>
+                    <div className={`absolute left-[-6px] md:left-auto md:top-[-6px] w-2.5 h-2.5 rounded-full ${step.done
+                      ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]'
+                      : (step.active
+                        ? (step.error ? 'bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]')
+                        : 'bg-zinc-800')
+                      }`} />
+                    <span className={`text-xs font-heading uppercase tracking-widest ${step.done ? 'text-green-400' : (step.active ? (step.error ? 'text-orange-400' : 'text-neon-cyan') : 'text-zinc-500')
+                      }`}>
                       {step.label}
                     </span>
                     <span className="text-[9px] text-zinc-500 uppercase mt-1 tracking-wider font-body leading-tight">
@@ -464,10 +462,9 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                             {player.ign}
                           </td>
                           <td className="py-3.5">
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-wider ${
-                              isCaptain ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' : 
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-extrabold tracking-wider ${isCaptain ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20' :
                               (isSub ? 'bg-zinc-800 text-zinc-400 border border-zinc-700' : 'bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20')
-                            }`}>
+                              }`}>
                               {player.role}
                             </span>
                           </td>
@@ -538,7 +535,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
 
             {/* EXPANDABLE RAW DETAILS */}
             <div className="bg-black/20 border border-white/5 rounded-lg overflow-hidden">
-              <button 
+              <button
                 onClick={() => { playClick(); setDetailsExpanded(!detailsExpanded); }}
                 className="w-full p-5 flex items-center justify-between text-zinc-400 hover:text-white transition-colors text-xs font-bold uppercase tracking-widest font-body hover:bg-white/5"
               >
