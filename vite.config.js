@@ -144,6 +144,18 @@ export default defineConfig(({ mode }) => {
       host: true,
       strictPort: true,
       cors: true,
+      proxy: {
+        '/lot-api': {
+          target: 'https://dlan.lotgaming.xyz',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/lot-api/, ''),
+        },
+        '/flux-api': {
+          target: 'https://fluxbot.lotgaming.xyz',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/flux-api/, ''),
+        },
+      }
     },
     build: {
       target: ['es2020'],

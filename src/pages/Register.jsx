@@ -447,6 +447,15 @@ export const Register = () => {
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
+              <Link
+                to="/match-center"
+                onMouseEnter={playHover}
+                onClick={playClick}
+                className="font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 text-white/40 hover:text-white/80 flex items-center gap-1.5"
+              >
+                Match Center
+                <span className="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest shrink-0">STATS</span>
+              </Link>
             </div>
           </header>
 

@@ -6,7 +6,9 @@ export const tournaments = [
     status: "LIVE",
     format: "5v5",
     gameMode: "CS2 Competitive",
-    matchFormat: "Knockout Challenger (Bo1/Bo3/Bo5)",
+    tournamentStructure: "Swiss",
+    matchFormat: "BO1",
+    finalsFormat: "BO3",
     prizePool: "1st: $2000 | 2nd: $750",
     maxTeams: 32,
     openSlots: 26,
@@ -356,6 +358,9 @@ const defaultConfig = {
   supportsLogoUpload: false,
   champion: { name: "", tag: "", logo: "" },
   runnerUp: { name: "", tag: "", logo: "" },
+  tournamentStructure: "Knockout Bracket",
+  matchFormat: "BO1",
+  finalsFormat: "BO3",
 
   // API Keys (empty strings = fallback UI logic is triggered)
   // API Keys (Environment Variables)

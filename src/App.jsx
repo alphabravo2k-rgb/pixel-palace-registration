@@ -8,6 +8,9 @@ import DraftRegistrations from './pages/admin/DraftRegistrations';
 import { Footer } from './components/layout/Footer';
 import { BootSequence } from './components/ui/BootSequence';
 import { Terminal } from './utils/logger';
+import { MatchCenterDashboard } from './match-center/presentation/pages/MatchCenterDashboard';
+import { MatchCenterSpectator } from './match-center/presentation/pages/MatchCenterSpectator';
+import { MatchCenterList } from './match-center/presentation/pages/MatchCenterList';
 
 function App() {
   const [booting, setBooting] = useState(true);
@@ -28,6 +31,10 @@ function App() {
           <Route path="/register/:tournamentSlug" element={<Register />} />
           <Route path="/admin/preview/:tournamentSlug" element={<AdminPreview />} />
           <Route path="/admin/drafts" element={<DraftRegistrations />} />
+          <Route path="/admin/match-center/:matchId" element={<MatchCenterDashboard />} />
+          <Route path="/match-center/:matchId" element={<MatchCenterSpectator />} />
+          <Route path="/match-center" element={<MatchCenterList />} />
+          <Route path="/admin/match-center" element={<MatchCenterList isAdmin={true} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </main>

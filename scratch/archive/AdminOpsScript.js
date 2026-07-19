@@ -81,14 +81,16 @@ const C = {
   CS2_HRS: 31,  // AE
   STEAM_AGE: 32,  // AF
   RISK_FLAG: 33,  // AG
+  SUBMISSION_ID: 34 // AH
 };
 
-const TOTAL_COLS = 33;
+const TOTAL_COLS = 34;
 
 // Columns that merge across all PLAYERS_PER_TEAM rows:
 const TEAM_MERGE_COLS = [
   C.SN, C.TEAM_NAME, C.TEAM_TAG, C.LOGO, C.REGION,
-  C.AVG_ELO, C.REG_STATUS, C.SEED, C.REMARKS, C.RISK_FLAG
+  C.AVG_ELO, C.REG_STATUS, C.SEED, C.REMARKS, C.RISK_FLAG,
+  C.SUBMISSION_ID
 ];
 
 // -- HEADERS ------------------------------------------------------------------
@@ -103,7 +105,7 @@ const ALL_HEADERS = [
   "Matches", "FACEIT Tier", "Country",
   "Steam64 ID", "VAC Ban", "Game Ban",
   "Steam Lvl", "CS2 Hrs", "Steam Age (yrs)",
-  "Risk Flag"
+  "Risk Flag", "Submission ID"
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -111,6 +113,11 @@ function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu("Admin Tools")
     .addItem("Full Sync - All Sources", "syncAndFetch")
+    .addSeparator()
+    .addItem("Sync Pending Jobs", "syncPendingJobs")
+    .addItem("Rerun Failed Jobs", "rerunFailedJobs")
+    .addItem("Rebuild Export (Kancha's Kitchen)", "rebuildKanchaExport")
+    .addItem("Setup Export Center Dashboard", "setupExportCenter")
     .addSeparator()
     .addItem("Setup / Fix Column Headers", "setupNewColumns")
     .addItem("Fill Roles from Player Names", "fillRolesFromNames")
@@ -132,6 +139,39 @@ function onOpen() {
     .addToUi();
 }
 
+function rebuildKanchaExport() {
+  try {
+    IntegrationEngine.rebuildProfile("PROFILE_KANCHA");
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Rebuild failed: " + err.toString());
+  }
+}
+
+function syncPendingJobs() {
+  try {
+    IntegrationEngine.processJobs();
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Sync failed: " + err.toString());
+  }
+}
+
+function rerunFailedJobs() {
+  try {
+    IntegrationEngine.rerunFailedJobs();
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Rerun failed: " + err.toString());
+  }
+}
+
+function setupExportCenter() {
+  try {
+    IntegrationEngine.buildExportCenterDashboard_();
+    SpreadsheetApp.getActiveSpreadsheet().toast("Export Center Dashboard initialized!", "Integration Engine", 5);
+  } catch (err) {
+    SpreadsheetApp.getUi().alert("Failed to build dashboard: " + err.toString());
+  }
+}
+
 function syncAndFetch() {
   setupNewColumns();
   syncRawToAdmin();
@@ -139,6 +179,11 @@ function syncAndFetch() {
   updateFaceitData(false); // Only fetch new/unresolved players to save quota
   updateSteamData(false);  // Only fetch new/unresolved players to save quota
   buildSummarySheet();
+  try {
+    IntegrationEngine.rebuildProfile("PROFILE_KANCHA");
+  } catch (e) {
+    Logger.log("Failed to sync export after syncAndFetch: " + e);
+  }
   SpreadsheetApp.getActiveSpreadsheet().toast("Full sync complete!", "Admin Ops", 6);
 }
 
@@ -337,6 +382,8 @@ function syncRawToAdmin() {
         ? faceit.replace(/\/$/, "").split("/").pop() + roleTags[p]
         : discord + roleTags[p];
 
+      var submissionId = (row[2] || "").toString().trim();
+
       var r = [];
       for (var x = 0; x < TOTAL_COLS; x++) r.push("");
       r[C.SN - 1] = p === 0 ? sn : "";
@@ -355,6 +402,7 @@ function syncRawToAdmin() {
       r[C.ROLE - 1] = roles[p];
       r[C.RANK_BADGE - 1] = getCS2RankBadge("0", startRow + p);
       r[C.RISK_FLAG - 1] = p === 0 ? "Pending" : "";
+      r[C.SUBMISSION_ID - 1] = p === 0 ? submissionId : "";
       block.push(r);
     }
 
@@ -854,32 +902,7 @@ function buildSummarySheet() {
 }
 
 // -- ON EDIT: sync status change back to Raw Sheet ---------------------------
-function onEdit(e) {
-  if (!e || !e.range) return;
-
-  var range = e.range;
-  var sheet = range.getSheet();
-  var sheetName = sheet.getName();
-
-  if (sheetName !== ADMIN_SHEET_NAME && sheetName !== "Sheet1") return;
-  if (range.getColumn() !== C.REG_STATUS) return;
-
-  var newStatus = e.value ? e.value.toString().trim().toUpperCase() : "";
-  var oldStatus = e.oldValue ? e.oldValue.toString().trim().toUpperCase() : "";
-  if (newStatus === oldStatus) return;
-
-  // Get team name from Col B; merged cells may return "" for sub-rows
-  var teamName = sheet.getRange(range.getRow(), C.TEAM_NAME).getValue().toString().trim();
-  if (!teamName) {
-    for (var r = range.getRow() - 1; r >= 2; r--) {
-      teamName = sheet.getRange(r, C.TEAM_NAME).getValue().toString().trim();
-      if (teamName) break;
-    }
-  }
-  if (!teamName) return;
-
-  syncStatusToRaw_(teamName, newStatus);
-}
+// First onEdit shadowed definition replaced. Consolidated at the bottom of the script.
 
 function syncStatusToRaw_(teamName, newStatus) {
   // NOTE: Raw Google Form sheet has no "Status" column.
@@ -1410,21 +1433,7 @@ function updateBracketDropdowns() {
 /**
  * Spreadsheet-level edit listener to trigger real-time dropdown updates on selection changes.
  */
-function onEdit(e) {
-  if (!e) return;
-  var range = e.range;
-  var sheet = range.getSheet();
-  var sheetName = sheet.getName();
-
-  // Real-time dynamic validation updates for brackets selections
-  if (sheetName === "Brackets") {
-    var col = range.getColumn();
-    // Col 3 is Team 1, Col 4 is Team 2, Col 6 is Winner
-    if (col === 3 || col === 4 || col === 6) {
-      updateBracketDropdowns();
-    }
-  }
-}
+// Second onEdit shadowed definition replaced. Consolidated at the bottom of the script.
 
 // =============================================================================
 //  MATCH TIME SCHEDULER SIDEBAR
@@ -1549,110 +1558,94 @@ function saveMatchTime(dateVal, timeVal, offsetVal, formatVal, mapsVal) {
  * 8. SPREADSHEET TRIGGERS
  * Handles automatic event logging on administrative updates to Admin_Ops sheet.
  */
+/**
+ * 8. SPREADSHEET Consolidated Edit listener
+ */
 function onEdit(e) {
+  if (!e || !e.range) return;
   try {
     const range = e.range;
     const sheet = range.getSheet();
     const sheetName = sheet.getName();
-    if (sheetName !== ADMIN_SHEET_NAME) return;
 
-    const row = range.getRow();
-    const col = range.getColumn();
-    if (row <= 1) return; // Skip headers
+    // Route 1: Brackets dropdown updates
+    if (sheetName === "Brackets") {
+      const col = range.getColumn();
+      if (col === 3 || col === 4 || col === 6) {
+        updateBracketDropdowns();
+      }
+      return;
+    }
 
-    // Resolve column index headers dynamically from first row
-    const headersRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const adminHeaders = headersRow.map(h => h.toString().toLowerCase().trim());
+    // Route 2: Admin_Ops edits (event logging + synchronizations)
+    if (sheetName === ADMIN_SHEET_NAME) {
+      const row = range.getRow();
+      const col = range.getColumn();
+      if (row <= 1) return; // Skip headers
 
-    const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
-    const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") :
-      (adminHeaders.indexOf("reg. status") !== -1 ? adminHeaders.indexOf("reg. status") : 14);
-    const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") :
-      (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
-    const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") :
-      (adminHeaders.indexOf("team seed") !== -1 ? adminHeaders.indexOf("team seed") : 15);
-    const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 33;
-    const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 34;
+      const headersRow = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+      const adminHeaders = headersRow.map(h => h.toString().toLowerCase().trim());
 
-    // Determine rows per team
-    const rowsPerTeam = PLAYERS_PER_TEAM; // e.g. 7 (or 3 for Chaos II)
-    const blockStart = Math.floor((row - 2) / rowsPerTeam) * rowsPerTeam + 2;
-    const teamName = sheet.getRange(blockStart, aTeamNameIdx + 1).getValue().toString().trim();
-    if (!teamName) return;
+      const aTeamNameIdx = adminHeaders.indexOf("team name") !== -1 ? adminHeaders.indexOf("team name") : 1;
+      const aStatusIdx = adminHeaders.indexOf("status") !== -1 ? adminHeaders.indexOf("status") :
+        (adminHeaders.indexOf("reg. status") !== -1 ? adminHeaders.indexOf("reg. status") : 14);
+      const aRemarksIdx = adminHeaders.indexOf("remarks") !== -1 ? adminHeaders.indexOf("remarks") :
+        (adminHeaders.indexOf("admin remarks") !== -1 ? adminHeaders.indexOf("admin remarks") : 16);
+      const aSeedIdx = adminHeaders.indexOf("seed") !== -1 ? adminHeaders.indexOf("seed") :
+        (adminHeaders.indexOf("team seed") !== -1 ? adminHeaders.indexOf("team seed") : 15);
+      const aUpdatedAtIdx = adminHeaders.indexOf("updated at") !== -1 ? adminHeaders.indexOf("updated at") : 33;
+      const aUpdatedByIdx = adminHeaders.indexOf("updated by") !== -1 ? adminHeaders.indexOf("updated by") : 34;
 
-    // Look up Submission ID from RAW_SHEET_ID
-    let submissionId = "PP-UNKNOWN";
-    let tournamentId = TARGET_TOURNAMENT;
-    try {
-      const rawDoc = SpreadsheetApp.openById(RAW_SHEET_ID);
-      const rawSheet = rawDoc.getSheetByName("Sheet1");
-      if (rawSheet) {
-        const rawData = rawSheet.getDataRange().getValues();
-        if (rawData.length > 1) {
-          const rawHeaders = rawData[0].map(h => h.toString().toLowerCase().trim());
-          const subIdx = rawHeaders.indexOf("submission id");
-          const nameIdx = rawHeaders.indexOf("team name");
-          const tidIdx = rawHeaders.indexOf("tournament id");
-          for (let k = 1; k < rawData.length; k++) {
-            if ((rawData[k][nameIdx] || "").toString().trim().toUpperCase() === teamName.toUpperCase()) {
-              submissionId = rawData[k][subIdx];
-              tournamentId = rawData[k][tidIdx] || TARGET_TOURNAMENT;
-              break;
-            }
-          }
+      const rowsPerTeam = PLAYERS_PER_TEAM; // e.g. 7
+      const blockStart = Math.floor((row - 2) / rowsPerTeam) * rowsPerTeam + 2;
+
+      // Extract Team Name
+      const teamName = sheet.getRange(blockStart, aTeamNameIdx + 1).getValue().toString().trim();
+      if (!teamName) return;
+
+      // Extract Submission ID (immutable Team ID from Column AH)
+      const submissionId = sheet.getRange(blockStart, C.SUBMISSION_ID).getValue().toString().trim();
+
+      const val = range.getValue().toString().trim();
+      const oldValue = e.oldValue ? e.oldValue.toString().trim() : "";
+      const userEmail = e.user ? e.user.getEmail() : "Admin";
+
+      let logEventTriggered = false;
+      let eventType = "";
+      let eventDesc = "";
+
+      if (col === (aStatusIdx + 1)) {
+        eventType = "STATUS_CHANGED";
+        eventDesc = "Roster status transitioned from " + (oldValue || "PENDING") + " to " + val + ".";
+        logEventTriggered = true;
+      } else if (col === (aRemarksIdx + 1)) {
+        eventType = "REMARK_UPDATED";
+        eventDesc = "Admin Remarks updated: " + (val || "Cleared.");
+        logEventTriggered = true;
+      } else if (col === (aSeedIdx + 1)) {
+        eventType = "SEED_CHANGED";
+        eventDesc = "Seed rank updated: " + val + ".";
+        logEventTriggered = true;
+      }
+
+      if (logEventTriggered) {
+        logRosterEvent_(RAW_SHEET_ID, TARGET_TOURNAMENT, submissionId || "PP-UNKNOWN", teamName, eventType, "Verification Team", eventDesc);
+
+        if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
+          sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
+        }
+        if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
+          sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
         }
       }
-    } catch (dbErr) {
-      Logger.log("Audit lookup failed: " + dbErr);
-    }
 
-    const val = range.getValue().toString().trim();
-    const oldValue = e.oldValue ? e.oldValue.toString().trim() : "";
-    const userEmail = e.user ? e.user.getEmail() : "Admin";
-
-    // Edit in Status column
-    if (col === (aStatusIdx + 1)) {
-      logRosterEvent_(
-        RAW_SHEET_ID, tournamentId, submissionId, teamName, "STATUS_CHANGED", "Verification Team",
-        "Roster status transitioned from " + (oldValue || "PENDING") + " to " + val + "."
-      );
-      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
-      }
-      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
-      }
-    }
-
-    // Edit in Remarks column
-    if (col === (aRemarksIdx + 1)) {
-      logRosterEvent_(
-        RAW_SHEET_ID, tournamentId, submissionId, teamName, "REMARK_UPDATED", "Verification Team",
-        "Admin Remarks updated: " + (val || "Cleared.")
-      );
-      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
-      }
-      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
-      }
-    }
-
-    // Edit in Seed column
-    if (col === (aSeedIdx + 1)) {
-      logRosterEvent_(
-        RAW_SHEET_ID, tournamentId, submissionId, teamName, "SEED_CHANGED", "Verification Team",
-        "Seed rank updated: " + val + "."
-      );
-      if (aUpdatedAtIdx !== -1 && aUpdatedAtIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedAtIdx + 1).setValue(new Date().toISOString());
-      }
-      if (aUpdatedByIdx !== -1 && aUpdatedByIdx + 1 <= sheet.getMaxColumns()) {
-        sheet.getRange(blockStart, aUpdatedByIdx + 1).setValue(userEmail);
+      // Sync team to Kancha / other export profiles
+      if (submissionId) {
+        IntegrationEngine.queueSync(submissionId);
       }
     }
   } catch (err) {
-    Logger.log("onEdit failed: " + err);
+    Logger.log("Consolidated onEdit failed: " + err);
   }
 }
 
@@ -1679,3 +1672,530 @@ function logRosterEvent_(rawSheetId, tournamentId, submissionId, teamName, event
     Logger.log("Failed to write roster log event: " + e);
   }
 }
+
+// =============================================================================
+//  PIXEL PALACE EXPORT ENGINE & SYNCHRONIZATION SYSTEM
+// =============================================================================
+
+var ExportEngine = {
+  VERSION: "1.0",
+  PROFILES_SHEET: "Export_Profiles",
+  INDEX_SHEET: "Export_Index",
+  AUDIT_SHEET: "Export_Audit_Log",
+
+  /**
+   * Main entry point to queue a team for synchronization.
+   */
+  queueSync: function(submissionId) {
+    if (!submissionId || submissionId === "PP-UNKNOWN") return;
+    
+    try {
+      this.initSheets_();
+      this.syncTeamToAllProfiles_(submissionId);
+    } catch (err) {
+      Logger.log("[ExportEngine] queueSync failed for ID " + submissionId + ": " + err);
+      this.logAudit_("SYSTEM", submissionId, "QUEUE_FAIL", "ERROR", err.toString(), 0);
+    }
+  },
+
+  /**
+   * Triggers a manual full rebuild of all teams for a specific profile ID.
+   */
+  rebuildProfile: function(profileId) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const adminSheet = ss.getSheetByName(ADMIN_SHEET_NAME);
+    if (!adminSheet) {
+      throw new Error("Admin_Ops sheet not found.");
+    }
+
+    this.initSheets_();
+    const profile = this.getProfile_(profileId);
+    if (!profile) {
+      throw new Error("Profile " + profileId + " not found or disabled.");
+    }
+
+    const data = adminSheet.getDataRange().getValues();
+    const headers = data[0].map(h => h.toString().toLowerCase().trim());
+    const subIdColIdx = headers.indexOf("submission id");
+    if (subIdColIdx === -1) {
+      throw new Error("Submission ID column not found in Admin_Ops.");
+    }
+
+    // Clear target sheet content (leaving metadata header structure)
+    this.initTargetSheet_(profile, true);
+
+    const rowsPerTeam = PLAYERS_PER_TEAM;
+    let rebuildCount = 0;
+
+    for (let i = 1; i < data.length; i += rowsPerTeam) {
+      const subId = (data[i][subIdColIdx] || "").toString().trim();
+      if (subId && subId !== "Submission ID") {
+        try {
+          this.syncTeamToProfile_(subId, profile);
+          rebuildCount++;
+        } catch (e) {
+          Logger.log("[ExportEngine] Failed to sync team during rebuild: " + subId + " error: " + e);
+        }
+      }
+    }
+
+    SpreadsheetApp.getActiveSpreadsheet().toast("Rebuilt " + rebuildCount + " teams for " + profile.name, "Export Engine", 6);
+  },
+
+  /**
+   * Initializes all required system sheet tabs.
+   */
+  initSheets_: function() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // 1. Export_Profiles
+    let profilesSheet = ss.getSheetByName(this.PROFILES_SHEET);
+    if (!profilesSheet) {
+      profilesSheet = ss.insertSheet(this.PROFILES_SHEET);
+      profilesSheet.appendRow(["Profile ID", "Profile Name", "Schema Version", "Enabled", "Last Updated", "Column Mapping", "Export Type"]);
+      profilesSheet.appendRow([
+        "PROFILE_KANCHA",
+        "Kancha's Kitchen",
+        "1.0",
+        "TRUE",
+        new Date().toISOString(),
+        JSON.stringify({
+          steamFormat: "SteamID64", // SteamID64 or Steam Profile URL
+          logoFormat: "Direct Download", // View Link or Direct Download
+          includeSubs: "Yes", // Yes or No
+          targetTabName: "Kancha's Kitchen"
+        }),
+        "Google Sheet"
+      ]);
+      profilesSheet.setFrozenRows(1);
+    }
+
+    // 2. Export_Index
+    let indexSheet = ss.getSheetByName(this.INDEX_SHEET);
+    if (!indexSheet) {
+      indexSheet = ss.insertSheet(this.INDEX_SHEET);
+      indexSheet.appendRow(["Team ID", "Export Row Index", "Last Sync Timestamp", "Checksum", "Revision Number", "Status"]);
+      indexSheet.setFrozenRows(1);
+      indexSheet.hideSheet();
+    }
+
+    // 3. Export_Audit_Log
+    let auditSheet = ss.getSheetByName(this.AUDIT_SHEET);
+    if (!auditSheet) {
+      auditSheet = ss.insertSheet(this.AUDIT_SHEET);
+      auditSheet.appendRow(["Timestamp", "Profile ID", "Team ID", "Action", "Status", "Message", "Revision"]);
+      auditSheet.setFrozenRows(1);
+      auditSheet.hideSheet();
+    }
+  },
+
+  /**
+   * Retrieves a profile configuration by ID.
+   */
+  getProfile_: function(profileId) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(this.PROFILES_SHEET);
+    if (!sheet) return null;
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === profileId) {
+        return {
+          id: data[i][0],
+          name: data[i][1],
+          version: data[i][2],
+          enabled: (data[i][3] || "").toString().toUpperCase() === "TRUE",
+          lastUpdated: data[i][4],
+          settings: JSON.parse(data[i][5] || "{}"),
+          exportType: data[i][6],
+          targetSheetName: JSON.parse(data[i][5] || "{}").targetTabName || "Export Output"
+        };
+      }
+    }
+    return null;
+  },
+
+  /**
+   * Syncs a team to all enabled export profiles.
+   */
+  syncTeamToAllProfiles_: function(submissionId) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const profilesSheet = ss.getSheetByName(this.PROFILES_SHEET);
+    if (!profilesSheet) return;
+
+    const data = profilesSheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      const isEnabled = (data[i][3] || "").toString().toUpperCase() === "TRUE";
+      if (isEnabled) {
+        const profileId = data[i][0];
+        const profile = this.getProfile_(profileId);
+        if (profile) {
+          this.syncTeamToProfile_(submissionId, profile);
+        }
+      }
+    }
+  },
+
+  /**
+   * Main executor to sync a team to a specific profile target.
+   */
+  syncTeamToProfile_: function(submissionId, profile) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const adminSheet = ss.getSheetByName(ADMIN_SHEET_NAME);
+    if (!adminSheet) return;
+
+    const teamData = this.fetchTeamFromAdminOps_(adminSheet, submissionId);
+    if (!teamData) {
+      Logger.log("[ExportEngine] Team not found in Admin_Ops for ID: " + submissionId);
+      return;
+    }
+
+    const targetSheet = this.initTargetSheet_(profile, false);
+    const indexSheet = ss.getSheetByName(this.INDEX_SHEET);
+    const indexRecord = this.getIndexRecord_(indexSheet, submissionId, profile.id);
+    const checksum = this.calculateChecksum_(teamData, profile.settings);
+
+    // Validation stage
+    const validationErrors = this.validateTeamData_(teamData, profile.settings);
+    if (validationErrors.length > 0) {
+      this.updateIndex_(indexSheet, submissionId, profile.id, indexRecord.rowIndex || -1, checksum, indexRecord.revision, "SYNC_ERROR");
+      this.logAudit_(profile.id, submissionId, "VALIDATION", "ERROR", "Validation failed: " + validationErrors.join("; "), indexRecord.revision);
+      return;
+    }
+
+    let targetRowIndex = indexRecord.rowIndex;
+    let nextRevision = indexRecord.revision + 1;
+
+    if (targetRowIndex <= 0) {
+      targetRowIndex = targetSheet.getLastRow() + 1;
+      if (targetRowIndex < 4) targetRowIndex = 4;
+    }
+
+    const exportRowValues = this.buildExportRowValues_(teamData, profile.settings, submissionId, nextRevision, checksum);
+    targetSheet.getRange(targetRowIndex, 1, 1, exportRowValues.length).setValues([exportRowValues]);
+
+    this.updateIndex_(indexSheet, submissionId, profile.id, targetRowIndex, checksum, nextRevision, "SUCCESS");
+    this.logAudit_(profile.id, submissionId, "WRITE", "SUCCESS", "Synced successfully. Revision " + nextRevision, nextRevision);
+  },
+
+  /**
+   * Helper to retrieve team details block from Admin_Ops.
+   */
+  fetchTeamFromAdminOps_: function(adminSheet, submissionId) {
+    const data = adminSheet.getDataRange().getValues();
+    const headers = data[0].map(h => h.toString().toLowerCase().trim());
+    const subColIdx = headers.indexOf("submission id");
+    if (subColIdx === -1) return null;
+
+    const cleanId = submissionId.toUpperCase().trim();
+    let startRow = -1;
+
+    for (let i = 1; i < data.length; i++) {
+      if ((data[i][subColIdx] || "").toString().toUpperCase().trim() === cleanId) {
+        startRow = i + 1;
+        break;
+      }
+    }
+
+    if (startRow === -1) return null;
+
+    const rosterRows = adminSheet.getRange(startRow, 1, PLAYERS_PER_TEAM, TOTAL_COLS).getValues();
+    const teamName = rosterRows[0][C.TEAM_NAME - 1].toString().trim();
+    const teamTag = rosterRows[0][C.TEAM_TAG - 1].toString().trim();
+    const logoUrl = rosterRows[0][C.LOGO - 1].toString().trim();
+    const region = rosterRows[0][C.REGION - 1].toString().trim();
+    const status = rosterRows[0][C.REG_STATUS - 1].toString().trim();
+
+    const players = [];
+    for (let p = 0; p < PLAYERS_PER_TEAM; p++) {
+      const pName = rosterRows[p][C.PLAYER_NAME - 1].toString().trim();
+      const discord = rosterRows[p][C.DISCORD - 1].toString().trim();
+      const steamUrl = rosterRows[p][C.STEAM_URL - 1].toString().trim();
+      const steam64 = rosterRows[p][C.STEAM64 - 1].toString().trim();
+      const role = rosterRows[p][C.ROLE - 1].toString().trim();
+
+      if (pName && pName !== "" && pName !== "N/A") {
+        players.push({
+          name: pName,
+          discord: discord,
+          steamUrl: steamUrl,
+          steam64: steam64,
+          role: role
+        });
+      }
+    }
+
+    return {
+      submissionId: submissionId,
+      teamName: teamName,
+      teamTag: teamTag,
+      logoUrl: logoUrl,
+      region: region,
+      status: status,
+      players: players
+    };
+  },
+
+  /**
+   * Export Validator - run before writing to prevent corrupt files.
+   */
+  validateTeamData_: function(teamData, settings) {
+    const errors = [];
+    const players = teamData.players;
+
+    if (players.length < 5) {
+      errors.push("Roster has less than 5 players (" + players.length + " present)");
+    }
+
+    const steamIds = [];
+    for (let i = 0; i < players.length; i++) {
+      const p = players[i];
+      const isSub = (p.role || '').toLowerCase().includes("sub");
+      if (isSub && settings.includeSubs !== "Yes") continue;
+
+      const steamVal = settings.steamFormat === "SteamID64" ? p.steam64 : p.steamUrl;
+      if (!steamVal || steamVal === "N/A" || steamVal === "") {
+        errors.push("Player " + p.name + " (" + p.role + ") has missing Steam ID");
+        continue;
+      }
+      if (steamIds.indexOf(steamVal) !== -1) {
+        errors.push("Duplicate Steam identifier: " + steamVal);
+      } else {
+        steamIds.push(steamVal);
+      }
+    }
+
+    if (settings.steamFormat === "SteamID64") {
+      players.forEach(p => {
+        const isSub = (p.role || '').toLowerCase().includes("sub");
+        if (isSub && settings.includeSubs !== "Yes") return;
+
+        if (p.steam64 && p.steam64 !== "N/A" && p.steam64 !== "") {
+          const isNum = /^[0-9]+$/.test(p.steam64);
+          if (!isNum || p.steam64.length !== 17) {
+            errors.push("Invalid SteamID64 for " + p.name + ": " + p.steam64);
+          }
+        }
+      });
+    }
+
+    if (settings.logoFormat !== "None" && (!teamData.logoUrl || teamData.logoUrl === "N/A" || teamData.logoUrl === "")) {
+      errors.push("Team logo URL is missing or empty.");
+    }
+
+    return errors;
+  },
+
+  /**
+   * Initializes and protects the target export sheet tab.
+   */
+  initTargetSheet_: function(profile, forceClear) {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    let targetSheet = ss.getSheetByName(profile.targetSheetName);
+    
+    if (!targetSheet) {
+      targetSheet = ss.insertSheet(profile.targetSheetName);
+      forceClear = true;
+    }
+
+    if (forceClear) {
+      targetSheet.clear();
+      targetSheet.getRange("A1").setValue("Export Version: " + profile.version).setFontStyle("italic");
+      targetSheet.getRange("B1").setValue("Generated At: " + new Date().toISOString()).setFontStyle("italic");
+      targetSheet.getRange("A2").setValue("Generated By: Pixel Palace Export Engine v" + this.VERSION).setFontStyle("italic");
+      
+      const headers = ["Team Name"];
+      const includeSubs = profile.settings.includeSubs === "Yes";
+      const totalPlayers = includeSubs ? PLAYERS_PER_TEAM : 5;
+
+      for (let pIdx = 1; pIdx <= totalPlayers; pIdx++) {
+        const pLabel = pIdx > 5 ? "sub" + (pIdx - 5) : pIdx.toString();
+        headers.push("steamid" + pLabel);
+        headers.push("playername" + pLabel);
+      }
+
+      if (profile.settings.logoFormat !== "None") {
+        headers.push("Team Logo");
+      }
+
+      headers.push("Team ID");
+      headers.push("Last Synced");
+      headers.push("Sync Status");
+      headers.push("Export Revision");
+      headers.push("Checksum");
+
+      targetSheet.getRange(3, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+      targetSheet.setFrozenRows(3);
+
+      try {
+        const protections = targetSheet.getProtections(SpreadsheetApp.ProtectionType.SHEET);
+        protections.forEach(p => p.remove());
+
+        const protection = targetSheet.protect().setDescription("Export Engine Lock");
+        protection.removeEditors(protection.getEditors());
+        if (protection.canDomainEdit()) {
+          protection.setDomainEdit(false);
+        }
+      } catch (err) {
+        Logger.log("Failed to lock target sheet " + profile.targetSheetName + ": " + err);
+      }
+    }
+
+    return targetSheet;
+  },
+
+  /**
+   * Look up row index and revision registry from Export_Index.
+   */
+  getIndexRecord_: function(indexSheet, submissionId, profileId) {
+    const data = indexSheet.getDataRange().getValues();
+    const cleanId = submissionId.toUpperCase().trim();
+    for (let i = 1; i < data.length; i++) {
+      const indexKey = (data[i][0] || "").toString().toUpperCase().trim();
+      const currentKey = (cleanId + "_" + profileId).toUpperCase();
+      if (indexKey === currentKey) {
+        return {
+          rowIdx: i + 1,
+          rowIndex: parseInt(data[i][1] || "0"),
+          checksum: data[i][3],
+          revision: parseInt(data[i][4] || "0"),
+          status: data[i][5]
+        };
+      }
+    }
+    return { rowIdx: -1, rowIndex: 0, checksum: "", revision: 0, status: "" };
+  },
+
+  /**
+   * Updates the index sheet with new row position and metadata.
+   */
+  updateIndex_: function(indexSheet, submissionId, profileId, rowIndex, checksum, revision, status) {
+    const record = this.getIndexRecord_(indexSheet, submissionId, profileId);
+    const key = (submissionId + "_" + profileId).toUpperCase();
+    const rowValues = [
+      key,
+      rowIndex,
+      new Date().toISOString(),
+      checksum,
+      revision,
+      status
+    ];
+
+    if (record.rowIdx > 0) {
+      indexSheet.getRange(record.rowIdx, 1, 1, rowValues.length).setValues([rowValues]);
+    } else {
+      indexSheet.appendRow(rowValues);
+    }
+  },
+
+  /**
+   * Calculates SHA-256 equivalent checksum of roster details.
+   */
+  calculateChecksum_: function(teamData, settings) {
+    const parts = [teamData.teamName, teamData.teamTag, teamData.logoUrl, teamData.region, teamData.status];
+    teamData.players.forEach(p => {
+      const isSub = (p.role || '').toLowerCase().includes("sub");
+      if (isSub && settings.includeSubs !== "Yes") return;
+
+      parts.push(p.name);
+      parts.push(settings.steamFormat === "SteamID64" ? p.steam64 : p.steamUrl);
+    });
+    const rawString = parts.join("|");
+    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, rawString, Utilities.Charset.UTF_8);
+    let hexString = "";
+    for (let i = 0; i < digest.length; i++) {
+      let byteValue = digest[i];
+      if (byteValue < 0) byteValue += 256;
+      let byteString = byteValue.toString(16);
+      if (byteString.length == 1) byteString = "0" + byteString;
+      hexString += byteString;
+    }
+    return hexString;
+  },
+
+  /**
+   * Formats Google Drive logo URLs to View Link or Direct Download.
+   */
+  formatLogoUrl_: function(logoUrl, logoFormat) {
+    if (!logoUrl || logoUrl === "N/A" || logoUrl === "") return "";
+    let fileId = "";
+    if (logoUrl.includes("drive.google.com")) {
+      const driveIdMatch = logoUrl.match(/id=([a-zA-Z0-9_-]{25,})/) || logoUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+      if (driveIdMatch) {
+        fileId = driveIdMatch[1];
+      }
+    }
+
+    if (!fileId && logoUrl.includes("IMAGE(\"")) {
+      const innerMatch = logoUrl.match(/IMAGE\("([^"]+)"\)/);
+      if (innerMatch && innerMatch[1].includes("drive.google.com")) {
+        const driveIdMatch2 = innerMatch[1].match(/id=([a-zA-Z0-9_-]{25,})/) || innerMatch[1].match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+        if (driveIdMatch2) fileId = driveIdMatch2[1];
+      }
+    }
+
+    if (!fileId) return logoUrl;
+
+    if (logoFormat === "Direct Download") {
+      return "https://drive.google.com/uc?export=download&id=" + fileId;
+    }
+    return "https://drive.google.com/uc?export=view&id=" + fileId;
+  },
+
+  /**
+   * Maps team metadata into export fields.
+   */
+  buildExportRowValues_: function(teamData, settings, submissionId, revision, checksum) {
+    const row = [teamData.teamName];
+    const includeSubs = settings.includeSubs === "Yes";
+    const totalPlayers = includeSubs ? PLAYERS_PER_TEAM : 5;
+
+    for (let pIdx = 0; pIdx < totalPlayers; pIdx++) {
+      const p = teamData.players[pIdx];
+      if (p) {
+        const steamVal = settings.steamFormat === "SteamID64" ? p.steam64 : p.steamUrl;
+        row.push(steamVal || "N/A");
+        row.push(p.name || "N/A");
+      } else {
+        row.push("");
+        row.push("");
+      }
+    }
+
+    if (settings.logoFormat !== "None") {
+      row.push(this.formatLogoUrl_(teamData.logoUrl, settings.logoFormat));
+    }
+
+    row.push(submissionId);
+    row.push(new Date().toISOString());
+    row.push("SUCCESS");
+    row.push(revision);
+    row.push(checksum);
+
+    return row;
+  },
+
+  /**
+   * Logs details to Export_Audit_Log sheet.
+   */
+  logAudit_: function(profileId, teamId, action, status, message, revision) {
+    try {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheet = ss.getSheetByName(this.AUDIT_SHEET);
+      if (sheet) {
+        sheet.appendRow([
+          new Date().toISOString(),
+          profileId,
+          teamId,
+          action,
+          status,
+          message,
+          revision
+        ]);
+        SpreadsheetApp.flush();
+      }
+    } catch (e) {
+      Logger.log("Failed to write Export audit log: " + e);
+    }
+  }
+};

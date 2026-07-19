@@ -150,7 +150,17 @@ export class GoogleSheetsRepository extends RegistrationRepository {
         const text = await res.text().catch(() => "");
         throw new Error(`HTTP Error ${res.status}: ${res.statusText || 'Offline'} - ${text.substring(0, 100)}`);
       }
-      return res.json();
+      const data = await res.json();
+      if (data && data.success && data.team && data.team.logo) {
+        let logoUrl = data.team.logo;
+        if (logoUrl.includes("drive.google.com")) {
+          const driveIdMatch = logoUrl.match(/id=([a-zA-Z0-9_-]{25,})/) || logoUrl.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+          if (driveIdMatch) {
+            data.team.logo = "https://lh3.googleusercontent.com/d/" + driveIdMatch[1];
+          }
+        }
+      }
+      return data;
     } catch (err) {
       console.error("[GoogleSheetsRepository] trackRegistration failed:", err);
       return { success: false, error: err.message };

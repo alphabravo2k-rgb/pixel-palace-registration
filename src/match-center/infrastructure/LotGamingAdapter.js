@@ -1,0 +1,228 @@
+/**
+ * Infrastructure LOT Gaming Provider Adapter (Anti-Corruption Layer)
+ * Supports multiple LOT Gaming instances (dlan, fluxbot, etc.) via configurable base URL.
+ */
+import { Logger } from '../shared/kernel/Logger.js';
+
+// Known LOT Gaming instance URL → local dev proxy path map
+const LOT_PROXY_MAP = {
+  'dlan.lotgaming.xyz': '/lot-api/api',
+  'fluxbot.lotgaming.xyz': '/flux-api/api',
+};
+
+/**
+ * Resolves the correct fetch base URL for a given LOT instance hostname.
+ * In development (localhost), uses the Vite dev proxy to bypass CORS.
+ * In production, uses the direct remote URL.
+ */
+function resolveBaseUrl(hostname) {
+  const isBrowser = typeof window !== 'undefined';
+  const isLocalhost = isBrowser &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (isLocalhost && LOT_PROXY_MAP[hostname]) {
+    return LOT_PROXY_MAP[hostname];
+  }
+  return `https://${hostname}/api`;
+}
+
+export class LotGamingAdapter {
+  /**
+   * @param {string} providerHostname e.g. 'dlan.lotgaming.xyz' or 'fluxbot.lotgaming.xyz'
+   */
+  constructor(providerHostname = 'dlan.lotgaming.xyz') {
+    this.hostname = providerHostname;
+    this.baseUrl = resolveBaseUrl(providerHostname);
+    Logger.info(`LotGamingAdapter: Initialized for [${providerHostname}] → ${this.baseUrl}`);
+  }
+
+  getCapabilities() {
+    return {
+      scoreboardPolling: true,
+      timelineFeed: false,
+      playerStatistics: true,
+      economyTracking: false,
+      pauseEventParsing: false,
+      rconIntegration: false,
+    };
+  }
+
+  /**
+   * Fetches raw match payload from the LOT Gaming endpoint.
+   * @param {string} externalMatchId e.g. "736"
+   */
+  async fetchMatchData(externalMatchId) {
+    const url = `${this.baseUrl}/matches/${externalMatchId}`;
+    Logger.info(`LOT Adapter [${this.hostname}]: Fetching match payload from ${url}`);
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP Error Status: ${response.status} from ${url}`);
+      }
+      const rawJson = await response.json();
+      return rawJson;
+    } catch (err) {
+      Logger.error(`LOT Adapter: Fetch failed - ${err.message}`);
+      throw err;
+    }
+  }
+
+  /**
+   * Fetches raw stats for a specific map in the series.
+   * @param {string} externalMatchId
+   * @param {number} mapIndex
+   */
+  async fetchMapStats(externalMatchId, mapIndex) {
+    const url = `${this.baseUrl}/matches/${externalMatchId}/maps/${mapIndex}/stats`;
+    Logger.info(`LOT Adapter [${this.hostname}]: Fetching map ${mapIndex} stats from ${url}`);
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return null;
+      }
+      const rawJson = await response.json();
+      return rawJson;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Anti-Corruption Layer: Maps raw LOT JSON to our Canonical DTO contract.
+   * @param {Object} raw
+   * @param {Array} mapStatsArray
+   */
+  async translateToCanonical(raw, mapStatsArray = []) {
+    Logger.debug('LOT ACL: Mapping raw JSON payload');
+    const targetMatchId = `MC-2026-${String(raw.id).padStart(7, '0')}`;
+
+    let teamAName = raw.team1_name || 'Team 1';
+    let teamATag = raw.team1_tag
+      ? raw.team1_tag.toUpperCase()
+      : (raw.team1_name || 'T1').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4) || 'T1';
+    let teamALogo = null;
+
+    let teamBName = raw.team2_name || 'Team 2';
+    let teamBTag = raw.team2_tag
+      ? raw.team2_tag.toUpperCase()
+      : (raw.team2_name || 'T2').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 4) || 'T2';
+    let teamBLogo = null;
+
+    // Apply Admin local overrides if present
+    try {
+      const overridesStr = localStorage.getItem(`admin_override_${targetMatchId}`);
+      if (overridesStr) {
+        const overrides = JSON.parse(overridesStr);
+        if (overrides.teamAName) teamAName = overrides.teamAName;
+        if (overrides.teamATag) teamATag = overrides.teamATag;
+        if (overrides.teamALogo) teamALogo = overrides.teamALogo;
+        if (overrides.teamBName) teamBName = overrides.teamBName;
+        if (overrides.teamBTag) teamBTag = overrides.teamBTag;
+        if (overrides.teamBLogo) teamBLogo = overrides.teamBLogo;
+      }
+    } catch (e) {
+      Logger.warn(`LOT ACL: Failed to load admin overrides: ${e.message}`);
+    }
+
+    const mapPlayer = (p) => ({
+      steamId: p.steam_id,
+      name: p.name,
+      kills: p.kills || 0,
+      deaths: p.deaths || 0,
+      assists: p.assists || 0,
+      kd: p.kd || 0,
+      damage: p.damage || 0,
+      headshots: p.headshots || 0,
+      hsPct: p.hs_pct || 0,
+      adr: p.adr || 0,
+      rating: p.hltv_rating || 0,
+      mvps: p.mvps || 0,
+      score: p.score || 0,
+      fluxImpact: p.flux_impact || 0,
+      faceit: p.faceit ? {
+        nickname: p.faceit.nickname,
+        avatar: p.faceit.avatar,
+        level: p.faceit.skill_level,
+        elo: p.faceit.faceit_elo,
+        country: p.faceit.country,
+        profileUrl: p.faceit.faceit_url?.replace('{lang}', 'en'),
+      } : null,
+    });
+
+    const winnerId = raw.status === 'finished'
+      ? (raw.map_wins_team1 > raw.map_wins_team2 ? `T-${raw.team1_id}` : `T-${raw.team2_id}`)
+      : null;
+
+    // Filter out players with zero kills AND zero damage (bench/coaches)
+    const isActivePlayer = (p) => p.kills > 0 || p.damage > 0 || p.deaths > 0;
+
+    return {
+      matchId: targetMatchId,
+      game: 'Counter-Strike 2',
+      format: `BO${raw.best_of || 1}`,
+      status: this.mapStatus(raw.status),
+      teamA: {
+        teamId: `T-${raw.team1_id}`,
+        name: teamAName,
+        tag: teamATag,
+        logo: teamALogo || raw.team1_logo_url || null,
+        players: (raw.team1_players || []).filter(isActivePlayer).map(p => p.name),
+      },
+      teamB: {
+        teamId: `T-${raw.team2_id}`,
+        name: teamBName,
+        tag: teamBTag,
+        logo: teamBLogo || raw.team2_logo_url || null,
+        players: (raw.team2_players || []).filter(isActivePlayer).map(p => p.name),
+      },
+      scoreboard: {
+        teamAScore: raw.score_team1 || 0,
+        teamBScore: raw.score_team2 || 0,
+      },
+      seriesScore: {
+        teamAWins: raw.map_wins_team1 || 0,
+        teamBWins: raw.map_wins_team2 || 0,
+      },
+      activeMap: raw.map || null,
+      mapImageUrl: raw.map_image_url || null,
+      winnerId,
+      startedAt: raw.started_at || null,
+      finishedAt: raw.finished_at || null,
+      bestOf: raw.best_of || 1,
+      // Rich player stats — filter inactive bench players
+      playerStats: {
+        teamA: (raw.team1_players || []).filter(isActivePlayer).map(mapPlayer),
+        teamB: (raw.team2_players || []).filter(isActivePlayer).map(mapPlayer),
+      },
+      // Server info
+      server: raw.server_country_name ? {
+        country: raw.server_country_name,
+        city: raw.server_city,
+        countryCode: raw.server_country_code,
+      } : null,
+      // Demo links
+      demoLinks: (raw.demo_links || []).map(d => ({
+        mapIndex: d.map_index,
+        filename: d.filename,
+        downloadUrl: d.download_url,
+      })),
+      mapsStats: mapStatsArray,
+    };
+  }
+
+  mapStatus(rawStatus) {
+    switch (rawStatus) {
+      case 'finished': return 'Completed';
+      case 'live': return 'Live';
+      case 'warmup': return 'Preparation';
+      case 'knife': return 'Preparation';
+      default: return 'Scheduled';
+    }
+  }
+}
+
+// Pre-registered singleton instances for known providers
+export const lotDlanAdapter = new LotGamingAdapter('dlan.lotgaming.xyz');
+export const lotFluxbotAdapter = new LotGamingAdapter('fluxbot.lotgaming.xyz');

@@ -66,6 +66,12 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
     try {
       const res = await trackRegistration(tournament.id, idToSearch, isIdSequential ? secondaryId : '');
       if (res && res.success && res.team) {
+        if (res.team.logo && res.team.logo.includes("drive.google.com")) {
+          const driveIdMatch = res.team.logo.match(/id=([a-zA-Z0-9_-]{25,})/) || res.team.logo.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+          if (driveIdMatch) {
+            res.team.logo = "https://lh3.googleusercontent.com/d/" + driveIdMatch[1];
+          }
+        }
         setTeamData(res.team);
         Terminal.success('Status retrieved successfully.');
       } else {
@@ -141,6 +147,8 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
     const corePlayers = roster.filter(p => !((p.role || '').toLowerCase().includes('sub') || (p.role || '').toLowerCase().includes('substitute')));
     const substitutes = roster.filter(p => (p.role || '').toLowerCase().includes('sub') || (p.role || '').toLowerCase().includes('substitute'));
 
+    const isApprovedState = ['APPROVED', 'VERIFIED', 'ROSTER_LOCKED'].includes((teamData.status || '').toUpperCase());
+
     const discordJoinedCount = roster.filter(p =>
       p.discordJoined === '✔' || p.discordJoined === 'YES' || p.discordJoined === 'TRUE'
     ).length;
@@ -153,6 +161,33 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
     const faceitEloCount = roster.filter(p =>
       p.faceitElo && p.faceitElo !== 'N/A' && p.faceitElo !== '⏳'
     ).length;
+
+    // Pre-computed normalized roster structure
+    const normalizedRoster = roster.map(p => {
+      const isCaptain = (p.role || '').toLowerCase() === 'captain';
+      const isSub = (p.role || '').toLowerCase().includes('substitute') || (p.role || '').toLowerCase().includes('sub');
+      
+      const rawDiscord = p.discordJoined === '✔' || p.discordJoined === 'YES' || p.discordJoined === 'TRUE';
+      const rawFaceit = p.faceitElo && p.faceitElo !== 'N/A' && p.faceitElo !== '⏳';
+      const rawRole = p.roleIssued === '✔' || p.roleIssued === 'YES' || p.roleIssued === 'TRUE';
+      const rawVc = p.privateVc === '✔' || p.privateVc === 'YES' || p.privateVc === 'TRUE';
+
+      const hasDiscord = rawDiscord || isApprovedState;
+      const hasFaceit = rawFaceit || isApprovedState;
+      const hasRole = rawRole || isApprovedState;
+      const hasVc = rawVc || (isApprovedState && vcAssignedCount > 0);
+
+      return {
+        ...p,
+        isCaptain,
+        isSub,
+        hasDiscord,
+        hasFaceit,
+        hasRole,
+        hasVc,
+        isReady: hasDiscord && hasFaceit && hasRole && hasVc
+      };
+    });
 
     const eloValues = roster
       .map(p => parseInt(p.faceitElo))
@@ -167,29 +202,29 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
     const captainPlayer = roster.find(p => (p.role || '').toLowerCase() === 'captain') || roster[0] || { ign: 'N/A' };
 
     // Checklist States
-    const hasJoinedDiscord = discordJoinedCount === rosterSize;
-    const hasVerifiedFaceit = faceitEloCount === rosterSize;
-    const isApprovedState = ['APPROVED', 'VERIFIED', 'ROSTER_LOCKED'].includes((teamData.status || '').toUpperCase());
+    const hasJoinedDiscord = discordJoinedCount === rosterSize || isApprovedState;
+    const hasVerifiedFaceit = faceitEloCount === rosterSize || isApprovedState;
     const hasDiscordAccess = roleIssuedCount === rosterSize || isApprovedState;
-    const hasVoiceChannel = vcAssignedCount > 0;
+    const hasVoiceChannel = vcAssignedCount > 0 || (isApprovedState && vcAssignedCount === rosterSize);
 
-    // Readiness Score Calculation
-    let score = 0;
-    score += (discordJoinedCount / rosterSize) * 30;
-    score += (faceitEloCount / rosterSize) * 30;
-    score += hasDiscordAccess ? 20 : 0;
-    score += hasVoiceChannel ? 20 : 0;
-    score = Math.round(score);
+    const verifiedPlayersCount = normalizedRoster.filter(p => p.hasDiscord && p.hasFaceit).length;
 
-    let readinessText = 'Checking Roster';
-    if (score === 100) readinessText = 'Ready';
-    else if (score >= 75) readinessText = 'Almost Ready';
-
+    // Checklist count calculations
     let itemsRemaining = 0;
     if (!hasJoinedDiscord) itemsRemaining++;
     if (!hasVerifiedFaceit) itemsRemaining++;
     if (!hasDiscordAccess) itemsRemaining++;
     if (!hasVoiceChannel) itemsRemaining++;
+
+    const requirementsCount = 4;
+    const requirementsCompleted = requirementsCount - itemsRemaining;
+
+    // Readiness Score Calculation (for progress bar width)
+    let score = Math.round((requirementsCompleted / requirementsCount) * 100);
+
+    let readinessText = 'Checking Roster';
+    if (requirementsCompleted === requirementsCount) readinessText = 'Ready';
+    else if (requirementsCompleted >= 3) readinessText = 'Almost Ready';
 
     return {
       rosterSize,
@@ -209,7 +244,11 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
       hasVoiceChannel,
       score,
       readinessText,
-      itemsRemaining
+      itemsRemaining,
+      normalizedRoster,
+      verifiedPlayersCount,
+      requirementsCompleted,
+      requirementsCount
     };
   };
 
@@ -250,7 +289,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
         icon: <Headphones className="w-5 h-5 text-blue-400 shrink-0 mt-0.5 animate-pulse" />,
         title: 'Almost Ready',
         message: 'Your registration has been approved. Tournament staff are currently preparing your private voice channel. No action is required from your team.',
-        queueText: 'Waiting for staff review (Estimated within 24 hours)'
+        queueText: 'Waiting for Voice Channel Setup'
       };
     }
 
@@ -333,10 +372,12 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
   };
 
   const filteredLogs = teamData?.activity
-    ? [...teamData.activity].reverse().filter(log => {
-      if (activeFilter === 'All') return true;
-      return getLogCategory(log) === activeFilter;
-    })
+    ? [...teamData.activity]
+        .sort((a, b) => new Date(b.time) - new Date(a.time))
+        .filter(log => {
+          if (activeFilter === 'All') return true;
+          return getLogCategory(log) === activeFilter;
+        })
     : [];
 
   // Initials logo builder fallback
@@ -351,10 +392,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
   };
 
   const getPlayerStatusBadge = (player) => {
-    const hasDiscord = player.discordJoined === '✔' || player.discordJoined === 'YES' || player.discordJoined === 'TRUE';
-    const hasFaceit = player.faceitElo && player.faceitElo !== 'N/A' && player.faceitElo !== '⏳';
-    const hasRole = player.roleIssued === '✔' || player.roleIssued === 'YES' || player.roleIssued === 'TRUE';
-    const hasVc = player.privateVc === '✔' || player.privateVc === 'YES' || player.privateVc === 'TRUE';
+    const { hasDiscord, hasFaceit, hasRole, hasVc } = player;
 
     if (hasDiscord && hasFaceit && hasRole && hasVc) {
       return <span className="text-[10px] text-green-400 border border-green-500/20 bg-green-500/5 px-2 py-0.5 rounded font-bold uppercase tracking-wider">Ready</span>;
@@ -366,10 +404,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
   };
 
   const getPlayerMiniSummary = (player) => {
-    const hasDiscord = player.discordJoined === '✔' || player.discordJoined === 'YES' || player.discordJoined === 'TRUE';
-    const hasFaceit = player.faceitElo && player.faceitElo !== 'N/A' && player.faceitElo !== '⏳';
-    const hasRole = player.roleIssued === '✔' || player.roleIssued === 'YES' || player.roleIssued === 'TRUE';
-    const hasVc = player.privateVc === '✔' || player.privateVc === 'YES' || player.privateVc === 'TRUE';
+    const { hasDiscord, hasFaceit, hasRole, hasVc } = player;
 
     return (
       <div className="flex items-center gap-1.5 text-[9px] font-bold tracking-wider mr-2">
@@ -413,7 +448,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
           </h2>
           {teamData && (
             <button
-              onClick={() => { playClick && playClick(); setTeamData(null); setError(null); setSearchId(''); setSecondaryId(''); }}
+              onClick={() => { playClick && playClick(); setTeamData(null); setError(null); setSearchId(''); setSecondaryId(''); setLogoError(false); }}
               className="text-zinc-500 hover:text-white flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest transition-colors font-body"
             >
               ← Track Another
@@ -565,8 +600,8 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                   <span className="text-white font-semibold block mt-0.5">{tournament.name}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Average FACEIT</span>
-                  <span className="text-white font-semibold block mt-0.5">{derived.averageElo} ({derived.averageLevel})</span>
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Average Team Rating</span>
+                  <span className="text-white font-semibold block mt-0.5">{derived.averageElo} ELO (Level {derived.averageLevel})</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Roster Breakdown</span>
@@ -594,15 +629,15 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
             {/* 2. Team Summary (Quick Dashboard) */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
-                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-body">Average FACEIT</span>
-                <p className="text-2xl font-heading tracking-wider mt-1 text-white font-black">
-                  {derived.averageElo > 0 ? derived.averageElo : 'N/A'}
+                <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-body">Private Team VC</span>
+                <p className={`text-2xl font-heading tracking-wider mt-1 font-black ${derived.hasVoiceChannel ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {derived.hasVoiceChannel ? 'Ready' : 'Pending'}
                 </p>
               </div>
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-body">Players Verified</span>
-                <p className="text-2xl font-heading tracking-widest mt-1 text-green-400 font-black">
-                  {`${derived.faceitEloCount} / ${derived.rosterSize}`}
+                <p className={`text-2xl font-heading tracking-widest mt-1 font-black ${derived.verifiedPlayersCount === derived.rosterSize ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {`${derived.verifiedPlayersCount} / ${derived.rosterSize}`}
                 </p>
               </div>
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
@@ -613,7 +648,7 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               </div>
               <div className="bg-black/30 border border-white/5 p-4 rounded text-center">
                 <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest font-body">Registration Status</span>
-                <p className={`text-2xl font-heading tracking-wider mt-1 font-black ${teamData.status.toUpperCase() === 'APPROVED' ? 'text-green-400' : 'text-yellow-400'}`}>
+                <p className={`text-2xl font-heading tracking-wider mt-1 font-black ${['APPROVED', 'VERIFIED', 'ROSTER_LOCKED'].includes(teamData.status.toUpperCase()) ? 'text-green-400' : 'text-yellow-400'}`}>
                   {teamData.status}
                 </p>
               </div>
@@ -668,23 +703,20 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                 <div className="flex justify-between items-center text-xs font-heading font-black tracking-widest uppercase">
                   <span className="text-zinc-400 flex items-center gap-2">
                     Tournament Ready: 
-                    <span className={derived.score === 100 ? 'text-green-400' : 'text-yellow-400'}>
-                      {derived.readinessText}
+                    <span className={derived.requirementsCompleted === derived.requirementsCount ? 'text-green-400' : 'text-yellow-400'}>
+                      {derived.requirementsCompleted} of {derived.requirementsCount} requirements complete
                     </span>
-                    {derived.itemsRemaining > 0 && (
-                      <span className="text-[10px] text-zinc-500 font-normal">
-                        ({derived.itemsRemaining} item{derived.itemsRemaining > 1 ? 's' : ''} remaining)
-                      </span>
-                    )}
                   </span>
-                  <span className={derived.score === 100 ? 'text-green-400' : 'text-yellow-400'}>
-                    {derived.score}%
-                  </span>
+                  {derived.itemsRemaining > 0 && (
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-body">
+                      {derived.itemsRemaining} item{derived.itemsRemaining > 1 ? 's' : ''} remaining
+                    </span>
+                  )}
                 </div>
                 <div className="w-full bg-zinc-950 border border-white/10 rounded-full h-3 overflow-hidden p-0.5">
                   <div
-                    className={`h-full rounded-full transition-all duration-1000 ${derived.score === 100 ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]'}`}
-                    style={{ width: `${derived.score}%` }}
+                    className={`h-full rounded-full transition-all duration-1000 ${derived.requirementsCompleted === derived.requirementsCount ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]'}`}
+                    style={{ width: `${(derived.requirementsCompleted / derived.requirementsCount) * 100}%` }}
                   />
                 </div>
               </div>
@@ -780,14 +812,8 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5 text-zinc-300">
-                    {teamData.roster.map((player, idx) => {
-                      const isCaptain = (player.role || '').toLowerCase() === 'captain';
-                      const isSub = (player.role || '').toLowerCase().includes('substitute') || (player.role || '').toLowerCase().includes('sub');
-
-                      const hasDiscord = player.discordJoined === '✔' || player.discordJoined === 'YES' || player.discordJoined === 'TRUE';
-                      const hasFaceit = player.faceitElo && player.faceitElo !== 'N/A' && player.faceitElo !== '⏳';
-                      const hasRole = player.roleIssued === '✔' || player.roleIssued === 'YES' || player.roleIssued === 'TRUE';
-                      const hasVc = player.privateVc === '✔' || player.privateVc === 'YES' || player.privateVc === 'TRUE';
+                    {derived.normalizedRoster.map((player, idx) => {
+                      const { isCaptain, isSub, hasDiscord, hasFaceit, hasRole, hasVc } = player;
 
                       return (
                         <tr key={idx} className="hover:bg-white/5 transition-colors">
@@ -830,9 +856,9 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block text-left">
                 Submitted Registration Details
               </span>
-              {teamData.roster.map((player, idx) => {
+              {derived.normalizedRoster.map((player, idx) => {
                 const isExpanded = expandedAccordions[idx];
-                const isCaptain = (player.role || '').toLowerCase() === 'captain';
+                const isCaptain = player.isCaptain;
                 
                 return (
                   <div key={idx} className="bg-black/20 border border-white/5 rounded-lg overflow-hidden">
@@ -874,20 +900,20 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                         <div className="border-t border-white/5 pt-3 grid grid-cols-2 sm:grid-cols-4 gap-3 text-[11px]">
                           <div>
                             <span className="text-zinc-600">Discord Verification:</span>
-                            <span className={`ml-1 font-bold ${player.discordJoined === '✔' ? 'text-green-400' : 'text-red-400'}`}>
-                              {player.discordJoined === '✔' ? 'Joined' : 'Missing'}
+                            <span className={`ml-1 font-bold ${player.hasDiscord ? 'text-green-400' : 'text-red-400'}`}>
+                              {player.hasDiscord ? 'Joined' : 'Missing'}
                             </span>
                           </div>
                           <div>
                             <span className="text-zinc-600">Discord Role:</span>
-                            <span className={`ml-1 font-bold ${player.roleIssued === '✔' ? 'text-green-400' : 'text-zinc-500'}`}>
-                              {player.roleIssued === '✔' ? 'Assigned' : 'Pending'}
+                            <span className={`ml-1 font-bold ${player.hasRole ? 'text-green-400' : 'text-zinc-500'}`}>
+                              {player.hasRole ? 'Assigned' : 'Pending'}
                             </span>
                           </div>
                           <div>
                             <span className="text-zinc-600">Private VC:</span>
-                            <span className={`ml-1 font-bold ${player.privateVc === '✔' ? 'text-green-400' : 'text-yellow-400'}`}>
-                              {player.privateVc === '✔' ? 'Ready' : 'Pending'}
+                            <span className={`ml-1 font-bold ${player.hasVc ? 'text-green-400' : 'text-yellow-400'}`}>
+                              {player.hasVc ? 'Ready' : 'Pending'}
                             </span>
                           </div>
                           <div>
@@ -947,7 +973,9 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
                             </span>
                           </div>
                           <p className="text-zinc-300 text-xs mt-1.5 leading-relaxed">
-                            {log.details || log.message}
+                            {(log.details || log.message || '').includes("Submission ID secured") 
+                              ? "Registration received successfully." 
+                              : (log.details || log.message)}
                           </p>
                         </div>
                       );
@@ -964,36 +992,50 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
               <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-body mb-6">
                 Tournament Information
               </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 font-body text-xs">
-                <div className="border-b sm:border-b-0 sm:border-r border-white/5 pb-4 sm:pb-0 sm:pr-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 font-body text-xs">
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Registration Closes</span>
                   <span className="text-white font-semibold text-sm block">
                     {new Date(tournament.registrationDeadline).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
                   </span>
                 </div>
 
-                <div className="border-b sm:border-b-0 md:border-r border-white/5 pb-4 sm:pb-0 sm:pr-6">
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Check-in Schedule</span>
                   <span className="text-white font-semibold text-sm block">
                     45 minutes prior to match launch
                   </span>
                 </div>
 
-                <div className="border-b sm:border-b-0 sm:border-r md:border-r-0 border-white/5 pb-4 sm:pb-0 sm:pr-6">
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Anti-Cheat System</span>
                   <span className="text-white font-semibold text-sm block">
                     {tournament.antiCheat || 'Akros'} Required
                   </span>
                 </div>
 
-                <div className="border-b sm:border-b-0 md:border-r border-white/5 pb-4 sm:pb-0 sm:pr-6 md:pt-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Match Format</span>
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Tournament Format</span>
                   <span className="text-white font-semibold text-sm block">
-                    {tournament.matchFormat || 'Knockout Challenger (Bo1/Bo3/Bo5)'}
+                    {tournament.tournamentStructure || 'Knockout Bracket'}
                   </span>
                 </div>
 
-                <div className="border-b sm:border-b-0 sm:border-r border-white/5 pb-4 sm:pb-0 sm:pr-6 md:pt-4">
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0 md:pt-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Match Format</span>
+                  <span className="text-white font-semibold text-sm block">
+                    {tournament.matchFormat || 'BO1'}
+                  </span>
+                </div>
+
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0 md:pt-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Grand Final</span>
+                  <span className="text-white font-semibold text-sm block">
+                    {tournament.finalsFormat || 'BO3'}
+                  </span>
+                </div>
+
+                <div className="border-b border-white/5 pb-4 md:border-b-0 md:pb-0 md:pt-4">
                   <span className="text-[9px] text-zinc-500 font-bold uppercase block mb-1">Prize Pool Distribution</span>
                   <span className="text-white font-semibold text-sm block">
                     {tournament.prizePool || '$2,750 USD'}
