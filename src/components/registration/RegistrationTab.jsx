@@ -10,7 +10,10 @@ export const RegistrationTab = ({
   failedMapImages, 
   handleMapImgError 
 }) => {
-  const mapAccentClasses = ['mc-green', 'mc-orange', 'mc-yellow', 'mc-red', 'mc-amber', 'mc-cyan'];
+  const isClosed = slots?.registration ? !slots.registration.isAcceptingRegistrations : (timeLeft === 'OFFLINE');
+  const title = slots?.registration?.title || "REGISTRATION CLOSED";
+  const subtitle = slots?.registration?.subtitle || "The registration deadline has passed.";
+  const severity = slots?.registration?.severity || "error";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
@@ -51,9 +54,9 @@ export const RegistrationTab = ({
           <div className="hud-crosshair br opacity-30" />
           <p className="text-[10px] uppercase tracking-[0.3em] text-neon-pink mb-4 font-bold font-body">Registration Closes In</p>
           <div className="flex items-center gap-3">
-            {timeLeft === 'OFFLINE' || timeLeft === 'TBD' ? (
-              <p className={`text-5xl font-heading tracking-widest leading-none ${timeLeft === 'OFFLINE' ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'text-white'}`}>
-                {timeLeft}
+            {isClosed || timeLeft === 'TBD' ? (
+              <p className={`text-5xl font-heading tracking-widest leading-none ${isClosed ? 'text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'text-white'}`}>
+                {isClosed ? 'CLOSED' : 'TBD'}
               </p>
             ) : (
               timeLeft.split(':').map((val, i) => (
@@ -103,7 +106,7 @@ export const RegistrationTab = ({
                         className="map-card-img" 
                         style={{ backgroundImage: `url('https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_${mapNameLower}.png')` }} 
                         onError={() => handleMapImgError(mapName)} 
-                      />
+                        />
                     ) : <div className="absolute inset-0 bg-black/80 z-10" />}
                     <div className="map-card-overlay" />
                     <div className="map-card-content justify-center w-full">
@@ -119,11 +122,13 @@ export const RegistrationTab = ({
 
       {/* RIGHT FORM */}
       <div className="lg:col-span-8">
-        {timeLeft === 'OFFLINE' ? (
-          <div className="glass-panel p-16 text-center text-red-500 flex flex-col items-center">
-            <AlertOctagon className="w-24 h-24 mb-6" />
-            <h2 className="text-5xl font-heading font-black uppercase">REGISTRATION OFFLINE</h2>
-            <p className="mt-4 font-body uppercase text-sm tracking-widest text-zinc-400">The registration deadline has passed.</p>
+        {isClosed ? (
+          <div className={`glass-panel p-16 text-center flex flex-col items-center border-t-4 ${
+            severity === 'warning' ? 'border-t-yellow-500 text-yellow-500 shadow-[0_0_30px_rgba(234,179,8,0.1)]' : 'border-t-red-500 text-red-500 shadow-[0_0_30px_rgba(239,68,68,0.1)]'
+          }`}>
+            <AlertOctagon className="w-24 h-24 mb-6 animate-pulse" />
+            <h2 className="text-4xl md:text-5xl font-heading font-black uppercase tracking-wider">{title}</h2>
+            <p className="mt-4 font-body uppercase text-sm tracking-widest text-zinc-400">{subtitle}</p>
           </div>
         ) : (
           <TournamentForm tournament={tournament} slots={slots} />

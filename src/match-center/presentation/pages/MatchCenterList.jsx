@@ -174,10 +174,9 @@ export function MatchCenterList({ isAdmin = false }) {
   useEffect(() => {
     if (isAdmin) {
       fetchTeams('community-cup-2')
-        .then(teams => {
-          if (teams && Array.isArray(teams)) {
-            setRegisteredTeams(teams);
-          }
+        .then(res => {
+          const list = Array.isArray(res) ? res : (res?.teams || []);
+          setRegisteredTeams(list);
         })
         .catch(err => Logger.warn(`Failed to fetch verified registrations: ${err.message}`));
     }
@@ -214,36 +213,30 @@ export function MatchCenterList({ isAdmin = false }) {
 
   const handleSaveOverrides = async (e) => {
     e.preventDefault();
-    if (!selectedSlot || !apiLink) {
-      alert('Please select a playoff slot and input the match ID/URL.');
+    if (!selectedSlot || !apiLink || !teamAOverride || !teamBOverride) {
+      alert('Please select a playoff slot, Team A, Team B, and input the match ID/URL.');
       return;
     }
 
     const targetMatchId = apiLink.trim().match(/\/matches\/(\d+)/)?.[1] || apiLink.trim();
     const normalizedId = `MC-2026-${targetMatchId.padStart(7, '0')}`;
 
-    // Resolve team profile details (Name, Tag, Logo URL)
-    let teamAName = teamAOverride;
-    let teamATag = customTeamATag;
-    let teamALogo = teamALogoUrl;
+    // Resolve team profile details strictly from the selected registrations dropdowns
+    const selectedTeamA = registeredTeams.find(t => t.id === teamAOverride || t.team?.team_name === teamAOverride || t.team_name === teamAOverride);
+    const selectedTeamB = registeredTeams.find(t => t.id === teamBOverride || t.team?.team_name === teamBOverride || t.team_name === teamBOverride);
 
-    let teamBName = teamBOverride;
-    let teamBTag = customTeamBTag;
-    let teamBLogo = teamBLogoUrl;
-
-    const selectedTeamA = registeredTeams.find(t => t.id === teamAOverride || t.team?.team_name === teamAOverride);
-    if (selectedTeamA) {
-      teamAName = selectedTeamA.team?.team_name || selectedTeamA.team_name;
-      teamATag = selectedTeamA.team?.team_tag || selectedTeamA.team_tag;
-      teamALogo = selectedTeamA.team?.logo_url || selectedTeamA.logo_url;
+    if (!selectedTeamA || !selectedTeamB) {
+      alert('Selected teams must be from the verified registrations list.');
+      return;
     }
 
-    const selectedTeamB = registeredTeams.find(t => t.id === teamBOverride || t.team?.team_name === teamBOverride);
-    if (selectedTeamB) {
-      teamBName = selectedTeamB.team?.team_name || selectedTeamB.team_name;
-      teamBTag = selectedTeamB.team?.team_tag || selectedTeamB.team_tag;
-      teamBLogo = selectedTeamB.team?.logo_url || selectedTeamB.logo_url;
-    }
+    const teamAName = selectedTeamA.team?.team_name || selectedTeamA.team_name;
+    const teamATag = selectedTeamA.team?.team_tag || selectedTeamA.team_tag;
+    const teamALogo = selectedTeamA.team?.logo_url || selectedTeamA.logo_url;
+
+    const teamBName = selectedTeamB.team?.team_name || selectedTeamB.team_name;
+    const teamBTag = selectedTeamB.team?.team_tag || selectedTeamB.team_tag;
+    const teamBLogo = selectedTeamB.team?.logo_url || selectedTeamB.logo_url;
 
     // Save override dictionary to localStorage
     const overridePayload = {
@@ -253,7 +246,7 @@ export function MatchCenterList({ isAdmin = false }) {
       teamBName,
       teamBTag,
       teamBLogo,
-      mapList: mapListOverride ? mapListOverride.split(',').map(m => m.trim()) : null,
+      mapList: null,
     };
     localStorage.setItem(`admin_override_${normalizedId}`, JSON.stringify(overridePayload));
 
@@ -283,12 +276,7 @@ export function MatchCenterList({ isAdmin = false }) {
       // Clean states
       setApiLink('');
       setTeamAOverride('');
-      setTeamALogoUrl('');
       setTeamBOverride('');
-      setTeamBLogoUrl('');
-      setMapListOverride('');
-      setCustomTeamATag('');
-      setCustomTeamBTag('');
     } catch (err) {
       alert(`Synchronize error: ${err.message}`);
     }
@@ -595,182 +583,94 @@ export function MatchCenterList({ isAdmin = false }) {
               </button>
             </div>
 
-            <form onSubmit={handleSaveOverrides} className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-[11px]">
+            <form onSubmit={handleSaveOverrides} className="grid grid-cols-1 sm:grid-cols-4 gap-6 font-mono text-[11px]">
               
-              {/* Left Column: Match Slot and Endpoint mapping */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Select Playoff Slot</label>
-                  <select
-                    value={selectedSlot}
-                    onChange={e => setSelectedSlot(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  >
-                    <option value="">-- Choose Slot --</option>
-                    <optgroup label="Round of 32">
-                      {Array.from({ length: 16 }).map((_, i) => (
-                        <option key={i+1} value={`R32-M${i+1}`}>R32 - Match {i+1}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Round of 16">
-                      {Array.from({ length: 8 }).map((_, i) => (
-                        <option key={i+1} value={`R16-M${i+1}`}>R16 - Match {i+1}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Quarterfinals">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <option key={i+1} value={`QF-M${i+1}`}>Quarterfinal {i+1}</option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Semifinals">
-                      <option value="SF-M1">Semifinal 1</option>
-                      <option value="SF-M2">Semifinal 2</option>
-                    </optgroup>
-                    <optgroup label="Grand Final">
-                      <option value="GF-M1">Grand Final</option>
-                    </optgroup>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">LOT MATCH ID / URL</label>
-                  <input
-                    type="text"
-                    value={apiLink}
-                    onChange={e => setApiLink(e.target.value)}
-                    placeholder="e.g. 736 or endpoint URL"
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  />
-                </div>
+              {/* Playoff Slot selection */}
+              <div>
+                <label className="text-slate-505 block mb-1.5 uppercase font-bold text-[9px]">Select Playoff Slot</label>
+                <select
+                  value={selectedSlot}
+                  onChange={e => setSelectedSlot(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2.5 rounded-lg w-full outline-none transition-colors"
+                >
+                  <option value="">-- Choose Slot --</option>
+                  <optgroup label="Round of 32">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <option key={i+1} value={`R32-M${i+1}`}>R32 - Match {i+1}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Round of 16">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <option key={i+1} value={`R16-M${i+1}`}>R16 - Match {i+1}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Quarterfinals">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                      <option key={i+1} value={`QF-M${i+1}`}>Quarterfinal {i+1}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Semifinals">
+                    <option value="SF-M1">Semifinal 1</option>
+                    <option value="SF-M2">Semifinal 2</option>
+                  </optgroup>
+                  <optgroup label="Grand Final">
+                    <option value="GF-M1">Grand Final</option>
+                  </optgroup>
+                </select>
               </div>
 
-              {/* Middle Column: Team A Details */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Team A (From Registrations)</label>
-                  <select
-                    value={teamAOverride}
-                    onChange={e => setTeamAOverride(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  >
-                    <option value="">-- Custom (Enter below) --</option>
-                    {registeredTeams.map(t => (
-                      <option key={t.id} value={t.team?.team_name || t.team_name}>
-                        {t.team?.team_name || t.team_name} [{t.team?.team_tag || t.team_tag}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {!registeredTeams.some(t => t.team?.team_name === teamAOverride || t.team_name === teamAOverride) && (
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Custom Name A</label>
-                      <input
-                        type="text"
-                        value={teamAOverride}
-                        onChange={e => setTeamAOverride(e.target.value)}
-                        placeholder="Glitchtech"
-                        className="bg-slate-950 border border-slate-800 text-slate-200 px-2 py-1.5 rounded w-full outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Tag A</label>
-                      <input
-                        type="text"
-                        value={customTeamATag}
-                        onChange={e => setCustomTeamATag(e.target.value)}
-                        placeholder="G"
-                        className="bg-slate-950 border border-slate-800 text-slate-200 px-2 py-1.5 rounded w-full outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Google Drive Logo URL (Team A)</label>
-                  <input
-                    type="text"
-                    value={teamALogoUrl}
-                    onChange={e => setTeamALogoUrl(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  />
-                </div>
+              {/* Team A dropdown */}
+              <div>
+                <label className="text-slate-505 block mb-1.5 uppercase font-bold text-[9px]">Team A</label>
+                <select
+                  value={teamAOverride}
+                  onChange={e => setTeamAOverride(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2.5 rounded-lg w-full outline-none transition-colors"
+                >
+                  <option value="">-- Select Team A --</option>
+                  {registeredTeams.map(t => (
+                    <option key={t.id} value={t.team?.team_name || t.team_name}>
+                      {t.team?.team_name || t.team_name} [{t.team?.team_tag || t.team_tag}]
+                    </option>
+                  ))}
+                </select>
               </div>
 
-              {/* Right Column: Team B Details & Actions */}
-              <div className="space-y-4">
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Team B (From Registrations)</label>
-                  <select
-                    value={teamBOverride}
-                    onChange={e => setTeamBOverride(e.target.value)}
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  >
-                    <option value="">-- Custom (Enter below) --</option>
-                    {registeredTeams.map(t => (
-                      <option key={t.id} value={t.team?.team_name || t.team_name}>
-                        {t.team?.team_name || t.team_name} [{t.team?.team_tag || t.team_tag}]
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              {/* Team B dropdown */}
+              <div>
+                <label className="text-slate-505 block mb-1.5 uppercase font-bold text-[9px]">Team B</label>
+                <select
+                  value={teamBOverride}
+                  onChange={e => setTeamBOverride(e.target.value)}
+                  className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2.5 rounded-lg w-full outline-none transition-colors"
+                >
+                  <option value="">-- Select Team B --</option>
+                  {registeredTeams.map(t => (
+                    <option key={t.id} value={t.team?.team_name || t.team_name}>
+                      {t.team?.team_name || t.team_name} [{t.team?.team_tag || t.team_tag}]
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-                {!registeredTeams.some(t => t.team?.team_name === teamBOverride || t.team_name === teamBOverride) && (
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Custom Name B</label>
-                      <input
-                        type="text"
-                        value={teamBOverride}
-                        onChange={e => setTeamBOverride(e.target.value)}
-                        placeholder="Strael-Bora"
-                        className="bg-slate-950 border border-slate-800 text-slate-200 px-2 py-1.5 rounded w-full outline-none"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Tag B</label>
-                      <input
-                        type="text"
-                        value={customTeamBTag}
-                        onChange={e => setCustomTeamBTag(e.target.value)}
-                        placeholder="S"
-                        className="bg-slate-950 border border-slate-800 text-slate-200 px-2 py-1.5 rounded w-full outline-none"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Google Drive Logo URL (Team B)</label>
-                  <input
-                    type="text"
-                    value={teamBLogoUrl}
-                    onChange={e => setTeamBLogoUrl(e.target.value)}
-                    placeholder="https://drive.google.com/..."
-                    className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2 rounded-lg w-full outline-none transition-colors"
-                  />
-                </div>
+              {/* LOT Match ID/URL */}
+              <div>
+                <label className="text-slate-505 block mb-1.5 uppercase font-bold text-[9px]">LOT MATCH ID / URL</label>
+                <input
+                  type="text"
+                  value={apiLink}
+                  onChange={e => setApiLink(e.target.value)}
+                  placeholder="e.g. 749 or URL"
+                  className="bg-slate-950 border border-slate-800 hover:border-slate-700/80 text-slate-200 px-3 py-2.5 rounded-lg w-full outline-none transition-colors"
+                />
               </div>
 
               {/* Action row at bottom of form */}
-              <div className="md:col-span-3 border-t border-slate-900 pt-4 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div>
-                  <label className="text-slate-500 block mb-1 uppercase font-bold text-[9px]">Map vetoes override (Comma separated)</label>
-                  <input
-                    type="text"
-                    value={mapListOverride}
-                    onChange={e => setMapListOverride(e.target.value)}
-                    placeholder="de_ancient, de_mirage, de_dust2"
-                    className="bg-slate-950 border border-slate-800 text-slate-200 px-3 py-2 rounded-lg w-80 outline-none"
-                  />
-                </div>
-                
+              <div className="sm:col-span-4 border-t border-slate-900 pt-4 flex justify-end">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-violet-650 hover:bg-violet-600 text-white text-xs font-black px-6 py-3 rounded-lg font-mono uppercase tracking-wider"
+                  className="bg-violet-650 hover:bg-violet-600 disabled:bg-slate-850 text-white text-xs font-black px-6 py-3 rounded-lg font-mono uppercase tracking-wider transition-colors shrink-0"
                 >
                   {loading ? 'SYNCHRONIZING...' : 'SAVE & SYNCHRONIZE SLOT'}
                 </button>

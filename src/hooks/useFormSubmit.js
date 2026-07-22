@@ -83,15 +83,19 @@ export const useFormSubmit = (tournamentId) => {
         throw new Error(`Validation failed: ${messages}`);
       }
 
-      // ── Bug #3: Final Race Condition Check ─────────────────────────────
+      // ── Final Race Condition Check against authoritative state ─────────
       try {
         const liveSlots = await fetchTournamentSlots(tournamentId);
-        if (liveSlots && liveSlots.isFull) {
-           throw new Error('Tournament filled up while you were registering. Verification failed.');
+        if (liveSlots && liveSlots.registration && !liveSlots.registration.isAcceptingRegistrations) {
+           const reason = liveSlots.registration.closedReason || 'Registration closed';
+           const message = reason === 'SLOT_LIMIT_REACHED'
+             ? 'Tournament filled up while you were registering. Verification failed.'
+             : 'Registration closed before submission could be processed.';
+           throw new Error(message);
         }
       } catch (e) {
-        if (e.message.includes('filled up')) throw e;
-        console.warn("[Gateway] Slot check failed, proceeding with caution", e);
+        if (e.message.includes('filled up') || e.message.includes('Registration closed')) throw e;
+        console.warn("[Gateway] State check failed, proceeding with caution", e);
       }
 
       // ── 2. FSM Transition: SUBMITTING ────────────────────────────────────

@@ -69,9 +69,9 @@ export function MatchCenterSpectator() {
   // Fallbacks & derived calculations
   const teamA = summary?.teamA || { name: 'Team A', tag: 'TMA' };
   const teamB = summary?.teamB || { name: 'Team B', tag: 'TMB' };
-  const scoreA = scoreboard?.score?.teamAScore ?? summary?.score?.teamAScore ?? 13;
-  const scoreB = scoreboard?.score?.teamBScore ?? summary?.score?.teamBScore ?? 10;
-  const totalRounds = scoreA + scoreB || 23;
+  const scoreA = scoreboard?.score?.teamAScore ?? summary?.score?.teamAScore ?? 0;
+  const scoreB = scoreboard?.score?.teamBScore ?? summary?.score?.teamBScore ?? 0;
+  const totalRounds = scoreA + scoreB || 1;
   
   const mapList = summary?.mapList ? (typeof summary.mapList === 'string' ? JSON.parse(summary.mapList) : summary.mapList) : ['de_ancient'];
   const mapsStats = summary?.mapsStats || [];
@@ -126,6 +126,21 @@ export function MatchCenterSpectator() {
       };
     });
   }, [playerStats, totalRounds, teamA.name, teamB.name]);
+
+  const availableTabs = useMemo(() => {
+    const tabs = ['Overview', 'Maps'];
+    if (allPlayers.length > 0) {
+      tabs.push('Scoreboard', 'Players');
+    }
+    tabs.push('Downloads');
+    return tabs;
+  }, [allPlayers]);
+
+  useEffect(() => {
+    if (!availableTabs.includes(activeTab)) {
+      setActiveTab('Overview');
+    }
+  }, [availableTabs, activeTab]);
 
   // Set default selected player
   useEffect(() => {
@@ -354,10 +369,7 @@ export function MatchCenterSpectator() {
       {/* Navigation tabs */}
       <div className="max-w-7xl mx-auto px-5 mt-6">
         <div className="border-b border-slate-800/80 flex overflow-x-auto gap-4 scrollbar-none">
-          {[
-            'Overview', 'Scoreboard', 'Maps', 'Players', 'Rounds', 
-            'Timeline', 'Economy', 'Performance', 'Analytics', 'Downloads'
-          ].map(tab => (
+          {availableTabs.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -483,19 +495,27 @@ export function MatchCenterSpectator() {
                   {!isSummaryCollapsed && (
                     <div className="space-y-6">
                       <div className="text-sm text-slate-300 font-mono leading-relaxed">
-                        <span className="text-white font-bold">{teamA.name}</span> defeated <span className="text-white font-bold">{teamB.name}</span> <span className="text-indigo-400 font-bold">2–0</span>.
+                        <span className="text-white font-bold">{teamA.name}</span> {summary?.seriesScore?.teamAWins > (summary?.seriesScore?.teamBWins || 0) ? 'defeated' : summary?.seriesScore?.teamAWins < (summary?.seriesScore?.teamBWins || 0) ? 'lost to' : 'is playing'} <span className="text-white font-bold">{teamB.name}</span> <span className="text-indigo-400 font-bold">{summary?.seriesScore?.teamAWins ?? 0}–{summary?.seriesScore?.teamBWins ?? 0}</span>.
                       </div>
                       
                       {/* Map scores */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="bg-slate-950/60 border border-slate-900 p-4 rounded-xl flex justify-between items-center">
-                          <span className="text-xs font-bold text-slate-300">1. Ancient</span>
-                          <span className="text-xs font-mono font-bold text-white bg-indigo-950/40 border border-indigo-900/30 px-2 py-0.5 rounded">13 – 10</span>
-                        </div>
-                        <div className="bg-slate-950/60 border border-slate-900 p-4 rounded-xl flex justify-between items-center">
-                          <span className="text-xs font-bold text-slate-300">2. Mirage</span>
-                          <span className="text-xs font-mono font-bold text-white bg-indigo-950/40 border border-indigo-900/30 px-2 py-0.5 rounded">13 – 8</span>
-                        </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        {mapList.map((mapName, idx) => {
+                          const mapStats = mapsStats.find(ms => ms.map_index === idx || ms.map_name === mapName);
+                          const isPlayed = !!mapStats;
+                          const score1 = mapStats ? mapStats.score_team1 : 0;
+                          const score2 = mapStats ? mapStats.score_team2 : 0;
+                          const cleanedName = mapName.replace('de_', '').toUpperCase();
+                          
+                          return (
+                            <div key={mapName} className="bg-slate-950/60 border border-slate-900 p-4 rounded-xl flex justify-between items-center">
+                              <span className="text-xs font-bold text-slate-300">{idx + 1}. {cleanedName}</span>
+                              <span className="text-xs font-mono font-bold text-white bg-indigo-950/40 border border-indigo-900/30 px-2 py-0.5 rounded">
+                                {isPlayed ? `${score1} – ${score2}` : 'TBD'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
 
                       {/* Stat summary grid */}
@@ -522,42 +542,44 @@ export function MatchCenterSpectator() {
                 </div>
 
                 {/* Team Comparison bar charts */}
-                <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6">
-                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-6 pb-3 border-b border-slate-800/80">
-                    TEAM PERFORMANCE COMPARISON
-                  </h3>
-                  
-                  <div className="space-y-4">
-                    {[
-                      { label: 'Kills', key: 'kills', format: val => val },
-                      { label: 'ADR', key: 'adr', format: val => val.toFixed(1) },
-                      { label: 'Headshot %', key: 'hsPct', format: val => `${val.toFixed(0)}%` },
-                      { label: 'Utility Damage', key: 'utilityDamage', format: val => val },
-                      { label: 'Flashed Enemies', key: 'enemiesFlashed', format: val => val },
-                      { label: 'Clutches Won', key: 'clutchesWon', format: val => val },
-                    ].map(stat => {
-                      const valA = teamComparison.A[stat.key];
-                      const valB = teamComparison.B[stat.key];
-                      const total = (valA + valB) || 1;
-                      const pctA = Math.round((valA / total) * 100);
-                      const pctB = 100 - pctA;
-                      
-                      return (
-                        <div key={stat.label} className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-mono">
-                            <span className="text-sky-400 font-bold">{stat.format(valA)}</span>
-                            <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">{stat.label}</span>
-                            <span className="text-amber-400 font-bold">{stat.format(valB)}</span>
+                {allPlayers.length > 0 && (
+                  <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-6 pb-3 border-b border-slate-800/80">
+                      TEAM PERFORMANCE COMPARISON
+                    </h3>
+                    
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Kills', key: 'kills', format: val => val },
+                        { label: 'ADR', key: 'adr', format: val => val.toFixed(1) },
+                        { label: 'Headshot %', key: 'hsPct', format: val => `${val.toFixed(0)}%` },
+                        { label: 'Utility Damage', key: 'utilityDamage', format: val => val },
+                        { label: 'Flashed Enemies', key: 'enemiesFlashed', format: val => val },
+                        { label: 'Clutches Won', key: 'clutchesWon', format: val => val },
+                      ].map(stat => {
+                        const valA = teamComparison.A[stat.key];
+                        const valB = teamComparison.B[stat.key];
+                        const total = (valA + valB) || 1;
+                        const pctA = Math.round((valA / total) * 100);
+                        const pctB = 100 - pctA;
+                        
+                        return (
+                          <div key={stat.label} className="space-y-1.5">
+                            <div className="flex justify-between text-xs font-mono">
+                              <span className="text-sky-400 font-bold">{stat.format(valA)}</span>
+                              <span className="text-slate-400 font-semibold uppercase text-[10px] tracking-wider">{stat.label}</span>
+                              <span className="text-amber-400 font-bold">{stat.format(valB)}</span>
+                            </div>
+                            <div className="h-2 rounded-full overflow-hidden bg-slate-900 flex">
+                              <div className="bg-sky-500 h-full" style={{ width: `${pctA}%` }} />
+                              <div className="bg-amber-500 h-full" style={{ width: `${pctB}%` }} />
+                            </div>
                           </div>
-                          <div className="h-2 rounded-full overflow-hidden bg-slate-900 flex">
-                            <div className="bg-sky-500 h-full" style={{ width: `${pctA}%` }} />
-                            <div className="bg-amber-500 h-full" style={{ width: `${pctB}%` }} />
-                          </div>
-                        </div>
-                      );
-                    })}
+                        );
+                      })}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* MVP & Map Cards (Right Column) */}
@@ -608,28 +630,36 @@ export function MatchCenterSpectator() {
                     SERIES MAPS
                   </h3>
                   
-                  {mapList.map((mapName, idx) => (
-                    <div
-                      key={mapName}
-                      onClick={() => { setSelectedMapIndex(idx); setActiveTab('Maps'); }}
-                      className="bg-slate-900/40 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-slate-900/60 transition group"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-950 flex items-center justify-center text-xs font-mono font-bold text-indigo-400 group-hover:bg-indigo-900/30 transition-colors">
-                          M{idx + 1}
+                  {mapList.map((mapName, idx) => {
+                    const mapStats = mapsStats.find(ms => ms.map_index === idx || ms.map_name === mapName);
+                    const isPlayed = !!mapStats;
+                    const score1 = mapStats ? mapStats.score_team1 : 0;
+                    const score2 = mapStats ? mapStats.score_team2 : 0;
+                    const cleanedName = mapName.replace('de_', '').toUpperCase();
+
+                    return (
+                      <div
+                        key={mapName}
+                        onClick={() => { setSelectedMapIndex(idx); setActiveTab('Maps'); }}
+                        className="bg-slate-900/40 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-slate-900/60 transition group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-950 flex items-center justify-center text-xs font-mono font-bold text-indigo-400 group-hover:bg-indigo-900/30 transition-colors">
+                            M{idx + 1}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">{cleanedName}</h4>
+                            <span className="text-[9px] text-slate-500 font-mono">{isPlayed ? 'CONCLUDED' : 'SCHEDULED'}</span>
+                          </div>
                         </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-white uppercase font-mono tracking-wider">{mapName.replace('de_', '')}</h4>
-                          <span className="text-[9px] text-slate-500 font-mono">CONCLUDED</span>
+                        <div className="text-right">
+                          <span className="text-xs font-mono font-black text-white bg-slate-950 border border-slate-800 px-2.5 py-1 rounded">
+                            {isPlayed ? `${score1} – ${score2}` : 'TBD'}
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xs font-mono font-black text-white bg-slate-950 border border-slate-800 px-2.5 py-1 rounded">
-                          {idx === 0 ? '13 – 10' : '13 – 8'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
               </div>
@@ -915,20 +945,29 @@ export function MatchCenterSpectator() {
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-4 pb-2 border-b border-slate-900">
                     MAP DETAILS
                   </h3>
-                  <dl className="space-y-3 font-mono text-xs">
-                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
-                      <dt className="text-slate-550">MAP NAME</dt>
-                      <dd className="text-white font-bold uppercase">{activeMapName.replace('de_', '')}</dd>
-                    </div>
-                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
-                      <dt className="text-slate-550">SCORE</dt>
-                      <dd className="text-indigo-400 font-black">13 – 10</dd>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <dt className="text-slate-550">TOTAL ROUNDS</dt>
-                      <dd className="text-slate-300">23 Rounds</dd>
-                    </div>
-                  </dl>
+                  {(() => {
+                    const mapStats = mapsStats.find((ms, idx) => idx === selectedMapIndex || ms.map_name === activeMapName);
+                    const isPlayed = !!mapStats;
+                    const score1 = mapStats ? mapStats.score_team1 : 0;
+                    const score2 = mapStats ? mapStats.score_team2 : 0;
+                    const roundsCount = isPlayed ? (score1 + score2) : 0;
+                    return (
+                      <dl className="space-y-3 font-mono text-xs">
+                        <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                          <dt className="text-slate-550">MAP NAME</dt>
+                          <dd className="text-white font-bold uppercase">{activeMapName.replace('de_', '')}</dd>
+                        </div>
+                        <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                          <dt className="text-slate-550">SCORE</dt>
+                          <dd className="text-indigo-400 font-black">{isPlayed ? `${score1} – ${score2}` : 'TBD'}</dd>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <dt className="text-slate-550">TOTAL ROUNDS</dt>
+                          <dd className="text-slate-300">{isPlayed ? `${roundsCount} Rounds` : '0 Rounds'}</dd>
+                        </div>
+                      </dl>
+                    );
+                  })()}
                 </div>
               </div>
             </div>

@@ -26,6 +26,7 @@ export const TrackerTab = ({
   playClick,
   setSelectedTeam,
   tournament,
+  slots,
   onRegisterClick
 }) => {
   const [failedLogos, setFailedLogos] = useState({});
@@ -35,7 +36,8 @@ export const TrackerTab = ({
     ? new Date().getTime() < new Date(tournament.registrationDeadline).getTime()
     : false;
 
-  const shouldHideTeams = tournament?.hideRegisteredTeamsDuringRegistration && isRegistrationOpen;
+  const shouldRevealRegisteredTeams = slots?.registration ? slots.registration.status !== 'OPEN' : !isRegistrationOpen;
+  const shouldHideTeams = tournament?.hideRegisteredTeamsDuringRegistration && !shouldRevealRegisteredTeams;
 
   const [timeLeft, setTimeLeft] = useState('LOADING');
 

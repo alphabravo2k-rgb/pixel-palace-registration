@@ -22,6 +22,8 @@ export const Register = () => {
   const { playHover, playClick } = useAudio();
   const tournament = getTournamentBySlug(tournamentSlug);
   const isArchived = tournament?.status === 'ARCHIVED';
+  const timeOffsetRef = React.useRef(0);
+  const [prevVersion, setPrevVersion] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
     if (tournament?.status === 'ARCHIVED' && tournament?.tournamentComplete) return 'results';
     if (tournament?.status === 'ARCHIVED' && tournament?.bracketsEnabled) return 'brackets';
@@ -103,6 +105,15 @@ export const Register = () => {
 
         if (!active) return;
         setSlots(liveSlots);
+        
+        // Sync server time offset
+        const serverTimeStr = liveSlots?.registration?.serverTime;
+        if (serverTimeStr) {
+          const serverTime = new Date(serverTimeStr).getTime();
+          const clientTime = Date.now();
+          timeOffsetRef.current = serverTime - clientTime;
+        }
+
         setTeams(liveTeams?.teams || []);
         if (liveBracket) setBracketData(liveBracket);
         failCount = 0;
@@ -141,7 +152,14 @@ export const Register = () => {
 
   useEffect(() => {
     if (!tournament) return;
-    const deadlineStr = tournament.registrationDeadline;
+
+    const isClosedOnLoad = slots?.registration && !slots.registration.isAcceptingRegistrations;
+    if (isClosedOnLoad) {
+      setTimeLeft('OFFLINE');
+      return;
+    }
+
+    const deadlineStr = slots?.registration?.registrationDeadline || tournament.registrationDeadline;
     if (!deadlineStr || deadlineStr === 'TBD') {
       setTimeLeft('TBD');
       return;
@@ -149,7 +167,16 @@ export const Register = () => {
     const deadline = new Date(deadlineStr).getTime();
 
     const timer = setInterval(() => {
-      const diff = deadline - new Date().getTime();
+      // Tick using calibrated server offset
+      const calibratedNow = Date.now() + timeOffsetRef.current;
+      const diff = deadline - calibratedNow;
+
+      if (slots?.registration && !slots.registration.isAcceptingRegistrations) {
+        setTimeLeft('OFFLINE');
+        clearInterval(timer);
+        return;
+      }
+
       if (diff < 0) {
         setTimeLeft('OFFLINE');
         clearInterval(timer);
@@ -163,7 +190,54 @@ export const Register = () => {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [tournament]);
+  }, [tournament, slots]);
+
+  // Auto-switch unregistered users to 'teams' tab when registration is closed
+  useEffect(() => {
+    if (slots?.registration) {
+      const isAccepting = slots.registration.isAcceptingRegistrations;
+      if (!isAccepting && activeTab === 'register' && !activeTeam) {
+        setActiveTab('teams');
+      }
+    }
+  }, [slots, activeTab, activeTeam]);
+
+  // Event Bus for registration lifecycle transitions
+  useEffect(() => {
+    if (slots?.registration) {
+      const currentVer = slots.registration.version;
+      const currentStatus = slots.registration.status;
+      const closedReason = slots.registration.closedReason;
+
+      if (prevVersion !== null && prevVersion !== currentVer) {
+        // Emit State Changed Event
+        const stateEvent = new CustomEvent('pp-registration-state-changed', {
+          detail: {
+            status: currentStatus,
+            closedReason: closedReason,
+            version: currentVer,
+            phase: slots.phase
+          }
+        });
+        window.dispatchEvent(stateEvent);
+
+        if (currentStatus === 'CLOSED' || currentStatus === 'ARCHIVED') {
+          // Emit Closed Event
+          const closedEvent = new CustomEvent('pp-registration-closed', {
+            detail: { status: currentStatus, closedReason: closedReason }
+          });
+          window.dispatchEvent(closedEvent);
+        } else if (currentStatus === 'OPEN') {
+          // Emit Opened Event
+          const openedEvent = new CustomEvent('pp-registration-opened', {
+            detail: { status: currentStatus }
+          });
+          window.dispatchEvent(openedEvent);
+        }
+      }
+      setPrevVersion(currentVer);
+    }
+  }, [slots, prevVersion]);
 
   const renderCommandDeck = () => {
     if (!activeTeam) return null;
@@ -408,13 +482,13 @@ export const Register = () => {
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
-              {!isArchived && (
+              {!isArchived && (slots?.registration ? slots.registration.isAcceptingRegistrations || activeTeam : true) && (
                 <button
                   onMouseEnter={playHover}
                   onClick={() => { playClick(); setActiveTab('register'); }}
                   className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
                 >
-                  Register Team
+                  {activeTeam ? 'Team Portal' : 'Register Team'}
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
@@ -492,7 +566,8 @@ export const Register = () => {
                  playClick={playClick}
                  setSelectedTeam={setSelectedTeam}
                  tournament={tournament}
-                 onRegisterClick={() => setActiveTab('register')}
+                 slots={slots}
+                 onRegisterClick={slots?.registration?.isAcceptingRegistrations ? () => setActiveTab('register') : null}
                />
              )}
 

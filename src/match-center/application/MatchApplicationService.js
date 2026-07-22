@@ -178,6 +178,8 @@ export class MatchApplicationService {
 
     // ⚡ Direct projection write — the event bus handlers run asynchronously (setTimeout 0)
     // so we cannot rely on them being done here. Build the full projection directly.
+    const existingSummary = await platformSummaryRepo.findById(matchId);
+
     await platformSummaryRepo.save(matchId, {
       matchId,
       status: status === 'Completed' ? 'Completed' : status === 'Live' ? 'Live' : 'Scheduled',
@@ -198,6 +200,10 @@ export class MatchApplicationService {
       mapsStats: canonical.mapsStats || [],
       lastEventSeq: aggregate.version,
       updatedAt: new Date().toISOString(),
+      // Preserve slot mapping details
+      stage: existingSummary?.stage || 'Single Elimination',
+      round: existingSummary?.round || 1,
+      matchIndex: existingSummary?.matchIndex,
     });
 
     await platformScoreboardRepo.save(matchId, {

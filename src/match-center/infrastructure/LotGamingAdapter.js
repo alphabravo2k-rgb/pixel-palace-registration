@@ -10,6 +10,18 @@ const LOT_PROXY_MAP = {
   'fluxbot.lotgaming.xyz': '/flux-api/api',
 };
 
+function sanitizeLogoUrl(logoUrl) {
+  if (!logoUrl) return '';
+  const urlStr = String(logoUrl).trim();
+  if (urlStr.includes("drive.google.com")) {
+    const driveIdMatch = urlStr.match(/id=([a-zA-Z0-9_-]{25,})/) || urlStr.match(/\/d\/([a-zA-Z0-9_-]{25,})/);
+    if (driveIdMatch) {
+      return "https://lh3.googleusercontent.com/d/" + driveIdMatch[1];
+    }
+  }
+  return urlStr;
+}
+
 /**
  * Resolves the correct fetch base URL for a given LOT instance hostname.
  * In development (localhost), uses the Vite dev proxy to bypass CORS.
@@ -17,10 +29,7 @@ const LOT_PROXY_MAP = {
  */
 function resolveBaseUrl(hostname) {
   const isBrowser = typeof window !== 'undefined';
-  const isLocalhost = isBrowser &&
-    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
-
-  if (isLocalhost && LOT_PROXY_MAP[hostname]) {
+  if (isBrowser && LOT_PROXY_MAP[hostname]) {
     return LOT_PROXY_MAP[hostname];
   }
   return `https://${hostname}/api`;
@@ -167,14 +176,14 @@ export class LotGamingAdapter {
         teamId: `T-${raw.team1_id}`,
         name: teamAName,
         tag: teamATag,
-        logo: teamALogo || raw.team1_logo_url || null,
+        logo: sanitizeLogoUrl(teamALogo || raw.team1_logo_url) || null,
         players: (raw.team1_players || []).filter(isActivePlayer).map(p => p.name),
       },
       teamB: {
         teamId: `T-${raw.team2_id}`,
         name: teamBName,
         tag: teamBTag,
-        logo: teamBLogo || raw.team2_logo_url || null,
+        logo: sanitizeLogoUrl(teamBLogo || raw.team2_logo_url) || null,
         players: (raw.team2_players || []).filter(isActivePlayer).map(p => p.name),
       },
       scoreboard: {
