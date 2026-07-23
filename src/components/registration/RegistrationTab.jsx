@@ -14,6 +14,7 @@ export const RegistrationTab = ({
   const title = slots?.registration?.title || "REGISTRATION CLOSED";
   const subtitle = slots?.registration?.subtitle || "The registration deadline has passed.";
   const severity = slots?.registration?.severity || "error";
+  const mapAccentClasses = ['mc-green', 'mc-orange', 'mc-yellow', 'mc-red', 'mc-amber', 'mc-cyan'];
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
