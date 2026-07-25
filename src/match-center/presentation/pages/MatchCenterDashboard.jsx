@@ -4,6 +4,7 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useMatchCenter } from '../hooks/useMatchCenter.js';
+import { AdminConnectionWizard } from '../components/AdminConnectionWizard.jsx';
 
 export function MatchCenterDashboard() {
   const { matchId } = useParams();
@@ -123,6 +124,11 @@ export function MatchCenterDashboard() {
           </Link>
         </div>
       </header>
+
+      {/* 8-Step Admin Connection Wizard */}
+      <div className="mb-8">
+        <AdminConnectionWizard matchId={matchId || 'MC-2026-0000749'} />
+      </div>
 
 
       {/* Diagnostics Telemetry bar */}

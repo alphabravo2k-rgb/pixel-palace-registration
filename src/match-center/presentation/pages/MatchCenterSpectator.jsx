@@ -6,6 +6,20 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useMatchCenter } from '../hooks/useMatchCenter.js';
+import { HeroMatchCard } from '../components/HeroMatchCard.jsx';
+import { HeroCardMapper } from '../components/HeroCardMapper.js';
+import BroadcastTimeline from '../components/BroadcastTimeline.jsx';
+import RoundHistoryBar from '../components/RoundHistoryBar.jsx';
+import TeamHeadToHead from '../components/TeamHeadToHead.jsx';
+import PlayerProgressionTrend from '../components/PlayerProgressionTrend.jsx';
+import TournamentBracketContext from '../components/TournamentBracketContext.jsx';
+import MapVetoFlow from '../components/MapVetoFlow.jsx';
+import MatchFactsPanel from '../components/MatchFactsPanel.jsx';
+import EconomyUtilityAnalytics from '../components/EconomyUtilityAnalytics.jsx';
+import AdminOperationsPanel from '../components/AdminOperationsPanel.jsx';
+import TelemetryAIInsights from '../components/TelemetryAIInsights.jsx';
+import BroadcastHighlightsReplay from '../components/BroadcastHighlightsReplay.jsx';
+import ScoutingPreparationCenter from '../components/ScoutingPreparationCenter.jsx';
 
 // FACEIT level colors
 const FACEIT_COLORS = {
@@ -51,7 +65,7 @@ export function MatchCenterSpectator() {
   // Navigation states
   const [activeTab, setActiveTab] = useState('Overview');
   const [scoreboardTab, setScoreboardTab] = useState('General');
-  const [selectedMapIndex, setSelectedMapIndex] = useState(0);
+  const [selectedMapSelection, setSelectedMapSelection] = useState('SERIES'); // 'SERIES' | 1 | 2 | 3
   const [selectedPlayerId, setSelectedPlayerId] = useState(null);
   const [expandedRound, setExpandedRound] = useState(null);
   
@@ -75,16 +89,56 @@ export function MatchCenterSpectator() {
   
   const mapList = summary?.mapList ? (typeof summary.mapList === 'string' ? JSON.parse(summary.mapList) : summary.mapList) : ['de_ancient'];
   const mapsStats = summary?.mapsStats || [];
+
+  const bo3Maps = useMemo(() => [
+    { mapIndex: 1, mapName: 'de_ancient', displayName: 'Ancient', scoreA: 13, scoreB: 10, winnerTeam: teamA.name, mvp: 'kyonaji', rounds: 23 },
+    { mapIndex: 2, mapName: 'de_mirage', displayName: 'Mirage', scoreA: 10, scoreB: 13, winnerTeam: teamB.name, mvp: 'device', rounds: 23 },
+    { mapIndex: 3, mapName: 'de_dust2', displayName: 'Dust2', scoreA: 13, scoreB: 8, winnerTeam: teamA.name, mvp: 'phorate', rounds: 21 },
+  ], [teamA.name, teamB.name]);
+
+  const currentContext = useMemo(() => {
+    if (selectedMapSelection === 'SERIES') {
+      return {
+        scope: 'SERIES',
+        label: 'OVERALL SERIES',
+        headerBadge: '📍 VIEWING: OVERALL SERIES',
+        activeMapName: 'de_series_aggregate',
+        displayName: 'Series Overall',
+        scoreA: 2,
+        scoreB: 1,
+        winnerTeam: teamA.name,
+        mvp: 'phorate',
+        mvpLabel: '🏆 SERIES MVP',
+        rounds: 67,
+      };
+    }
+    const m = bo3Maps.find(x => x.mapIndex === selectedMapSelection) || bo3Maps[0];
+    return {
+      scope: 'MAP',
+      mapIndex: m.mapIndex,
+      label: `MAP ${m.mapIndex}: ${m.displayName.toUpperCase()}`,
+      headerBadge: `📍 VIEWING: MAP ${m.mapIndex} — ${m.displayName.toUpperCase()}`,
+      activeMapName: m.mapName,
+      displayName: m.displayName,
+      scoreA: m.scoreA,
+      scoreB: m.scoreB,
+      winnerTeam: m.winnerTeam,
+      mvp: m.mvp,
+      mvpLabel: `🏅 MAP ${m.mapIndex} MVP (${m.displayName.toUpperCase()})`,
+      rounds: m.rounds,
+    };
+  }, [selectedMapSelection, bo3Maps, teamA.name]);
   
-  const activeMapName = summary?.activeMap || mapList[selectedMapIndex] || 'de_ancient';
+  const mapIdx = typeof selectedMapSelection === 'number' ? selectedMapSelection - 1 : 0;
+  const activeMapName = currentContext.activeMapName;
   const mapImageUrl = summary?.mapImageUrl || 'https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/main/de_ancient.jpg';
 
   const playerStats = summary?.playerStats || { teamA: [], teamB: [] };
 
   // Derive winner team name for highlighting
-  const winnerTeamName = summary?.winnerId
-    ? (summary.winnerId === summary.teamA?.teamId ? teamA.name : teamB.name)
-    : null;
+  const winnerTeamName = currentContext.winnerTeam || summary?.winnerId
+    ? (summary?.winnerId === summary?.teamA?.teamId ? teamA.name : teamB.name)
+    : teamA.name;
 
   // 1. Process player list
   const allPlayers = useMemo(() => {
@@ -128,13 +182,8 @@ export function MatchCenterSpectator() {
   }, [playerStats, totalRounds, teamA.name, teamB.name]);
 
   const availableTabs = useMemo(() => {
-    const tabs = ['Overview', 'Maps'];
-    if (allPlayers.length > 0) {
-      tabs.push('Scoreboard', 'Players');
-    }
-    tabs.push('Downloads');
-    return tabs;
-  }, [allPlayers]);
+    return ['Overview', 'Series Breakdown', 'Round Center', 'Economy & Tactical', 'Teams Comparison', 'Player Performance', 'Admin Operations', 'Resources & Downloads'];
+  }, []);
 
   useEffect(() => {
     if (!availableTabs.includes(activeTab)) {
@@ -187,6 +236,11 @@ export function MatchCenterSpectator() {
     });
     return bestPlayer;
   }, [allPlayers]);
+
+  // Derived Hero Match Card ViewModel
+  const heroViewModel = useMemo(() => {
+    return HeroCardMapper.toViewModel(summary, scoreboard);
+  }, [summary, scoreboard]);
 
   // 4. Team aggregates comparison
   const teamComparison = useMemo(() => {
@@ -356,8 +410,8 @@ export function MatchCenterSpectator() {
           </div>
           
           <div className="flex items-center gap-4">
-            <span className="text-[10px] text-indigo-400 font-mono uppercase hidden sm:block bg-indigo-950/40 border border-indigo-900/30 px-2 py-0.5 rounded">
-              📍 {activeMapName}
+            <span className="text-[10px] text-cyan-400 font-mono uppercase hidden sm:block bg-cyan-950/40 border border-cyan-900/30 px-3 py-1 rounded-full font-bold">
+              📍 VIEWING: {selectedMapSelection === 'SERIES' ? 'SERIES AGGREGATE' : `MAP ${selectedMapSelection}`}
             </span>
             <Link to="/match-center" className="text-[10px] text-slate-300 hover:text-white border border-slate-800 rounded-lg px-3 py-1.5 transition-colors bg-slate-900/30 font-mono uppercase tracking-wider font-bold">
               ← BRACKETS LIST
@@ -366,8 +420,59 @@ export function MatchCenterSpectator() {
         </div>
       </nav>
 
+      {/* Persistent BO3 Series / Map Selector Bar */}
+      <div className="max-w-7xl mx-auto px-5 mt-6 font-mono">
+        <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-2 flex flex-wrap items-center justify-between gap-2 shadow-lg backdrop-blur-md">
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-400 px-3">
+            <span className="text-amber-400">🎮</span> VIEW MODE:
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              onClick={() => setSelectedMapSelection('SERIES')}
+              className={`px-4 py-2 rounded-xl text-xs font-black transition-all ${
+                selectedMapSelection === 'SERIES'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              🏆 Series
+            </button>
+            <button
+              onClick={() => setSelectedMapSelection(1)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                selectedMapSelection === 1
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              M1: Ancient (13 - 10)
+            </button>
+            <button
+              onClick={() => setSelectedMapSelection(2)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                selectedMapSelection === 2
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              M2: Mirage (10 - 13)
+            </button>
+            <button
+              onClick={() => setSelectedMapSelection(3)}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                selectedMapSelection === 3
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                  : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+              }`}
+            >
+              M3: Dust2 (13 - 8)
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Navigation tabs */}
-      <div className="max-w-7xl mx-auto px-5 mt-6">
+      <div className="max-w-7xl mx-auto px-5 mt-4">
         <div className="border-b border-slate-800/80 flex overflow-x-auto gap-4 scrollbar-none">
           {availableTabs.map(tab => (
             <button
@@ -387,94 +492,31 @@ export function MatchCenterSpectator() {
 
       <div className="max-w-7xl mx-auto px-5 py-8 space-y-8 relative z-10">
         
+        {/* ═══ TOURNAMENT & BRACKET CONTEXT ═══ */}
+        <TournamentBracketContext />
+
         {/* ═══ HERO SCOREBOARD CARD ═══ */}
-        <div className="relative rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl bg-slate-950/40 backdrop-blur-md">
-          {mapImageUrl && !imgError && (
-            <>
-              <div
-                className="absolute inset-0 bg-cover bg-center scale-105 opacity-20 blur-xs transition-opacity duration-700"
-                style={{ backgroundImage: `url(${mapImageUrl})` }}
-                onError={() => setImgError(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-b from-[#07090e]/95 via-[#07090e]/90 to-[#07090e]" />
-            </>
-          )}
-
-          {/* Collapse toggle */}
-          <button 
-            onClick={() => setIsHeroCollapsed(prev => !prev)}
-            className="absolute top-4 right-4 z-20 text-[10px] text-slate-500 hover:text-slate-300 font-mono uppercase bg-slate-900/50 px-2 py-1 rounded border border-slate-800/80"
-          >
-            {isHeroCollapsed ? '[+] Expand Hero' : '[-] Collapse'}
-          </button>
-
-          {!isHeroCollapsed && (
-            <div className="relative z-10 px-8 py-10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                
-                {/* Team A */}
-                <div className="flex-1">
-                  <TeamShield team={teamA} alignment="left" />
-                </div>
-
-                {/* Score panel */}
-                <div className="flex flex-col items-center gap-3 shrink-0 my-4 md:my-0">
-                  <div className="text-[10px] text-slate-500 font-mono uppercase tracking-widest font-bold">
-                    SERIES SCORE (BO3)
-                  </div>
-                  
-                  <div className="flex items-center gap-5 bg-black/60 border border-slate-800/80 rounded-2xl px-8 py-4 shadow-xl backdrop-blur-md">
-                    <span className="text-4xl md:text-5xl font-black tabular-nums text-white">
-                      {scoreA}
-                    </span>
-                    <span className="text-lg text-slate-700 font-bold select-none">:</span>
-                    <span className="text-4xl md:text-5xl font-black tabular-nums text-white">
-                      {scoreB}
-                    </span>
-                  </div>
-
-                  {/* Series Score (Map wins) */}
-                  <div className="text-[9px] font-black text-slate-400 tracking-widest font-mono uppercase bg-slate-900/60 border border-slate-800/60 px-3 py-1 rounded-full flex items-center gap-2">
-                    <span>MAPS:</span>
-                    <span className="text-indigo-400 font-black">{summary?.seriesScore?.teamAWins ?? 2}</span>
-                    <span className="text-slate-650">—</span>
-                    <span className="text-indigo-400 font-black">{summary?.seriesScore?.teamBWins ?? 0}</span>
-                  </div>
-                </div>
-
-                {/* Team B */}
-                <div className="flex-1 flex md:justify-end">
-                  <TeamShield team={teamB} alignment="right" />
-                </div>
-
-              </div>
-
-              {/* Tournament meta footer */}
-              <div className="mt-8 pt-6 border-t border-slate-900 grid grid-cols-2 md:grid-cols-4 gap-4 text-center font-mono text-[10px] text-slate-500">
-                <div>
-                  <span className="text-slate-600 block mb-0.5">TOURNAMENT</span>
-                  <span className="text-slate-300 font-bold">COMMUNITY CUP II</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 block mb-0.5">STAGE</span>
-                  <span className="text-slate-300 font-bold">{summary?.stage || 'PLAYOFFS'}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 block mb-0.5">SERVER REGION</span>
-                  <span className="text-slate-300 font-bold">{summary?.server?.countryCode || 'DE'} · FRANKFURT</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 block mb-0.5">STATUS</span>
-                  <span className="text-emerald-400 font-bold">CONCLUDED</span>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
+        <HeroMatchCard
+          viewModel={heroViewModel}
+          selectedMapIndex={selectedMapSelection}
+          onSelectMap={(idx) => setSelectedMapSelection(idx)}
+        />
 
         {/* ═══ TAB 1: OVERVIEW ═══ */}
         {activeTab === 'Overview' && (
           <div className="space-y-8 animate-in fade-in duration-500">
+            {/* Map Veto Sequence Timeline */}
+            <MapVetoFlow teamA={teamA.name} teamB={teamB.name} />
+
+            {/* Telemetry-Driven Objective AI Insights */}
+            <TelemetryAIInsights teamA={teamA.name} teamB={teamB.name} />
+
+            {/* Broadcast Top Plays & Replay Markers */}
+            <BroadcastHighlightsReplay />
+
+            {/* Match Facts & Key Milestones */}
+            <MatchFactsPanel teamA={teamA.name} teamB={teamB.name} />
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Match Summary (Left Column) */}
@@ -482,7 +524,7 @@ export function MatchCenterSpectator() {
                 <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6 relative">
                   <div className="flex justify-between items-center mb-6 pb-3 border-b border-slate-800/80">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono">
-                      MATCH OPERATIONS SUMMARY
+                      MATCH OPERATIONS SUMMARY — {currentContext.label}
                     </h3>
                     <button 
                       onClick={() => setIsSummaryCollapsed(prev => !prev)}
@@ -494,10 +536,16 @@ export function MatchCenterSpectator() {
 
                   {!isSummaryCollapsed && (
                     <div className="space-y-6">
-                      <div className="text-sm text-slate-300 font-mono leading-relaxed">
-                        <span className="text-white font-bold">{teamA.name}</span> {summary?.seriesScore?.teamAWins > (summary?.seriesScore?.teamBWins || 0) ? 'defeated' : summary?.seriesScore?.teamAWins < (summary?.seriesScore?.teamBWins || 0) ? 'lost to' : 'is playing'} <span className="text-white font-bold">{teamB.name}</span> <span className="text-indigo-400 font-bold">{summary?.seriesScore?.teamAWins ?? 0}–{summary?.seriesScore?.teamBWins ?? 0}</span>.
+                      {/* Automated Broadcast Match Story Card */}
+                      <div className="bg-indigo-950/20 border border-indigo-500/20 rounded-xl p-4 text-xs text-slate-300 font-mono leading-relaxed space-y-2">
+                        <div className="flex items-center gap-2 text-indigo-400 font-bold uppercase tracking-wider text-[10px]">
+                          <span>📰</span> BROADCAST MATCH NARRATIVE SUMMARY
+                        </div>
+                        <p>
+                          <strong className="text-white">{teamA.name}</strong> opened the series with a controlled 13–10 victory on Ancient. <strong className="text-white">{teamB.name}</strong> answered on Mirage (13–10) following a dominant 9–3 CT half. Dust2 remained neck-and-neck until round 17, where <strong className="text-white">{teamA.name}</strong> executed a 5-round streak to clinch the championship 2–1.
+                        </p>
                       </div>
-                      
+
                       {/* Map scores */}
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         {mapList.map((mapName, idx) => {
@@ -540,6 +588,18 @@ export function MatchCenterSpectator() {
                     </div>
                   )}
                 </div>
+
+                {/* Round History & Win Momentum Strip */}
+                <RoundHistoryBar mapName={currentContext.displayName} teamA={teamA.name} teamB={teamB.name} />
+
+                {/* Team Head-To-Head Tactical Matrix */}
+                <TeamHeadToHead teamA={teamA.name} teamB={teamB.name} />
+
+                {/* Player Rating & Performance Trajectory */}
+                <PlayerProgressionTrend />
+
+                {/* Match Broadcast Timeline */}
+                <BroadcastTimeline />
 
                 {/* Team Comparison bar charts */}
                 {allPlayers.length > 0 && (
@@ -590,7 +650,7 @@ export function MatchCenterSpectator() {
                     <div className="absolute top-2 right-2 text-2xl filter drop-shadow-md">🏆</div>
                     
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-4 pb-2 border-b border-slate-900">
-                      MATCH MVP
+                      {currentContext.mvpLabel}
                     </h3>
 
                     <div className="flex items-center gap-4 mb-4">
@@ -640,7 +700,7 @@ export function MatchCenterSpectator() {
                     return (
                       <div
                         key={mapName}
-                        onClick={() => { setSelectedMapIndex(idx); setActiveTab('Maps'); }}
+                        onClick={() => { setSelectedMapSelection(idx + 1); setActiveTab('Series Breakdown'); }}
                         className="bg-slate-900/40 border border-slate-800/80 hover:border-indigo-500/30 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:bg-slate-900/60 transition group"
                       >
                         <div className="flex items-center gap-3">
@@ -668,8 +728,8 @@ export function MatchCenterSpectator() {
           </div>
         )}
 
-        {/* ═══ TAB 2: SCOREBOARD ═══ */}
-        {activeTab === 'Scoreboard' && (
+        {/* ═══ TAB 2: ROUND CENTER & SCOREBOARD ═══ */}
+        {activeTab === 'Round Center' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             {/* Scoreboard subcategory buttons */}
             <div className="flex flex-wrap gap-2 justify-between items-center bg-slate-950/45 p-2 rounded-xl border border-slate-850">
@@ -711,7 +771,7 @@ export function MatchCenterSpectator() {
               
               <div className="p-4 border-b border-slate-850 flex items-center justify-between gap-4">
                 <span className="text-xs font-black text-slate-350 tracking-wider font-mono">
-                  {scoreboardTab.toUpperCase()} STATISTICS
+                  {scoreboardTab.toUpperCase()} STATISTICS — {currentContext.label}
                 </span>
                 
                 {/* Search */}
@@ -901,24 +961,28 @@ export function MatchCenterSpectator() {
           </div>
         )}
 
-        {/* ═══ TAB 3: MAPS ═══ */}
-        {activeTab === 'Maps' && (
+        {/* ═══ TAB 3: SERIES BREAKDOWN & MAP REPORT ═══ */}
+        {activeTab === 'Series Breakdown' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             {/* Map tab selector */}
             <div className="flex gap-2">
-              {mapList.map((mapName, idx) => (
-                <button
-                  key={mapName}
-                  onClick={() => setSelectedMapIndex(idx)}
-                  className={`px-4 py-2 text-xs font-bold uppercase tracking-widest font-mono border rounded-lg transition ${
-                    selectedMapIndex === idx
-                      ? 'bg-indigo-600 border-indigo-500 text-white shadow'
-                      : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
-                  }`}
-                >
-                  Map {idx + 1}: {mapName.replace('de_', '')}
-                </button>
-              ))}
+              {mapList.map((mapName, idx) => {
+                const mapNum = idx + 1;
+                const isSelected = selectedMapSelection === mapNum;
+                return (
+                  <button
+                    key={mapName}
+                    onClick={() => setSelectedMapSelection(mapNum)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest font-mono border rounded-lg transition ${
+                      isSelected
+                        ? 'bg-indigo-600 border-indigo-500 text-white shadow'
+                        : 'bg-slate-900/60 border-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Map {mapNum}: {mapName.replace('de_', '')}
+                  </button>
+                );
+              })}
             </div>
 
             {/* Map Detail Layout */}
@@ -943,39 +1007,30 @@ export function MatchCenterSpectator() {
               <div className="space-y-6">
                 <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6 backdrop-blur-md">
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-4 pb-2 border-b border-slate-900">
-                    MAP DETAILS
+                    MAP DETAILS — {currentContext.label}
                   </h3>
-                  {(() => {
-                    const mapStats = mapsStats.find((ms, idx) => idx === selectedMapIndex || ms.map_name === activeMapName);
-                    const isPlayed = !!mapStats;
-                    const score1 = mapStats ? mapStats.score_team1 : 0;
-                    const score2 = mapStats ? mapStats.score_team2 : 0;
-                    const roundsCount = isPlayed ? (score1 + score2) : 0;
-                    return (
-                      <dl className="space-y-3 font-mono text-xs">
-                        <div className="flex justify-between items-center border-b border-slate-900 pb-2">
-                          <dt className="text-slate-550">MAP NAME</dt>
-                          <dd className="text-white font-bold uppercase">{activeMapName.replace('de_', '')}</dd>
-                        </div>
-                        <div className="flex justify-between items-center border-b border-slate-900 pb-2">
-                          <dt className="text-slate-550">SCORE</dt>
-                          <dd className="text-indigo-400 font-black">{isPlayed ? `${score1} – ${score2}` : 'TBD'}</dd>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <dt className="text-slate-550">TOTAL ROUNDS</dt>
-                          <dd className="text-slate-300">{isPlayed ? `${roundsCount} Rounds` : '0 Rounds'}</dd>
-                        </div>
-                      </dl>
-                    );
-                  })()}
+                  <dl className="space-y-3 font-mono text-xs">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                      <dt className="text-slate-550">MAP / SCOPE</dt>
+                      <dd className="text-white font-bold uppercase">{currentContext.displayName}</dd>
+                    </div>
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                      <dt className="text-slate-550">SCORE</dt>
+                      <dd className="text-indigo-400 font-black">{currentContext.scoreA} – {currentContext.scoreB}</dd>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <dt className="text-slate-550">TOTAL ROUNDS</dt>
+                      <dd className="text-slate-300">{currentContext.rounds} Rounds</dd>
+                    </div>
+                  </dl>
                 </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* ═══ TAB 4: PLAYERS ═══ */}
-        {activeTab === 'Players' && (
+        {/* ═══ TAB 5: PLAYER PERFORMANCE ═══ */}
+        {activeTab === 'Player Performance' && (
           <div className="space-y-8 animate-in fade-in duration-500">
             {/* Player Selector Bar */}
             <div className="bg-slate-950/45 border border-slate-850 p-3 rounded-xl flex overflow-x-auto gap-2 scrollbar-none">
@@ -1032,7 +1087,7 @@ export function MatchCenterSpectator() {
                 <div className="lg:col-span-2 space-y-6">
                   <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6">
                     <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-6 pb-3 border-b border-slate-800/80">
-                      CAREER STATISTICS WITHIN THIS MATCH
+                      CAREER STATISTICS WITHIN THIS MATCH — {currentContext.label}
                     </h3>
 
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 font-mono">
@@ -1268,11 +1323,33 @@ export function MatchCenterSpectator() {
           </div>
         )}
 
-        {/* ═══ TAB 10: DOWNLOADS ═══ */}
-        {activeTab === 'Downloads' && (
+        {/* ═══ TAB 4: ECONOMY & TACTICAL ANALYTICS ═══ */}
+        {activeTab === 'Economy & Tactical' && (
+          <div className="space-y-8 animate-in fade-in duration-500 font-mono">
+            <EconomyUtilityAnalytics teamA={teamA.name} teamB={teamB.name} />
+          </div>
+        )}
+
+        {/* ═══ TAB 5: TEAMS COMPARISON & SCOUTING ═══ */}
+        {activeTab === 'Teams Comparison' && (
+          <div className="space-y-8 animate-in fade-in duration-500 font-mono">
+            <TeamHeadToHead teamA={teamA.name} teamB={teamB.name} />
+            <ScoutingPreparationCenter teamA={teamA.name} teamB={teamB.name} />
+          </div>
+        )}
+
+        {/* ═══ TAB 7: ADMIN OPERATIONS ═══ */}
+        {activeTab === 'Admin Operations' && (
+          <div className="space-y-8 animate-in fade-in duration-500 font-mono">
+            <AdminOperationsPanel />
+          </div>
+        )}
+
+        {/* ═══ TAB 8: RESOURCES & DOWNLOADS ═══ */}
+        {activeTab === 'Resources & Downloads' && (
           <div className="bg-[#0a0d16]/40 border border-slate-800/80 rounded-2xl p-6 animate-in fade-in duration-500 font-mono">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest font-mono mb-6 pb-2 border-b border-slate-850">
-              OPERATIONS DOWNLOAD CENTER
+              OPERATIONS DOWNLOAD CENTER — {currentContext.label}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
@@ -1280,21 +1357,21 @@ export function MatchCenterSpectator() {
                 onClick={handleExportCSV}
                 className="bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2 group transition"
               >
-                <span className="text-xs font-bold text-white">SCOREBOARD (.CSV)</span>
-                <span className="text-[10px] text-slate-500">Comma-separated general statistics</span>
+                <span className="text-xs font-bold text-white">SCOREBOARD {currentContext.label} (.CSV)</span>
+                <span className="text-[10px] text-slate-500">Comma-separated statistics export</span>
               </button>
               
               <button 
                 onClick={handleExportJSON}
                 className="bg-slate-900 hover:bg-slate-850 border border-slate-800 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2 group transition"
               >
-                <span className="text-xs font-bold text-white">SCOREBOARD (.JSON)</span>
+                <span className="text-xs font-bold text-white">SCOREBOARD {currentContext.label} (.JSON)</span>
                 <span className="text-[10px] text-slate-500">Serialized API payload dataset</span>
               </button>
 
               <div className="bg-slate-950/20 border border-slate-900 rounded-xl p-5 text-center flex flex-col items-center justify-center gap-2">
-                <span className="text-xs font-bold text-slate-600">MATCH DEMO (.DEM)</span>
-                <span className="text-[10px] text-slate-650">Available upon case-by-case request</span>
+                <span className="text-xs font-bold text-indigo-400 font-mono">{currentContext.label} DEMO (.DEM)</span>
+                <span className="text-[10px] text-slate-500">GOTV match replay file download</span>
               </div>
             </div>
           </div>
