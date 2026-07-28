@@ -4,8 +4,8 @@
  */
 import { ppcc2PublishedBracket } from '../data/temporary/ppcc2PublishedBracket.js';
 
-// Operational feature flag for 24-48 hour fallback window
-export const USE_PUBLISHED_BRACKET_FALLBACK = true;
+// Operational feature flag - set to false so live API data is rendered
+export const USE_PUBLISHED_BRACKET_FALLBACK = false;
 
 /**
  * Helper to check if Flux API matches contain REAL seeded team assignments

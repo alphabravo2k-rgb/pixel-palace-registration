@@ -4,8 +4,8 @@
  */
 
 export const PPCC2_PERMANENT_SLOTS = [
-  // Round of 32 (14 matches: R32-M01 to R32-M14)
-  ...Array.from({ length: 14 }, (_, i) => ({
+  // Round of 32 (16 matches: R32-M01 to R32-M16)
+  ...Array.from({ length: 16 }, (_, i) => ({
     slotKey: `R32-M${String(i + 1).padStart(2, '0')}`,
     round_number: 1,
     position: i,

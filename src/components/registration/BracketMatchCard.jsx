@@ -20,9 +20,9 @@ export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
   const isLive = matchData?.status === 'LIVE';
   const isBye = matchData?.status === 'BYE';
 
-  // Resolve team names
-  const t1Name = slot.defaultTeam1 || (matchData ? (matchData.team1 || 'TBD') : 'TBD');
-  const t2Name = isBye ? 'BYE' : (matchData ? (matchData.team2 || 'TBD') : 'TBD');
+  // Resolve team names prioritize live API matchData
+  const t1Name = (matchData && matchData.team1 && matchData.team1 !== 'TBD') ? matchData.team1 : (slot.defaultTeam1 || 'TBD');
+  const t2Name = isBye ? 'BYE' : ((matchData && matchData.team2 && matchData.team2 !== 'TBD') ? matchData.team2 : 'TBD');
 
   const t1Logo = getTeamLogo(matchData?.team1Obj || t1Name);
   const t2Logo = getTeamLogo(matchData?.team2Obj || t2Name);
@@ -41,7 +41,8 @@ export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
           width: `${cardW}px`,
           height: `${cardH}px`
         }}
-        className="bg-black/90 border border-neon-cyan/35 rounded-md px-2.5 py-1.5 flex flex-col justify-between overflow-hidden shadow-[0_0_10px_rgba(0,240,255,0.1)] shrink-0"
+        onClick={() => matchId && navigate(matchCenter(matchId))}
+        className="bg-black/90 border border-neon-cyan/35 rounded-md px-2.5 py-1.5 flex flex-col justify-between overflow-hidden shadow-[0_0_10px_rgba(0,240,255,0.1)] shrink-0 cursor-pointer hover:-translate-y-0.5 transition-all group"
       >
         {/* Header */}
         <div className="flex items-center justify-between text-[8px] font-bold font-body border-b border-white/10 pb-0.5 leading-none">

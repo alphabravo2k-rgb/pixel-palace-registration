@@ -9,6 +9,8 @@ import { platformEventStore } from '../../infrastructure/EventStore.js';
 import { platformProviderGateway } from '../../infrastructure/ProviderGateway.js';
 import { lotDlanAdapter, lotFluxbotAdapter } from '../../infrastructure/LotGamingAdapter.js';
 import { Logger } from '../../shared/kernel/Logger.js';
+import { tournamentService } from '../../../services/TournamentService.js';
+import { getTeamTag, getTeamLogoUrl } from '../../../utils/teamResolver.js';
 
 // Map of known LOT Gaming hostnames → adapter instances
 const LOT_ADAPTERS = {
@@ -178,7 +180,33 @@ export function useMatchCenter(matchId) {
         if (externalId > 0) {
           Logger.info(`Hook: Match ${normalizedId} not found locally. Auto-syncing external ID #${externalId}...`);
           try {
-            await syncLotMatch(externalId.toString());
+            const apiMatch = await tournamentService.fetchMatch(externalId);
+            if (apiMatch) {
+              const summaryDto = {
+                id: normalizedId,
+                matchId: String(apiMatch.id),
+                stage: 'Single Elimination',
+                round: apiMatch.roundNumber || apiMatch.round_number || 1,
+                status: apiMatch.status || 'PENDING',
+                game: 'Counter-Strike 2',
+                format: apiMatch.format || 'BO1',
+                teamA: {
+                  name: apiMatch.team1Obj?.name || (typeof apiMatch.team1 === 'string' ? apiMatch.team1 : 'TBD'),
+                  tag: apiMatch.team1Obj?.tag || getTeamTag(apiMatch.team1Obj || apiMatch.team1),
+                  logo: apiMatch.team1Obj?.logo || apiMatch.team1Obj?.logo_url || getTeamLogoUrl(apiMatch.team1Obj || apiMatch.team1) || null
+                },
+                teamB: {
+                  name: apiMatch.team2Obj?.name || (typeof apiMatch.team2 === 'string' ? apiMatch.team2 : 'TBD'),
+                  tag: apiMatch.team2Obj?.tag || getTeamTag(apiMatch.team2Obj || apiMatch.team2),
+                  logo: apiMatch.team2Obj?.logo || apiMatch.team2Obj?.logo_url || getTeamLogoUrl(apiMatch.team2Obj || apiMatch.team2) || null
+                },
+                score: typeof apiMatch.score === 'string' ? { teamAScore: apiMatch.score.split('-')[0] || 0, teamBScore: apiMatch.score.split('-')[1] || 0 } : (apiMatch.score || { teamAScore: 0, teamBScore: 0 })
+              };
+              await platformProjectionRegistry.updateSummary(normalizedId, summaryDto);
+              await refreshProjections();
+            } else {
+              await syncLotMatch(externalId.toString());
+            }
           } catch (err) {
             Logger.warn(`Hook: Auto-sync failed for ${normalizedId}: ${err.message}`);
           }

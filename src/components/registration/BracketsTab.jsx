@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Target, Loader2, RefreshCw, Clock } from 'lucide-react';
-import { fetchTournamentBracket } from '../../services/sheets';
+import { tournamentService } from '../../services/TournamentService';
 import { getTeamLogo as resolveLogo } from '../../utils/teamResolver';
 import { resolveDisplayMatches } from '../../utils/bracketSelector';
 import { PPCC2_LAYOUT, generateConnectorPath } from '../../config/ppcc2Layout';
@@ -20,8 +20,9 @@ export const BracketsTab = ({
   // Fast O(1) Logo Lookup Map
   const logoMap = useMemo(() => {
     const map = new Map();
-    (teams || []).forEach(t => {
-      if (t?.name) map.set(t.name.toLowerCase(), t.logo);
+    const teamList = Array.isArray(teams) ? teams : (typeof teams === 'object' && teams !== null ? Object.values(teams) : []);
+    teamList.forEach(t => {
+      if (t?.name) map.set(t.name.toLowerCase(), t.logo || t.logo_url);
     });
     return map;
   }, [teams]);
@@ -35,12 +36,12 @@ export const BracketsTab = ({
     return logoMap.get(lower) || resolveLogo(nameStr);
   }, [logoMap]);
 
-  // Unified Data Loading Handler
+  // Unified Data Loading Handler via TournamentService
   const loadBracket = useCallback(async (isManual = false) => {
     if (isManual) setRefreshing(true);
 
     try {
-      const data = await fetchTournamentBracket(tournament.id);
+      const data = await tournamentService.fetchBracket(tournament);
       setBracketData(data);
       setError(false);
       setLastSyncTime(new Date().toLocaleTimeString());
@@ -51,7 +52,7 @@ export const BracketsTab = ({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [tournament.id, bracketData]);
+  }, [tournament, bracketData]);
 
   // Polling Loop
   useEffect(() => {
@@ -70,7 +71,7 @@ export const BracketsTab = ({
   const rawMatches = bracketData?.matches || [];
   const { matches: displayMatches } = resolveDisplayMatches(rawMatches);
   const fluxMap = useMemo(() => {
-    return new Map((displayMatches || []).map(m => [`${m.round_number}-${m.position}`, m]));
+    return new Map((displayMatches || []).map(m => [`${m.round_number ?? m.roundNumber}-${m.position}`, m]));
   }, [displayMatches]);
 
   // Memoized SVG Connectors Render Layer

@@ -11,9 +11,10 @@ import { useMatchCenter } from '../hooks/useMatchCenter.js';
 import { Logger } from '../../shared/kernel/Logger.js';
 import { fetchTeams } from '../../../services/api/client.js';
 import { matchCenter } from '../../../utils/navigation.js';
-import { fluxRepository } from '../../../services/api/adapters/FluxRepository.js';
+import { tournamentService } from '../../../services/TournamentService.js';
 import { PPCC2_PERMANENT_SLOTS } from '../../../config/bracketLayout.js';
 import { resolveDisplayMatches } from '../../../utils/bracketSelector.js';
+import { getTeamTag, getTeamLogoUrl } from '../../../utils/teamResolver.js';
 
 // Dynamic SE round name resolver
 function getRoundLabel(stageName, roundNum, maxRound) {
@@ -160,19 +161,29 @@ export function MatchCenterList({ isAdmin = false }) {
     let active = true;
     const fetchMatches = async () => {
       try {
-        const bracket = await fluxRepository.getBracket();
+        const bracket = await tournamentService.fetchBracket();
         if (active && bracket && Array.isArray(bracket.matches)) {
           const liveList = bracket.matches.map(m => ({
             id: String(m.id),
             matchId: String(m.id),
             stage: 'Single Elimination',
-            round: m.round || `Round ${m.round_number}`,
+            round: m.roundNumber || m.round_number || 1,
+            round_number: m.round_number || m.roundNumber || 1,
+            position: typeof m.position === 'number' ? m.position : 0,
             status: m.status || 'PENDING',
             game: 'Counter-Strike 2',
             format: m.format || `BO${m.best_of || 1}`,
-            teamA: typeof m.team1 === 'object' ? m.team1 : { name: m.team1 || 'TBD', tag: m.team1 || 'TBD' },
-            teamB: typeof m.team2 === 'object' ? m.team2 : { name: m.team2 || 'TBD', tag: m.team2 || 'TBD' },
-            score: typeof m.score === 'object' ? m.score : { teamAScore: m.score?.split('-')[0] || 0, teamBScore: m.score?.split('-')[1] || 0 }
+            teamA: {
+              name: m.team1Obj?.name || (typeof m.team1 === 'string' ? m.team1 : 'TBD'),
+              tag: m.team1Obj?.tag || getTeamTag(m.team1Obj || m.team1),
+              logo: m.team1Obj?.logo || m.team1Obj?.logo_url || getTeamLogoUrl(m.team1Obj || m.team1) || null
+            },
+            teamB: {
+              name: m.team2Obj?.name || (typeof m.team2 === 'string' ? m.team2 : 'TBD'),
+              tag: m.team2Obj?.tag || getTeamTag(m.team2Obj || m.team2),
+              logo: m.team2Obj?.logo || m.team2Obj?.logo_url || getTeamLogoUrl(m.team2Obj || m.team2) || null
+            },
+            score: typeof m.score === 'string' ? { teamAScore: m.score.split('-')[0] || 0, teamBScore: m.score.split('-')[1] || 0 } : (m.score || { teamAScore: 0, teamBScore: 0 })
           }));
           setMatches(liveList);
         }
@@ -838,147 +849,235 @@ export function MatchCenterList({ isAdmin = false }) {
                     const mapsStats = m.mapsStats || [];
                     
                     return (
-                      <div 
+                      <div
                         key={m.id}
-                        className="bg-slate-900/40 border border-slate-800/80 hover:border-slate-700/60 rounded-xl p-5 relative overflow-hidden group transition-all"
+                        onClick={() => navigate(matchCenter(m.id, false))}
+                        className="relative overflow-hidden cursor-pointer group"
+                        style={{
+                          background: 'linear-gradient(135deg, #0a0d1a 0%, #0d1128 50%, #080b17 100%)',
+                          border: '1px solid rgba(139, 92, 246, 0.25)',
+                          borderRadius: '12px',
+                          boxShadow: isLive
+                            ? '0 0 0 1px rgba(16,185,129,0.4), 0 0 20px rgba(16,185,129,0.15), inset 0 0 40px rgba(16,185,129,0.03)'
+                            : '0 0 0 1px rgba(99,102,241,0.15), 0 4px 24px rgba(0,0,0,0.6)',
+                          transition: 'all 0.25s ease',
+                        }}
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = isLive
+                            ? '0 0 0 1px rgba(16,185,129,0.6), 0 0 30px rgba(16,185,129,0.25), inset 0 0 40px rgba(16,185,129,0.05)'
+                            : '0 0 0 1px rgba(139,92,246,0.5), 0 8px 32px rgba(139,92,246,0.2), inset 0 0 60px rgba(139,92,246,0.04)';
+                        }}
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = isLive
+                            ? '0 0 0 1px rgba(16,185,129,0.4), 0 0 20px rgba(16,185,129,0.15), inset 0 0 40px rgba(16,185,129,0.03)'
+                            : '0 0 0 1px rgba(99,102,241,0.15), 0 4px 24px rgba(0,0,0,0.6)';
+                        }}
                       >
-                        {/* Glow border overlay */}
-                        <div className="absolute inset-0 bg-gradient-to-r from-violet-600/0 via-violet-600/0 to-violet-600/0 group-hover:from-violet-600/5 group-hover:to-indigo-600/5 transition-all duration-300 pointer-events-none" />
-                        
-                        <div className="flex items-center justify-between mb-4">
-                          <span className="text-[10px] font-mono text-slate-550 font-bold uppercase tracking-wider">
-                            {m.id} · {m.stage}
-                          </span>
-                          
-                          {/* Status Indicator */}
-                          <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded border ${
-                            isLive 
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30 animate-pulse'
-                              : isFinished
-                              ? 'bg-slate-850 text-slate-400 border-slate-750'
-                              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30'
-                          }`}>
-                            {m.status}
-                          </span>
+                        {/* Animated scan line */}
+                        <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-xl">
+                          <div
+                            className="absolute inset-x-0 h-px opacity-0 group-hover:opacity-100 transition-opacity"
+                            style={{
+                              background: isLive
+                                ? 'linear-gradient(90deg, transparent, rgba(16,185,129,0.6), transparent)'
+                                : 'linear-gradient(90deg, transparent, rgba(139,92,246,0.5), transparent)',
+                              top: '40%',
+                              animation: 'none',
+                            }}
+                          />
                         </div>
 
-                        {/* Team Vs Layout */}
-                        <div className="flex items-center justify-between my-5">
-                          {/* Team A */}
-                          <div className="flex items-center gap-3 w-[42%]">
-                            {m.teamA?.logo ? (
-                              <img src={m.teamA.logo} alt={m.teamA.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-800 animate-in fade-in" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-450">
-                                {m.teamA?.name?.[0]?.toUpperCase() || 'A'}
-                              </div>
-                            )}
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-bold text-slate-200 truncate">{m.teamA?.name || 'Team A'}</h4>
-                              <p className="text-[9px] text-slate-555 font-mono tracking-widest">{m.teamA?.tag || 'TMA'}</p>
-                            </div>
-                          </div>
+                        {/* Corner bracket decorations */}
+                        <div className="absolute top-2 left-2 w-4 h-4 pointer-events-none" style={{ borderTop: '2px solid rgba(139,92,246,0.6)', borderLeft: '2px solid rgba(139,92,246,0.6)' }} />
+                        <div className="absolute top-2 right-2 w-4 h-4 pointer-events-none" style={{ borderTop: '2px solid rgba(139,92,246,0.6)', borderRight: '2px solid rgba(139,92,246,0.6)' }} />
+                        <div className="absolute bottom-2 left-2 w-4 h-4 pointer-events-none" style={{ borderBottom: '2px solid rgba(139,92,246,0.6)', borderLeft: '2px solid rgba(139,92,246,0.6)' }} />
+                        <div className="absolute bottom-2 right-2 w-4 h-4 pointer-events-none" style={{ borderBottom: '2px solid rgba(139,92,246,0.6)', borderRight: '2px solid rgba(139,92,246,0.6)' }} />
 
-                          {/* Series maps score / VS */}
-                          <div className="text-center shrink-0 px-2 flex flex-col items-center">
-                            {isLive || isFinished ? (
-                              <div className="text-lg font-black font-mono tracking-tight text-white bg-black/40 border border-slate-800/80 px-3 py-1 rounded-lg">
-                                {m.seriesScore?.teamAWins ?? 0} <span className="text-slate-650 font-normal">:</span> {m.seriesScore?.teamBWins ?? 0}
-                              </div>
-                            ) : (
-                              <div className="text-[10px] font-mono font-bold text-slate-550 border border-slate-800/60 px-2.5 py-1 rounded bg-slate-950/40">
-                                VS
-                              </div>
-                            )}
-                            {(isLive || isFinished) && (
-                              <p className="text-[8px] text-slate-500 font-bold font-mono uppercase mt-1 tracking-widest">
-                                MAPS SCORE
-                              </p>
-                            )}
-                          </div>
-
-                          {/* Team B */}
-                          <div className="flex items-center justify-end gap-3 w-[42%] text-right">
-                            <div className="min-w-0">
-                              <h4 className="text-sm font-bold text-slate-200 truncate">{m.teamB?.name || 'Team B'}</h4>
-                              <p className="text-[9px] text-slate-555 font-mono tracking-widest">{m.teamB?.tag || 'TMB'}</p>
-                            </div>
-                            {m.teamB?.logo ? (
-                              <img src={m.teamB.logo} alt={m.teamB.name} className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-800 animate-in fade-in" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-450">
-                                {m.teamB?.name?.[0]?.toUpperCase() || 'B'}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Active Map Detail Subbar */}
-                        {isLive && m.activeMap && (
-                          <div className="bg-emerald-950/15 border border-emerald-900/20 rounded-lg p-2.5 my-3 flex items-center justify-between text-[10px] font-mono">
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
-                              LIVE MAP: {m.activeMap.replace('de_', '').toUpperCase()}
-                            </span>
-                            <span className="text-slate-350 font-black">
-                              {m.score?.teamAScore ?? 0} : {m.score?.teamBScore ?? 0}
-                            </span>
-                          </div>
+                        {/* Live glow corners */}
+                        {isLive && (
+                          <>
+                            <div className="absolute top-2 left-2 w-4 h-4 pointer-events-none" style={{ borderTop: '2px solid rgba(16,185,129,0.8)', borderLeft: '2px solid rgba(16,185,129,0.8)' }} />
+                            <div className="absolute top-2 right-2 w-4 h-4 pointer-events-none" style={{ borderTop: '2px solid rgba(16,185,129,0.8)', borderRight: '2px solid rgba(16,185,129,0.8)' }} />
+                            <div className="absolute bottom-2 left-2 w-4 h-4 pointer-events-none" style={{ borderBottom: '2px solid rgba(16,185,129,0.8)', borderLeft: '2px solid rgba(16,185,129,0.8)' }} />
+                            <div className="absolute bottom-2 right-2 w-4 h-4 pointer-events-none" style={{ borderBottom: '2px solid rgba(16,185,129,0.8)', borderRight: '2px solid rgba(16,185,129,0.8)' }} />
+                          </>
                         )}
 
-                        {/* 🗺️ MAPS VETO & SCORES BREAKDOWN ROW */}
-                        {m.isSynced && (
-                          <div className="mt-3 pt-3 border-t border-slate-850 flex flex-col gap-2 text-[10px] font-mono">
-                            <div className="flex justify-between items-center text-slate-500 uppercase font-black tracking-wider text-[8px]">
-                              <span>MAP VETOES & SCORES</span>
-                              <span>{m.format} FORMAT</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {mapList.map((mapName, idx) => {
-                                const mapStats = mapsStats.find(ms => ms.map_index === idx || ms.map_name === mapName);
-                                const isPlayed = !!mapStats;
-                                const cleanedName = mapName.replace('de_', '').toUpperCase();
-
-                                return (
-                                  <div 
-                                    key={mapName}
-                                    className={`px-2 py-1 rounded border text-[9px] flex items-center gap-1.5 ${
-                                      isPlayed
-                                        ? 'bg-indigo-950/20 border-indigo-900/40 text-slate-200'
-                                        : 'bg-slate-950/30 border-slate-900 text-slate-550'
-                                    }`}
-                                  >
-                                    <span>🗺️ {cleanedName}</span>
-                                    {isPlayed ? (
-                                      <strong className="text-indigo-400 font-mono">
-                                        ({mapStats.score_team1} - {mapStats.score_team2})
-                                      </strong>
-                                    ) : (
-                                      <span className="text-slate-650">(TBD)</span>
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Footer Controls */}
-                        <div className="flex justify-end gap-2 border-t border-slate-850 pt-4 mt-3">
-                          <Link 
-                            to={matchCenter(m.id, false)}
-                            className="bg-slate-800 hover:bg-slate-700/80 text-xs font-bold text-slate-200 px-3.5 py-1.5 rounded-lg transition-colors font-mono"
+                        {/* Round name banner */}
+                        <div
+                          className="relative w-full text-center py-2.5"
+                          style={{
+                            background: isLive
+                              ? 'linear-gradient(90deg, rgba(16,185,129,0.08), rgba(16,185,129,0.18), rgba(16,185,129,0.08))'
+                              : 'linear-gradient(90deg, rgba(99,102,241,0.06), rgba(139,92,246,0.15), rgba(99,102,241,0.06))',
+                            borderBottom: isLive ? '1px solid rgba(16,185,129,0.2)' : '1px solid rgba(139,92,246,0.18)',
+                          }}
+                        >
+                          <span
+                            className="text-xs font-black tracking-widest uppercase font-mono"
+                            style={{
+                              color: isLive ? '#34d399' : '#a78bfa',
+                              textShadow: isLive ? '0 0 12px rgba(52,211,153,0.6)' : '0 0 12px rgba(167,139,250,0.5)',
+                            }}
                           >
-                            PUBLIC VIEW
-                          </Link>
-                          {isAdmin && (
-                            <Link 
-                              to={matchCenter(m.id, true)}
-                              className="bg-violet-650/10 hover:bg-violet-650 text-violet-300 hover:text-white border border-violet-500/20 hover:border-violet-650 text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all font-mono"
+                            {getRoundLabel(activeStageTab, m.round_number || m.round, maxRoundInActiveStage)}
+                          </span>
+                        </div>
+
+                        {/* Main body */}
+                        <div className="px-5 py-4">
+                          {/* Format + Match ID row */}
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-[9px] font-mono text-slate-500 tracking-widest uppercase">
+                              #{m.id}
+                            </span>
+                            <div
+                              className="px-3 py-0.5 rounded text-[10px] font-black font-mono tracking-wider"
+                              style={{
+                                background: 'rgba(99,102,241,0.12)',
+                                border: '1px solid rgba(99,102,241,0.3)',
+                                color: '#818cf8',
+                              }}
                             >
-                              OPERATOR PANEL
-                            </Link>
+                              {m.format || 'BO1'}
+                            </div>
+                          </div>
+
+                          {/* Teams row */}
+                          <div className="flex items-center justify-between gap-2 my-2">
+                            {/* Team A */}
+                            <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                              <div
+                                className="w-16 h-16 rounded-lg flex items-center justify-center text-xl font-black shrink-0 overflow-hidden"
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.1))',
+                                  border: '1px solid rgba(99,102,241,0.3)',
+                                  color: '#c4b5fd',
+                                }}
+                              >
+                                {m.teamA?.logo
+                                  ? <img src={m.teamA.logo} alt={m.teamA.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  : (m.teamA?.tag?.[0] || m.teamA?.name?.[0] || 'A')}
+                              </div>
+                              <div className="text-center min-w-0 w-full">
+                                <div
+                                  className="font-black text-white text-sm truncate"
+                                  style={{ textShadow: '0 0 8px rgba(255,255,255,0.15)' }}
+                                >
+                                  {m.teamA?.name || 'TBD'}
+                                </div>
+                                <div className="text-[9px] font-mono tracking-widest mt-0.5"
+                                  style={{ color: '#7c3aed' }}>
+                                  {m.teamA?.tag || 'TBD'}
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* VS / Score center */}
+                            <div className="flex flex-col items-center shrink-0 px-2">
+                              {isLive || isFinished ? (
+                                <div
+                                  className="text-xl font-black font-mono tracking-tight"
+                                  style={{ color: '#f8fafc', textShadow: '0 0 16px rgba(255,255,255,0.3)' }}
+                                >
+                                  {m.seriesScore?.teamAWins ?? 0}
+                                  <span className="text-slate-600 mx-1.5">:</span>
+                                  {m.seriesScore?.teamBWins ?? 0}
+                                </div>
+                              ) : (
+                                <div
+                                  className="text-sm font-black font-mono px-3 py-1.5 rounded"
+                                  style={{
+                                    background: 'rgba(15,23,42,0.8)',
+                                    border: '1px solid rgba(139,92,246,0.4)',
+                                    color: '#a78bfa',
+                                    textShadow: '0 0 8px rgba(167,139,250,0.5)',
+                                  }}
+                                >
+                                  VS
+                                </div>
+                              )}
+                              <div className="text-[8px] font-mono text-slate-600 mt-1 tracking-widest uppercase">
+                                {isLive || isFinished ? 'MAPS' : 'vs'}
+                              </div>
+                            </div>
+
+                            {/* Team B */}
+                            <div className="flex flex-col items-center gap-2 flex-1 min-w-0">
+                              <div
+                                className="w-16 h-16 rounded-lg flex items-center justify-center text-xl font-black shrink-0 overflow-hidden"
+                                style={{
+                                  background: 'linear-gradient(135deg, rgba(99,102,241,0.2), rgba(139,92,246,0.1))',
+                                  border: '1px solid rgba(99,102,241,0.3)',
+                                  color: '#c4b5fd',
+                                }}
+                              >
+                                {m.teamB?.logo
+                                  ? <img src={m.teamB.logo} alt={m.teamB.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  : (m.teamB?.tag?.[0] || m.teamB?.name?.[0] || 'B')}
+                              </div>
+                              <div className="text-center min-w-0 w-full">
+                                <div
+                                  className="font-black text-white text-sm truncate"
+                                  style={{ textShadow: '0 0 8px rgba(255,255,255,0.15)' }}
+                                >
+                                  {m.teamB?.name || 'TBD'}
+                                </div>
+                                <div className="text-[9px] font-mono tracking-widest mt-0.5"
+                                  style={{ color: '#7c3aed' }}>
+                                  {m.teamB?.tag || 'TBD'}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Active map bar (live only) */}
+                          {isLive && m.activeMap && (
+                            <div
+                              className="mt-3 flex items-center justify-between px-3 py-1.5 rounded text-[9px] font-mono"
+                              style={{
+                                background: 'rgba(16,185,129,0.08)',
+                                border: '1px solid rgba(16,185,129,0.2)',
+                              }}
+                            >
+                              <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                                <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+                                LIVE: {m.activeMap.replace('de_', '').toUpperCase()}
+                              </span>
+                              <span className="text-white font-black">
+                                {m.score?.teamAScore ?? 0} – {m.score?.teamBScore ?? 0}
+                              </span>
+                            </div>
                           )}
+                        </div>
+
+                        {/* Status footer banner */}
+                        <div
+                          className="relative w-full text-center py-2"
+                          style={{
+                            borderTop: isLive
+                              ? '1px solid rgba(16,185,129,0.2)'
+                              : isFinished
+                              ? '1px solid rgba(100,116,139,0.2)'
+                              : '1px solid rgba(99,102,241,0.15)',
+                            background: isLive
+                              ? 'linear-gradient(90deg, rgba(16,185,129,0.05), rgba(16,185,129,0.12), rgba(16,185,129,0.05))'
+                              : isFinished
+                              ? 'linear-gradient(90deg, rgba(30,41,59,0.5), rgba(51,65,85,0.3), rgba(30,41,59,0.5))'
+                              : 'linear-gradient(90deg, rgba(99,102,241,0.04), rgba(139,92,246,0.1), rgba(99,102,241,0.04))',
+                          }}
+                        >
+                          <span
+                            className="text-[10px] font-black tracking-widest uppercase font-mono"
+                            style={{
+                              color: isLive ? '#34d399' : isFinished ? '#64748b' : '#818cf8',
+                              textShadow: isLive ? '0 0 8px rgba(52,211,153,0.5)' : 'none',
+                            }}
+                          >
+                            {isLive ? '● LIVE' : isFinished ? '✓ COMPLETED' : '○ UPCOMING'}
+                          </span>
                         </div>
                       </div>
                     );

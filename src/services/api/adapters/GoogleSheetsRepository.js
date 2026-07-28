@@ -1,7 +1,7 @@
 import { RegistrationRepository } from '../RepositoryInterface';
 import { flattenForSheets } from './googleSheets';
 import { tournaments } from '../../../config/tournaments';
-import { fluxRepository } from './FluxRepository';
+import { pixelPalaceRepository } from './PixelPalaceRepository';
 
 export class GoogleSheetsRepository extends RegistrationRepository {
   constructor() {
@@ -243,9 +243,9 @@ export class GoogleSheetsRepository extends RegistrationRepository {
     const bracketUrl = tournament?.bracketApiUrl || "https://flux2.lotgaming.xyz/api/brackets/8/public";
 
     try {
-      return await fluxRepository.getBracket(bracketUrl);
+      return await pixelPalaceRepository.getBracket(tournament || bracketUrl);
     } catch (err) {
-      console.warn("[GoogleSheetsRepository] Flux API fetch failed, falling back to Apps Script:", err);
+      console.warn("[GoogleSheetsRepository] PixelPalace API fetch failed, falling back to Apps Script:", err);
       const endpoint = this._getEndpoint(tournamentId);
       if (!endpoint) {
         return { 

@@ -38,7 +38,11 @@ export const tournaments = [
     discordRequired: true,
     softBanEnabled: false,
     bracketsEnabled: true,
-    bracketApiUrl: "https://flux2.lotgaming.xyz/api/brackets/8/public",
+    api: {
+      baseUrl: "https://pixelpalace.lotgaming.xyz/api",
+      bracketId: 1
+    },
+    bracketApiUrl: "https://pixelpalace.lotgaming.xyz/api/brackets/1/public",
     supportsLogoUpload: true,
     hideRegisteredTeamsDuringRegistration: true,
     sessionManagementEnabled: true,
