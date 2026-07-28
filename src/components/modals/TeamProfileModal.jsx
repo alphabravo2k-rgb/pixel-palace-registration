@@ -1,4 +1,4 @@
-import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass } from 'lucide-react';
+import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass, Gamepad2 } from 'lucide-react';
 import React, { useState } from 'react';
 
 
@@ -108,7 +108,7 @@ export const TeamProfileModal = ({ team, onClose }) => {
             <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-6">
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Average ELO</span>
-                <span className="text-xl font-heading text-neon-cyan tracking-widest">{team.averageElo || 'N/A'}</span>
+                <span className="text-xl font-heading text-neon-cyan tracking-widest">{team.averageElo || 'Not Available'}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1 font-semibold">Team Seed</span>
@@ -124,7 +124,35 @@ export const TeamProfileModal = ({ team, onClose }) => {
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Region</span>
-                <span className="text-xl font-heading text-zinc-300 tracking-widest">{team.region || 'Unknown'}</span>
+                <span className="text-xl font-heading text-zinc-300 tracking-widest">{team.region || 'Not Available'}</span>
+              </div>
+            </div>
+
+            {/* Extended Metadata Trace */}
+            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/5 pt-4 text-xs font-body text-left">
+              <div>
+                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Captain</span>
+                <span className="text-white font-semibold block mt-0.5">
+                  {team.roster?.find(p => p.role === 'Captain')?.ign || 'Not Available'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Qualification Path</span>
+                <span className="text-white font-semibold block mt-0.5">
+                  {team.inviteCode ? `Invited (${team.inviteCode})` : 'Open Qualifier'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Registered At</span>
+                <span className="text-white font-semibold block mt-0.5">
+                  {team.registeredAt ? new Date(team.registeredAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending Verification'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Verification Status</span>
+                <span className="text-white font-semibold block mt-0.5 uppercase">
+                  {team.status || 'Pending Verification'}
+                </span>
               </div>
             </div>
 
@@ -173,41 +201,49 @@ export const TeamProfileModal = ({ team, onClose }) => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {team.roster.map((p, i) => (
-                <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden">
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-white/5 blur-[20px] rounded-full group-hover:bg-neon-cyan/10 transition-colors" />
-                  <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
-                      <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
-                        {p.ign || p.discord || 'PLAYER'}
+                <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
+                        <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
+                          {p.ign || p.discord || 'PLAYER'}
+                        </span>
+                      </div>
+                      <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
+                        {p.role || 'Player'}
                       </span>
                     </div>
-                    <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
-                      {p.role || 'Player'}
-                    </span>
+                    <div className="flex flex-col gap-2 relative z-10">
+                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
+                        <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black leading-none ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
+                          {getFaceitLevelStyle(p.faceitLevel).label}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
+                        <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'Not Available'}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex flex-col gap-2 relative z-10">
-                    <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
-                      <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black leading-none ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
-                        {getFaceitLevelStyle(p.faceitLevel).label}
+
+                  <div className="flex justify-start gap-4 mt-4 pt-3 border-t border-white/5 relative z-10 text-zinc-500">
+                    {p.discord && p.discord !== 'Not Available' && (
+                      <span className="text-[9px] text-zinc-400 font-bold uppercase flex items-center gap-1" title={`Discord: ${p.discord}`}>
+                        <MessageSquare className="w-3.5 h-3.5 text-[#5865F2]" />
+                        <span className="max-w-[65px] truncate">{p.discord}</span>
                       </span>
-                    </div>
-                    <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                      <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
-                      <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'N/A'}</span>
-                    </div>
-                    {p.rankBadge && (
-                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">CS2 Rank</span>
-                        <span className="text-[10px] text-amber-400 font-bold font-body">{p.rankBadge}</span>
-                      </div>
                     )}
-                    {p.kd && (
-                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Win / KD</span>
-                        <span className="text-[10px] text-green-400 font-bold font-body">{p.winRate || 'N/A'} | {p.kd}</span>
-                      </div>
+                    {p.steam && (
+                      <a href={p.steam} target="_blank" rel="noopener noreferrer" className="hover:text-neon-cyan transition-colors" title="Steam Profile">
+                        <Gamepad2 className="w-3.5 h-3.5" />
+                      </a>
+                    )}
+                    {p.faceit && (
+                      <a href={p.faceit} target="_blank" rel="noopener noreferrer" className="hover:text-neon-pink transition-colors" title="FACEIT Profile">
+                        <Crosshair className="w-3.5 h-3.5" />
+                      </a>
                     )}
                   </div>
                 </div>
@@ -218,4 +254,4 @@ export const TeamProfileModal = ({ team, onClose }) => {
       </div>
     </div>
   );
-}
+};

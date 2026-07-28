@@ -31,6 +31,59 @@ export const TrackerTab = ({
 }) => {
   const [failedLogos, setFailedLogos] = useState({});
 
+  // Calculate dynamic stats from teams array
+  const stats = React.useMemo(() => {
+    if (!Array.isArray(teams)) return null;
+    
+    let approved = 0;
+    let pending = 0;
+    let rejected = 0;
+    let invited = 0;
+    let totalElo = 0;
+    let playersWithElo = 0;
+    let totalLevel = 0;
+    let playersWithLevel = 0;
+    const regions = new Set();
+
+    teams.forEach(t => {
+      const status = (t.status || '').toUpperCase();
+      if (status === 'VERIFIED' || status === 'CHAMPION') approved++;
+      else if (status === 'REJECTED' || status === 'DISQUALIFIED') rejected++;
+      else pending++;
+
+      if (t.inviteCode) invited++;
+      if (t.region && t.region !== 'Not Available') regions.add(t.region);
+
+      if (Array.isArray(t.roster)) {
+        t.roster.forEach(p => {
+          const elo = parseInt(p.faceitElo);
+          if (!isNaN(elo) && elo > 0) {
+            totalElo += elo;
+            playersWithElo++;
+          }
+          const lvl = parseInt(p.faceitLevel);
+          if (!isNaN(lvl) && lvl > 0) {
+            totalLevel += lvl;
+            playersWithLevel++;
+          }
+        });
+      }
+    });
+
+    const avgElo = playersWithElo > 0 ? Math.round(totalElo / playersWithElo) : 'N/A';
+    const avgLvl = playersWithLevel > 0 ? (totalLevel / playersWithLevel).toFixed(1) : 'N/A';
+
+    return {
+      approved,
+      pending,
+      rejected,
+      invited,
+      avgElo,
+      avgLvl,
+      countries: regions.size
+    };
+  }, [teams]);
+
   // Compute if registrations are active
   const isRegistrationOpen = tournament?.registrationDeadline 
     ? new Date().getTime() < new Date(tournament.registrationDeadline).getTime()
@@ -225,8 +278,42 @@ export const TrackerTab = ({
             <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No teams have initialized registration yet.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {teams.map((team, idx) => {
+          <div className="space-y-6">
+            {stats && (
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4 bg-black/30 border border-white/5 p-4 rounded-lg text-left">
+                <div className="flex flex-col">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Approved Teams</span>
+                  <span className="text-xl font-heading text-green-400 font-black mt-1 leading-none">{stats.approved}</span>
+                </div>
+                <div className="flex flex-col border-l border-white/5 pl-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Pending Review</span>
+                  <span className="text-xl font-heading text-yellow-400 font-black mt-1 leading-none">{stats.pending}</span>
+                </div>
+                <div className="flex flex-col border-l border-white/5 pl-4 border-r border-white/5 pr-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Not Accepted</span>
+                  <span className="text-xl font-heading text-red-500 font-black mt-1 leading-none">{stats.rejected}</span>
+                </div>
+                <div className="flex flex-col pl-2">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Invited Teams</span>
+                  <span className="text-xl font-heading text-neon-pink font-black mt-1 leading-none">{stats.invited}</span>
+                </div>
+                <div className="flex flex-col border-l border-white/5 pl-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Average ELO</span>
+                  <span className="text-xl font-heading text-neon-cyan font-black mt-1 leading-none">{stats.avgElo}</span>
+                </div>
+                <div className="flex flex-col border-l border-white/5 pl-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Average Level</span>
+                  <span className="text-xl font-heading text-white font-black mt-1 leading-none">LVL {stats.avgLvl}</span>
+                </div>
+                <div className="flex flex-col border-l border-white/5 pl-4">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Regions</span>
+                  <span className="text-xl font-heading text-purple-400 font-black mt-1 leading-none">{stats.countries}</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {teams.map((team, idx) => {
               const isFailed = failedLogos[`${team.name}-${idx}`];
               const logoSrc = isFailed || !team.logo || !team.logo.startsWith('http')
                 ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'
@@ -294,6 +381,7 @@ export const TrackerTab = ({
               );
             })}
           </div>
+        </div>
         )}
       </div>
     </div>

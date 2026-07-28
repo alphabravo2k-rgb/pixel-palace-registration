@@ -6,8 +6,9 @@ import { Logger } from '../shared/kernel/Logger.js';
 
 // Known LOT Gaming instance URL → local dev proxy path map
 const LOT_PROXY_MAP = {
-  'dlan.lotgaming.xyz': '/lot-api/api',
-  'fluxbot.lotgaming.xyz': '/flux-api/api',
+  'dlan.lotgaming.xyz': 'https://dlan.lotgaming.xyz/api',
+  'fluxbot.lotgaming.xyz': 'https://flux2.lotgaming.xyz/api',
+  'flux2.lotgaming.xyz': 'https://flux2.lotgaming.xyz/api',
 };
 
 function sanitizeLogoUrl(logoUrl) {

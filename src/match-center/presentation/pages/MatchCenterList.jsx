@@ -10,6 +10,10 @@ import { platformProjectionRegistry } from '../../application/ProjectionManager.
 import { useMatchCenter } from '../hooks/useMatchCenter.js';
 import { Logger } from '../../shared/kernel/Logger.js';
 import { fetchTeams } from '../../../services/api/client.js';
+import { matchCenter } from '../../../utils/navigation.js';
+import { fluxRepository } from '../../../services/api/adapters/FluxRepository.js';
+import { PPCC2_PERMANENT_SLOTS } from '../../../config/bracketLayout.js';
+import { resolveDisplayMatches } from '../../../utils/bracketSelector.js';
 
 // Dynamic SE round name resolver
 function getRoundLabel(stageName, roundNum, maxRound) {
@@ -149,25 +153,40 @@ export function MatchCenterList({ isAdmin = false }) {
   const [customTeamBTag, setCustomTeamBTag] = useState('');
   const [teamBLogoUrl, setTeamBLogoUrl] = useState('');
   const [mapListOverride, setMapListOverride] = useState('');
-  
-  // Use a temporary match ID hook to access the LOT Gaming API sync engine
   const { syncLotMatch, loading, error, clearError } = useMatchCenter('736');
 
-  // Load matches from read-model registry on mount/polling
+  // Fetch live matches directly from Flux API endpoint
   useEffect(() => {
-    const fetchMatches = () => {
-      const allMatches = Array.from(platformProjectionRegistry.summaries.entries()).map(([id, data]) => ({
-        id,
-        ...data,
-        stage: data.stage || 'Single Elimination',
-        round: Number(data.round) || 1,
-      }));
-      setMatches(allMatches);
+    let active = true;
+    const fetchMatches = async () => {
+      try {
+        const bracket = await fluxRepository.getBracket();
+        if (active && bracket && Array.isArray(bracket.matches)) {
+          const liveList = bracket.matches.map(m => ({
+            id: String(m.id),
+            matchId: String(m.id),
+            stage: 'Single Elimination',
+            round: m.round || `Round ${m.round_number}`,
+            status: m.status || 'PENDING',
+            game: 'Counter-Strike 2',
+            format: m.format || `BO${m.best_of || 1}`,
+            teamA: typeof m.team1 === 'object' ? m.team1 : { name: m.team1 || 'TBD', tag: m.team1 || 'TBD' },
+            teamB: typeof m.team2 === 'object' ? m.team2 : { name: m.team2 || 'TBD', tag: m.team2 || 'TBD' },
+            score: typeof m.score === 'object' ? m.score : { teamAScore: m.score?.split('-')[0] || 0, teamBScore: m.score?.split('-')[1] || 0 }
+          }));
+          setMatches(liveList);
+        }
+      } catch (err) {
+        Logger.warn(`[MatchCenterList] Error fetching live Flux matches: ${err.message}`);
+      }
     };
     
     fetchMatches();
-    const interval = setInterval(fetchMatches, 2000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchMatches, 15000);
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Fetch registrations/teams on mount if in Admin Mode
@@ -390,64 +409,46 @@ export function MatchCenterList({ isAdmin = false }) {
       (m.mapName || '').toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  // Construct final display list for active stage tab
+  // Construct final display list from the permanent 31-slot tournament skeleton
   let stageMatches = [];
   
   if (activeStageTab === 'Single Elimination') {
-    const template = generateBracketTemplate();
-    const activeSEMatches = filteredRegistryMatches.filter(m => m.stage === 'Single Elimination');
-    
-    // First, map slots using local storage overrides mappings
-    template.forEach(slot => {
-      const mappedMatchId = localStorage.getItem(`slot_mapping_${slot.slotKey}`);
-      if (mappedMatchId) {
-        const activeMatch = filteredRegistryMatches.find(m => m.id === mappedMatchId);
-        if (activeMatch) {
-          slot.id = activeMatch.id;
-          slot.status = activeMatch.status;
-          slot.teamA = activeMatch.teamA || slot.teamA;
-          slot.teamB = activeMatch.teamB || slot.teamB;
-          slot.score = activeMatch.score || slot.score;
-          slot.seriesScore = activeMatch.seriesScore || slot.seriesScore;
-          slot.mapsStats = activeMatch.mapsStats || slot.mapsStats;
-          slot.mapList = activeMatch.mapList || slot.mapList;
-          slot.mapName = activeMatch.mapName || slot.mapName;
-          slot.isSynced = true;
-        }
-      }
-    });
+    const { matches: displayMatches } = resolveDisplayMatches(matches);
+    const fluxMatchMap = new Map((displayMatches || []).map(m => [`${m.round_number ?? m.round}-${m.position}`, m]));
 
-    // For any unmapped matches, use default index resolution fallback
-    activeSEMatches.forEach(activeMatch => {
-      const alreadyMapped = template.some(t => t.id === activeMatch.id);
-      if (alreadyMapped) return;
-
-      let matchIdx = activeMatch.matchIndex;
-      if (!matchIdx) {
-        const lastDigits = activeMatch.id.match(/\d+$/)?.[0];
-        matchIdx = lastDigits ? (parseInt(lastDigits.slice(-2), 10) || 1) : 1;
+    stageMatches = PPCC2_PERMANENT_SLOTS.map(slot => {
+      const live = fluxMatchMap.get(`${slot.round_number}-${slot.position}`);
+      if (live) {
+        return {
+          id: String(live.id || live.slotKey || slot.slotKey),
+          slotKey: slot.slotKey,
+          round: slot.round_number,
+          roundName: slot.roundName,
+          visualLabel: slot.visualLabel,
+          format: slot.format,
+          status: live.status || 'PENDING',
+          teamA: live.teamA || { name: 'TBD', tag: 'TBD' },
+          teamB: live.teamB || { name: 'TBD', tag: 'TBD' },
+          score: live.score || { teamAScore: 0, teamBScore: 0 },
+          hasMatch: true
+        };
       }
-      
-      const targetSlot = template.find(t => t.round === activeMatch.round && t.matchIndex === matchIdx && !t.isSynced);
-      if (targetSlot) {
-        targetSlot.id = activeMatch.id;
-        targetSlot.status = activeMatch.status;
-        targetSlot.teamA = activeMatch.teamA || targetSlot.teamA;
-        targetSlot.teamB = activeMatch.teamB || targetSlot.teamB;
-        targetSlot.score = activeMatch.score || targetSlot.score;
-        targetSlot.seriesScore = activeMatch.seriesScore || targetSlot.seriesScore;
-        targetSlot.mapsStats = activeMatch.mapsStats || targetSlot.mapsStats;
-        targetSlot.mapList = activeMatch.mapList || targetSlot.mapList;
-        targetSlot.mapName = activeMatch.mapName || targetSlot.mapName;
-        targetSlot.isSynced = true;
-      } else {
-        template.push(activeMatch);
-      }
+      return {
+        id: slot.slotKey,
+        slotKey: slot.slotKey,
+        round: slot.round_number,
+        roundName: slot.roundName,
+        visualLabel: slot.visualLabel,
+        format: slot.format,
+        status: 'Pending Initialization',
+        teamA: { name: 'TBD', tag: 'TBD' },
+        teamB: { name: 'TBD', tag: 'TBD' },
+        score: { teamAScore: 0, teamBScore: 0 },
+        hasMatch: false
+      };
     });
-    
-    stageMatches = template;
   } else {
-    stageMatches = filteredRegistryMatches.filter(m => m.stage === activeStageTab);
+    stageMatches = matches.filter(m => m.stage === activeStageTab);
   }
 
   // Group and filter by status and query for display
@@ -502,11 +503,11 @@ export function MatchCenterList({ isAdmin = false }) {
             <p className="text-xs text-slate-400 mt-1 max-w-xl leading-relaxed">
               {isAdmin 
                 ? 'Authorized Operator Portal: Map bracket slots to API endpoints, override team details, logos, and check live data feeds.' 
-                : 'Real-time CS2 series statistics, map vetoes, player performance, and live scoreboard feeds.'}
+                : 'Official tournament bracket and match structure synchronized live from the official Flux tournament service.'}
             </p>
           </div>
 
-          {!isAdmin && (
+          {isAdmin && (
             <div className="bg-slate-900/60 border border-slate-800/80 p-4 rounded-xl max-w-md w-full shrink-0">
               <h3 className="text-xs font-bold text-slate-300 mb-2 font-mono flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-violet-500 rounded-full animate-ping" />
@@ -965,14 +966,14 @@ export function MatchCenterList({ isAdmin = false }) {
                         {/* Footer Controls */}
                         <div className="flex justify-end gap-2 border-t border-slate-850 pt-4 mt-3">
                           <Link 
-                            to={`/match-center/${m.id}`}
+                            to={matchCenter(m.id, false)}
                             className="bg-slate-800 hover:bg-slate-700/80 text-xs font-bold text-slate-200 px-3.5 py-1.5 rounded-lg transition-colors font-mono"
                           >
                             PUBLIC VIEW
                           </Link>
                           {isAdmin && (
                             <Link 
-                              to={`/admin/match-center/${m.id}`}
+                              to={matchCenter(m.id, true)}
                               className="bg-violet-650/10 hover:bg-violet-650 text-violet-300 hover:text-white border border-violet-500/20 hover:border-violet-650 text-xs font-bold px-3.5 py-1.5 rounded-lg transition-all font-mono"
                             >
                               OPERATOR PANEL

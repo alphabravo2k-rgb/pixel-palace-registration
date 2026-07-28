@@ -37,7 +37,8 @@ export const tournaments = [
     // Feature flags
     discordRequired: true,
     softBanEnabled: false,
-    bracketsEnabled: false,
+    bracketsEnabled: true,
+    bracketApiUrl: "https://flux2.lotgaming.xyz/api/brackets/8/public",
     supportsLogoUpload: true,
     hideRegisteredTeamsDuringRegistration: true,
     sessionManagementEnabled: true,

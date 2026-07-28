@@ -20,31 +20,33 @@ export const RegistrationTab = ({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 max-w-7xl mx-auto">
       {/* LEFT SIDEBAR */}
       <div className="lg:col-span-4 space-y-8">
-        <div className="glass-panel p-6 border-l-4 border-l-red-500 bg-red-950/20">
-          <h3 className="text-2xl text-white font-heading mb-4 flex items-center gap-2 uppercase">
-            <AlertOctagon className="w-6 h-6 text-red-500" /> CRITICAL REQUIREMENTS
-          </h3>
-          <ul className="space-y-4 font-body text-sm">
-            <li className="flex gap-3 items-start bg-black/30 p-3 rounded border border-white/5">
-              <MessageCircle className="w-5 h-5 text-[#5865F2] flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white uppercase tracking-widest font-bold">Mandatory Discord</strong>
-                <p className="text-zinc-400 leading-tight mt-1">
-                  All players MUST be in the Pixel Palace Discord server. Failure to join results in disqualification.
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-3 items-start bg-black/30 p-3 rounded border border-white/5">
-              <Target className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
-              <div>
-                <strong className="text-white uppercase tracking-widest font-bold">Registration Status</strong>
-                <p className="text-zinc-400 leading-tight mt-1">
-                  Invite codes unlock priority slots ({tournament.inviteSlots} available). Open registration fills remaining {tournament.openSlots} slots. Limited to {tournament.maxTeams} total teams.
-                </p>
-              </div>
-            </li>
-          </ul>
-        </div>
+        {!isClosed && (
+          <div className="glass-panel p-6 border-l-4 border-l-red-500 bg-red-950/20">
+            <h3 className="text-2xl text-white font-heading mb-4 flex items-center gap-2 uppercase">
+              <AlertOctagon className="w-6 h-6 text-red-500" /> CRITICAL REQUIREMENTS
+            </h3>
+            <ul className="space-y-4 font-body text-sm">
+              <li className="flex gap-3 items-start bg-black/30 p-3 rounded border border-white/5">
+                <MessageCircle className="w-5 h-5 text-[#5865F2] flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-white uppercase tracking-widest font-bold">Mandatory Discord</strong>
+                  <p className="text-zinc-400 leading-tight mt-1">
+                    All players MUST be in the Pixel Palace Discord server. Failure to join results in disqualification.
+                  </p>
+                </div>
+              </li>
+              <li className="flex gap-3 items-start bg-black/30 p-3 rounded border border-white/5">
+                <Target className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <strong className="text-white uppercase tracking-widest font-bold">Registration Status</strong>
+                  <p className="text-zinc-400 leading-tight mt-1">
+                    Invite codes unlock priority slots ({tournament.inviteSlots} available). Open registration fills remaining {tournament.openSlots} slots. Limited to {tournament.maxTeams} total teams.
+                  </p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        )}
         
         <TournamentInfo tournament={tournament} />
 
@@ -77,20 +79,22 @@ export const RegistrationTab = ({
           </div>
         </div>
 
-        <div className="glass-panel p-6">
-          <h3 className="text-2xl text-white font-heading mb-4 flex items-center gap-2 uppercase">
-            <ShieldAlert className="w-5 h-5 text-red-500" /> Anti-Cheat Protocols
-          </h3>
-          <ul className="text-sm space-y-3 text-zinc-300 font-body mb-5">
-            <li className="flex gap-3 items-start">
-              <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
-              <span className="leading-tight"><strong>Akros Anti-Cheat</strong> is 100% required. No exceptions.</span>
-            </li>
-          </ul>
-          <a href="https://akros.ac/#download" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black text-sm font-bold uppercase tracking-widest transition-all font-body rounded shadow-[0_0_15px_rgba(0,240,255,0.2)]">
-            <Download className="w-4 h-4" /> Download Akros Client
-          </a>
-        </div>
+        {!isClosed && (
+          <div className="glass-panel p-6">
+            <h3 className="text-2xl text-white font-heading mb-4 flex items-center gap-2 uppercase">
+              <ShieldAlert className="w-5 h-5 text-red-500" /> Anti-Cheat Protocols
+            </h3>
+            <ul className="text-sm space-y-3 text-zinc-300 font-body mb-5">
+              <li className="flex gap-3 items-start">
+                <ShieldCheck className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                <span className="leading-tight"><strong>Akros Anti-Cheat</strong> is 100% required. No exceptions.</span>
+              </li>
+            </ul>
+            <a href="https://akros.ac/#download" target="_blank" rel="noreferrer" className="flex items-center justify-center gap-2 w-full py-3 bg-neon-cyan/10 border border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-black text-sm font-bold uppercase tracking-widest transition-all font-body rounded shadow-[0_0_15px_rgba(0,240,255,0.2)]">
+              <Download className="w-4 h-4" /> Download Akros Client
+            </a>
+          </div>
+        )}
 
         {tournament.maps && tournament.maps.length > 0 && (
           <div className="glass-panel p-6">

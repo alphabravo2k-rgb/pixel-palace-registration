@@ -1,6 +1,7 @@
 import { RegistrationRepository } from '../RepositoryInterface';
 import { flattenForSheets } from './googleSheets';
 import { tournaments } from '../../../config/tournaments';
+import { fluxRepository } from './FluxRepository';
 
 export class GoogleSheetsRepository extends RegistrationRepository {
   constructor() {
@@ -81,7 +82,7 @@ export class GoogleSheetsRepository extends RegistrationRepository {
       try {
         const res = await fetch(`${endpoint}?endpoint=/api/v1/getTeams&action=getTeams&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
         if (res.ok) {
-          const data = await res.json();
+          const data = await res.ok ? await res.json() : null;
           if (data && Array.isArray(data.teams)) {
             apiTeams = data.teams;
           }
@@ -91,39 +92,53 @@ export class GoogleSheetsRepository extends RegistrationRepository {
       }
     }
 
-    // Merge static teams list with API teams, avoiding duplicate names
-    const mergedMap = new Map();
-    
-    // First, populate with static teams
-    STATIC_TEAMS.forEach(t => {
-      const sanitizedLogo = sanitizeLogoUrl(t.logo_url);
-      t.logo_url = sanitizedLogo;
-      if (t.team) t.team.logo_url = sanitizedLogo;
-      mergedMap.set(t.team_name.toLowerCase().trim(), t);
-    });
+    const mappedTeams = [];
+    const registrationIds = new Set();
 
-    // Then, merge API teams (overwriting or keeping custom ones)
-    apiTeams.forEach(t => {
-      const name = (t.team_name || t.team?.team_name || '').toLowerCase().trim();
-      if (name) {
-        const logo = sanitizeLogoUrl(t.logo_url || t.team?.logo_url);
-        // Construct canonical team structure
-        const canonicalTeam = {
-          id: t.id || `T-SHEET-${name.replace(/\s+/g, '-')}`,
-          team_name: t.team_name || t.team?.team_name,
-          team_tag: t.team_tag || t.team?.team_tag,
-          logo_url: logo,
-          team: {
-            team_name: t.team_name || t.team?.team_name,
-            team_tag: t.team_tag || t.team?.team_tag,
-            logo_url: logo,
-          }
-        };
-        mergedMap.set(name, canonicalTeam);
+    apiTeams.forEach((t, idx) => {
+      const name = (t.name || '').trim();
+      if (!name) return;
+
+      const regId = t.registrationId || `REG-SHEET-${name.toLowerCase().replace(/\s+/g, '-')}-${idx}`;
+      
+      // Data Integrity Check: Ensure unique Registration ID
+      if (registrationIds.has(regId)) {
+        console.warn(`[GoogleSheetsRepository] Duplicate Registration ID detected: ${regId} for team ${name}`);
+        return;
       }
+      registrationIds.add(regId);
+
+      const logo = sanitizeLogoUrl(t.logo);
+      const canonicalTeam = {
+        id: t.id || `T-SHEET-${name.toLowerCase().replace(/\s+/g, '-')}-${idx}`,
+        registrationId: regId,
+        name: name,
+        tag: (t.tag || '').trim(),
+        logo: logo,
+        status: t.status || 'PENDING REVIEW',
+        rawStatus: t.rawStatus || 'PENDING',
+        averageElo: t.averageElo || 'N/A',
+        seed: t.seed || 'TBD',
+        region: t.region || 'Not Available',
+        adminRemarks: t.adminRemarks || '',
+        registeredAt: t.registeredAt || '',
+        inviteCode: t.inviteCode || '',
+        roster: Array.isArray(t.roster) ? t.roster.map(p => ({
+          ign: (p.ign || '').trim(),
+          role: p.role || 'Player',
+          discord: p.discord || 'Not Available',
+          steam: p.steam || '',
+          faceit: p.faceit || '',
+          faceitLevel: p.faceitLevel || 'N/A',
+          faceitElo: p.faceitElo || 'N/A',
+          rankBadge: p.faceitLevel ? `Level ${p.faceitLevel}` : 'N/A'
+        })) : []
+      };
+
+      mappedTeams.push(canonicalTeam);
     });
 
-    return { teams: Array.from(mergedMap.values()) };
+    return { teams: mappedTeams };
   }
 
   async validateInviteCode(tournamentId, code) {
@@ -224,20 +239,23 @@ export class GoogleSheetsRepository extends RegistrationRepository {
   }
 
   async fetchBracket(tournamentId) {
-    const endpoint = this._getEndpoint(tournamentId);
-    if (!endpoint) {
-      return { 
-         bracketUrl: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png", 
-         schedule: ["Quarterfinals: 18:00 GST", "Semifinals: 20:00 GST", "Grand Finals: 22:00 GST"] 
-      };
-    }
+    const tournament = tournaments.find((t) => t.id === tournamentId);
+    const bracketUrl = tournament?.bracketApiUrl || "https://flux2.lotgaming.xyz/api/brackets/8/public";
 
     try {
+      return await fluxRepository.getBracket(bracketUrl);
+    } catch (err) {
+      console.warn("[GoogleSheetsRepository] Flux API fetch failed, falling back to Apps Script:", err);
+      const endpoint = this._getEndpoint(tournamentId);
+      if (!endpoint) {
+        return { 
+           bracketUrl: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png", 
+           schedule: ["Quarterfinals: 18:00 GST", "Semifinals: 20:00 GST", "Grand Finals: 22:00 GST"] 
+        };
+      }
       const res = await fetch(`${endpoint}?endpoint=/api/v1/getBracket&action=getBracket&tournamentId=${encodeURIComponent(tournamentId)}&t=${Date.now()}`);
       if (!res.ok) throw new Error("Bracket offline");
       return res.json();
-    } catch (err) {
-      throw err;
     }
   }
 
@@ -456,9 +474,10 @@ export function sanitizeLogoUrl(logoUrl) {
   return urlStr;
 }
 
-const STATIC_TEAMS = [
+const STATIC_TEAMS = [];
+const DELETED_TEAMS = [
   {
-    id: "team-eagle",
+    id: "team-come-mid",
     team_name: "Team Eagle",
     team_tag: "Eagle",
     logo_url: "https://drive.google.com/uc?export=view&id=1MdrjT0acW7JLJoOWBfr_Y3QDWFtRB430",

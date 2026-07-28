@@ -21,6 +21,10 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
   const [activeFilter, setActiveFilter] = useState('All');
   const [expandedAccordions, setExpandedAccordions] = useState({});
 
+  const isRegistrationClosed = tournament?.registrationDeadline 
+    ? Date.now() > new Date(tournament.registrationDeadline).getTime()
+    : false;
+
   // Detect if the entered ID is sequential or a secure UUID
   const isIdSequential = searchId.trim() && !(searchId.trim().length === 36 && searchId.trim().includes('-'));
 
@@ -693,77 +697,89 @@ export const TrackTab = ({ tournament, playHover, playClick }) => {
             )}
 
             {/* 4. Tournament Readiness Checklist Card */}
-            <div className="bg-black/20 border border-white/5 p-6 rounded-lg text-left">
-              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-body mb-6">
-                Tournament Readiness Checklist
-              </h4>
+            {!isRegistrationClosed && (
+              <div className="bg-black/20 border border-white/5 p-6 rounded-lg text-left">
+                <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-widest font-body mb-6">
+                  Tournament Readiness Checklist
+                </h4>
 
-              {/* Dynamic Readiness score Bar */}
-              <div className="space-y-2 mb-6 border-b border-white/5 pb-6">
-                <div className="flex justify-between items-center text-xs font-heading font-black tracking-widest uppercase">
-                  <span className="text-zinc-400 flex items-center gap-2">
-                    Tournament Ready: 
-                    <span className={derived.requirementsCompleted === derived.requirementsCount ? 'text-green-400' : 'text-yellow-400'}>
-                      {derived.requirementsCompleted} of {derived.requirementsCount} requirements complete
+                {/* Dynamic Readiness score Bar */}
+                <div className="space-y-2 mb-6 border-b border-white/5 pb-6">
+                  <div className="flex justify-between items-center text-xs font-heading font-black tracking-widest uppercase">
+                    <span className="text-zinc-400 flex items-center gap-2">
+                      Tournament Ready: 
+                      <span className={derived.requirementsCompleted === derived.requirementsCount ? 'text-green-400' : 'text-yellow-400'}>
+                        {derived.requirementsCompleted} of {derived.requirementsCount} requirements complete
+                      </span>
                     </span>
-                  </span>
-                  {derived.itemsRemaining > 0 && (
-                    <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-body">
-                      {derived.itemsRemaining} item{derived.itemsRemaining > 1 ? 's' : ''} remaining
-                    </span>
-                  )}
+                    {derived.itemsRemaining > 0 && (
+                      <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider font-body">
+                        {derived.itemsRemaining} item{derived.itemsRemaining > 1 ? 's' : ''} remaining
+                      </span>
+                    )}
+                  </div>
+                  <div className="w-full bg-zinc-950 border border-white/10 rounded-full h-3 overflow-hidden p-0.5">
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ${derived.requirementsCompleted === derived.requirementsCount ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]'}`}
+                      style={{ width: `${(derived.requirementsCompleted / derived.requirementsCount) * 100}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-zinc-950 border border-white/10 rounded-full h-3 overflow-hidden p-0.5">
-                  <div
-                    className={`h-full rounded-full transition-all duration-1000 ${derived.requirementsCompleted === derived.requirementsCount ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-neon-cyan shadow-[0_0_8px_rgba(0,240,255,0.6)]'}`}
-                    style={{ width: `${(derived.requirementsCompleted / derived.requirementsCount) * 100}%` }}
-                  />
+
+                {/* Requirement Check details */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-black/20 p-4 rounded border border-white/5">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Players Joined Discord</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {derived.hasJoinedDiscord ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
+                      <span className={`text-sm font-heading font-black ${derived.hasJoinedDiscord ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {derived.hasJoinedDiscord ? 'Complete' : `${derived.discordJoinedCount}/${derived.rosterSize}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 p-4 rounded border border-white/5">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">FACEIT Accounts Verified</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {derived.hasVerifiedFaceit ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
+                      <span className={`text-sm font-heading font-black ${derived.hasVerifiedFaceit ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {derived.hasVerifiedFaceit ? 'Complete' : `${derived.faceitVerifiedCount}/${derived.rosterSize}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 p-4 rounded border border-white/5">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Steam Connections Verified</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {derived.hasLinkedSteam ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
+                      <span className={`text-sm font-heading font-black ${derived.hasLinkedSteam ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {derived.hasLinkedSteam ? 'Complete' : `${derived.steamLinkedCount}/${derived.rosterSize}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 p-4 rounded border border-white/5">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Discord Role Issued</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {derived.hasDiscordAccess ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
+                      <span className={`text-sm font-heading font-black ${derived.hasDiscordAccess ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {derived.hasDiscordAccess ? 'Granted' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-black/20 p-4 rounded border border-white/5">
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Private Team Voice Channel</span>
+                    <div className="flex items-center gap-2 mt-1">
+                      {derived.hasVoiceChannel ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
+                      <span className={`text-sm font-heading font-black ${derived.hasVoiceChannel ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {derived.hasVoiceChannel ? 'Ready' : 'Pending'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-
-              {/* Requirement Check details */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="bg-black/20 p-4 rounded border border-white/5">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Players Joined Discord</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {derived.hasJoinedDiscord ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
-                    <span className={`text-sm font-heading font-black ${derived.hasJoinedDiscord ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {derived.hasJoinedDiscord ? 'Complete' : `${derived.discordJoinedCount}/${derived.rosterSize}`}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-black/20 p-4 rounded border border-white/5">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">FACEIT Accounts Verified</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {derived.hasVerifiedFaceit ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
-                    <span className={`text-sm font-heading font-black ${derived.hasVerifiedFaceit ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {derived.hasVerifiedFaceit ? 'Complete' : `${derived.faceitEloCount}/${derived.rosterSize}`}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-black/20 p-4 rounded border border-white/5">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Tournament Discord Access</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {derived.hasDiscordAccess ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
-                    <span className={`text-sm font-heading font-black ${derived.hasDiscordAccess ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {derived.hasDiscordAccess ? 'Granted' : 'Pending'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-black/20 p-4 rounded border border-white/5">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">Private Team Voice Channel</span>
-                  <div className="flex items-center gap-2 mt-1">
-                    {derived.hasVoiceChannel ? <CheckCircle2 className="w-4 h-4 text-green-400" /> : <div className="w-1.5 h-1.5 rounded-full bg-yellow-400 animate-ping" />}
-                    <span className={`text-sm font-heading font-black ${derived.hasVoiceChannel ? 'text-green-400' : 'text-yellow-400'}`}>
-                      {derived.hasVoiceChannel ? 'Ready' : 'Pending'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* 5. Registration Progress Timeline */}
             <div className="bg-black/20 border border-white/5 p-6 rounded-lg">

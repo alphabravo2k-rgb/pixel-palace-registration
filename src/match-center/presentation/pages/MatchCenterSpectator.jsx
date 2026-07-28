@@ -386,6 +386,35 @@ export function MatchCenterSpectator() {
     );
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#07090e] bg-cyber-grid text-slate-100 font-body flex flex-col items-center justify-center p-6">
+        <div className="w-12 h-12 rounded-full border-2 border-cyan-500 border-t-transparent animate-spin mb-4 shadow-[0_0_15px_rgba(6,182,212,0.4)]" />
+        <span className="font-mono text-xs text-slate-400 uppercase tracking-widest font-bold">Loading match state from Flux API...</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-[#07090e] bg-cyber-grid text-slate-100 font-body flex flex-col items-center justify-center p-6 text-center">
+        <div className="w-16 h-16 rounded-2xl bg-red-950/40 border border-red-500/30 flex items-center justify-center text-red-400 text-2xl font-black mb-6 shadow-[0_0_30px_rgba(239,68,68,0.2)] font-mono">
+          404
+        </div>
+        <h2 className="text-2xl font-heading text-white uppercase tracking-wider mb-2">Match Not Found</h2>
+        <p className="text-xs font-mono text-slate-400 max-w-md mb-8 uppercase tracking-widest leading-relaxed">
+          This match ({matchId}) doesn't exist or is no longer available in the official tournament bracket.
+        </p>
+        <Link 
+          to="/register?tab=brackets" 
+          className="bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black uppercase tracking-widest px-6 py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.4)] font-mono"
+        >
+          Return to Brackets
+        </Link>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#07090e] bg-cyber-grid text-slate-100 font-body relative pb-16">
       {/* Glow effects */}

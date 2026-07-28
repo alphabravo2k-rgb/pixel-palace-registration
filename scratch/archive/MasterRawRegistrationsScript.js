@@ -817,7 +817,7 @@ function doGet(e) {
       if (inviteSheet) {
         const inviteData = inviteSheet.getDataRange().getValues();
         for (let i = 1; i < inviteData.length; i++) {
-          const code = (inviteData[i][0] || "").toString().trim();
+          const code = (inviteData[i][0] || "").toString().trim().toLowerCase();
           const tid  = (inviteData[i][1] || "").toString().trim();
           if (code && (!tid || tid === tournamentId)) validCodes.add(code.toLowerCase());
         }
@@ -838,7 +838,33 @@ function doGet(e) {
         }
       }
 
-      return generateResponse({ inviteConfirmed: invite, openConfirmed: open });
+      // Dynamic config loading from Settings sheet
+      const config = {};
+      const settingsSheet = doc.getSheetByName("Settings");
+      if (settingsSheet) {
+        const sData = settingsSheet.getDataRange().getValues();
+        for (let i = 1; i < sData.length; i++) {
+          const key = (sData[i][0] || "").toString().trim().toLowerCase();
+          const val = (sData[i][1] || "").toString().trim();
+          if (key && val) config[key] = val;
+        }
+      }
+
+      var state = {};
+      try {
+        if (typeof TournamentLifecycleService !== 'undefined') {
+          state = TournamentLifecycleService.calculate(tournamentId, config);
+        }
+      } catch (err) {
+        console.error("TournamentLifecycleService.calculate failed: " + err);
+      }
+
+      return generateResponse({
+        inviteConfirmed: invite,
+        openConfirmed: open,
+        settings: config,
+        ...state
+      });
     }
 
     // ── Check Bans ──────────────────────────────────────────────────────────

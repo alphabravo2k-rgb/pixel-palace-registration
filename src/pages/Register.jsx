@@ -28,6 +28,13 @@ export const Register = () => {
     if (tournament?.status === 'ARCHIVED' && tournament?.tournamentComplete) return 'results';
     if (tournament?.status === 'ARCHIVED' && tournament?.bracketsEnabled) return 'brackets';
     if (tournament?.status === 'ARCHIVED') return 'teams';
+    
+    // Default to Registered Teams if registration deadline has passed
+    const now = Date.now();
+    const deadline = tournament?.registrationDeadline ? new Date(tournament.registrationDeadline).getTime() : 0;
+    if (deadline && now > deadline) {
+      return 'teams';
+    }
     return 'register';
   });
 
@@ -106,6 +113,24 @@ export const Register = () => {
         if (!active) return;
         setSlots(liveSlots);
         
+        // Merge settings from slots backend DTO into local tournament object
+        if (liveSlots?.settings) {
+          tournament.name = liveSlots.settings.tournament_name || tournament.name;
+          tournament.registrationDeadline = liveSlots.settings.registration_deadline || tournament.registrationDeadline;
+          tournament.tournamentDate = liveSlots.settings.tournament_date || tournament.tournamentDate;
+          tournament.maxTeams = parseInt(liveSlots.settings.max_teams) || tournament.maxTeams;
+          tournament.inviteSlots = parseInt(liveSlots.settings.invite_slots) || tournament.inviteSlots;
+          tournament.openSlots = parseInt(liveSlots.settings.open_slots) || tournament.openSlots;
+          tournament.prizePool = liveSlots.settings.prize_pool || tournament.prizePool;
+          if (liveSlots.settings.maps) {
+            tournament.maps = liveSlots.settings.maps.split(',').map(m => m.trim());
+          }
+          tournament.rulesUrl = liveSlots.settings.rules_pdf || tournament.rulesUrl;
+          tournament.discordUrl = liveSlots.settings.discord_url || tournament.discordUrl;
+          tournament.twitchUrl = liveSlots.settings.twitch_url || tournament.twitchUrl;
+          tournament.instagramUrl = liveSlots.settings.instagram_url || tournament.instagramUrl;
+        }
+
         // Sync server time offset
         const serverTimeStr = liveSlots?.registration?.serverTime;
         if (serverTimeStr) {
@@ -153,35 +178,35 @@ export const Register = () => {
   useEffect(() => {
     if (!tournament) return;
 
-    const isClosedOnLoad = slots?.registration && !slots.registration.isAcceptingRegistrations;
-    if (isClosedOnLoad) {
-      setTimeLeft('OFFLINE');
-      return;
-    }
-
     const deadlineStr = slots?.registration?.registrationDeadline || tournament.registrationDeadline;
-    if (!deadlineStr || deadlineStr === 'TBD') {
-      setTimeLeft('TBD');
-      return;
-    }
-    const deadline = new Date(deadlineStr).getTime();
+    const deadline = deadlineStr && deadlineStr !== 'TBD' ? new Date(deadlineStr).getTime() : 0;
+    const tournamentDate = tournament.tournamentDate ? new Date(tournament.tournamentDate).getTime() : 0;
 
     const timer = setInterval(() => {
-      // Tick using calibrated server offset
       const calibratedNow = Date.now() + timeOffsetRef.current;
-      const diff = deadline - calibratedNow;
+      
+      const isRegistrationClosed = slots?.registration 
+        ? !slots.registration.isAcceptingRegistrations 
+        : (deadline ? calibratedNow >= deadline : false);
 
-      if (slots?.registration && !slots.registration.isAcceptingRegistrations) {
-        setTimeLeft('OFFLINE');
-        clearInterval(timer);
+      let targetTime = deadline;
+      if (isRegistrationClosed) {
+        targetTime = tournamentDate;
+      }
+
+      if (!targetTime) {
+        setTimeLeft('TBD');
         return;
       }
+
+      const diff = targetTime - calibratedNow;
 
       if (diff < 0) {
-        setTimeLeft('OFFLINE');
+        setTimeLeft('CLOSED');
         clearInterval(timer);
         return;
       }
+
       const d = Math.floor(diff / 86400000);
       const h = Math.floor((diff % 86400000) / 3600000);
       const m = Math.floor((diff % 3600000) / 60000);
@@ -354,6 +379,10 @@ export const Register = () => {
     return <Navigate to="/404" replace />;
   }
 
+  const isRegistrationAccepting = slots?.registration
+    ? slots.registration.isAcceptingRegistrations
+    : (tournament?.registrationDeadline ? Date.now() < new Date(tournament.registrationDeadline).getTime() : true);
+
   return (
     <>
       {activeTab === 'register' && showForm && !isRulesAccepted && !isArchived && (
@@ -482,13 +511,25 @@ export const Register = () => {
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
-              {!isArchived && (slots?.registration ? slots.registration.isAcceptingRegistrations || activeTeam : true) && (
+              {!isArchived && (
                 <button
+                  disabled={!isRegistrationAccepting && !activeTeam}
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('register'); }}
-                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'register' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                  onClick={() => {
+                    if (isRegistrationAccepting || activeTeam) {
+                      playClick();
+                      setActiveTab('register');
+                    }
+                  }}
+                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${
+                    activeTab === 'register' 
+                      ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' 
+                      : (!isRegistrationAccepting && !activeTeam) 
+                        ? 'text-white/20 cursor-not-allowed line-through' 
+                        : 'text-white/40 hover:text-white/80'
+                  }`}
                 >
-                  {activeTeam ? 'Team Portal' : 'Register Team'}
+                  {activeTeam ? 'Team Portal' : isRegistrationAccepting ? 'Register Team' : 'Register Team (Closed)'}
                   <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
                 </button>
               )}
