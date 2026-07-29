@@ -30,6 +30,8 @@ export const TrackerTab = ({
   onRegisterClick
 }) => {
   const [failedLogos, setFailedLogos] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING'
 
   // Calculate dynamic stats from teams array
   const stats = React.useMemo(() => {
@@ -312,8 +314,61 @@ export const TrackerTab = ({
               </div>
             )}
 
+            {/* Live Search & Filter Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-black/40 border border-white/10 p-3 rounded-lg">
+              <div className="flex items-center gap-2 flex-grow max-w-md">
+                <input
+                  type="text"
+                  placeholder="🔍 Search team name or tag..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-zinc-900 border border-zinc-700/60 rounded px-3 py-1.5 text-xs text-white font-mono placeholder:text-zinc-500 focus:outline-none focus:border-neon-cyan"
+                />
+              </div>
+
+              <div className="flex items-center gap-2 text-xs font-mono">
+                <button
+                  onClick={() => setStatusFilter('ALL')}
+                  className={`px-3 py-1 rounded font-bold transition-all ${
+                    statusFilter === 'ALL'
+                      ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan'
+                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  All ({teams.length})
+                </button>
+                <button
+                  onClick={() => setStatusFilter('VERIFIED')}
+                  className={`px-3 py-1 rounded font-bold transition-all ${
+                    statusFilter === 'VERIFIED'
+                      ? 'bg-green-500/20 border border-green-500 text-green-400'
+                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ✓ Verified ({stats?.approved || 0})
+                </button>
+                <button
+                  onClick={() => setStatusFilter('PENDING')}
+                  className={`px-3 py-1 rounded font-bold transition-all ${
+                    statusFilter === 'PENDING'
+                      ? 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
+                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  ⏳ Pending ({stats?.pending || 0})
+                </button>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {teams.map((team, idx) => {
+              {(teams.filter(team => {
+                const nameMatch = (team.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                  (team.tag || '').toLowerCase().includes(searchTerm.toLowerCase());
+                if (!nameMatch) return false;
+                if (statusFilter === 'VERIFIED') return team.status === 'VERIFIED' || team.status === 'CHAMPION';
+                if (statusFilter === 'PENDING') return team.status !== 'VERIFIED' && team.status !== 'CHAMPION';
+                return true;
+              })).map((team, idx) => {
               const isFailed = failedLogos[`${team.name}-${idx}`];
               const logoSrc = isFailed || !team.logo || !team.logo.startsWith('http')
                 ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'

@@ -6,6 +6,7 @@
  */
 
 import { getTeamTag, getTeamLogoUrl } from '../../../utils/teamResolver';
+import { getMatchSchedule } from '../../../utils/matchSchedule';
 
 const DEFAULT_BASE_URL = "https://pixelpalace.lotgaming.xyz/api";
 const DEFAULT_BRACKET_ID = 1;
@@ -151,6 +152,16 @@ export class PixelPalaceRepository {
         winner = m.winner_id === m.team1_id ? 'team1' : 'team2';
       }
 
+      const scheduleInfo = getMatchSchedule(m.id, m.scheduled_date || data.bracket?.scheduled_date);
+
+      const formatSourceLabel = (src) => {
+        if (!src) return 'TBD';
+        if (/^\d+$/.test(src)) return `Winner of Match #${src}`;
+        const matchDigits = String(src).match(/(\d+)/);
+        if (matchDigits) return `Winner of Match #${matchDigits[1]}`;
+        return `From ${src}`;
+      };
+
       return {
         id: m.id,
         matchId: m.id,
@@ -167,12 +178,14 @@ export class PixelPalaceRepository {
         team2Source: m.team2_source,
         team1Obj: t1Obj,
         team2Obj: t2Obj,
-        team1: t1Obj ? (t1Obj.name || t1Obj.tag || `Team ${m.team1_id}`) : (m.team1_source ? `From ${m.team1_source}` : 'TBD'),
-        team2: isBye ? 'BYE' : (t2Obj ? (t2Obj.name || t2Obj.tag || `Team ${m.team2_id}`) : (m.team2_source ? `From ${m.team2_source}` : 'TBD')),
+        team1: t1Obj ? (t1Obj.name || t1Obj.tag || `Team ${m.team1_id}`) : (m.team1_source ? formatSourceLabel(m.team1_source) : 'TBD'),
+        team2: isBye ? 'BYE' : (t2Obj ? (t2Obj.name || t2Obj.tag || `Team ${m.team2_id}`) : (m.team2_source ? formatSourceLabel(m.team2_source) : 'TBD')),
         winnerId: m.winner_id,
         loserId: m.loser_id,
         winner,
-        score: m.score || (m.winner_id ? (m.winner_id === m.team1_id ? '1-0' : '0-1') : '0-0')
+        score: m.score || (m.winner_id ? (m.winner_id === m.team1_id ? '1-0' : '0-1') : '0-0'),
+        scheduleInfo,
+        scheduledDate: scheduleInfo.iso,
       };
     }) : [];
 

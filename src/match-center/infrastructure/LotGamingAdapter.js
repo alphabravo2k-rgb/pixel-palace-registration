@@ -63,18 +63,17 @@ export class LotGamingAdapter {
    */
   async fetchMatchData(externalMatchId) {
     const url = `${this.baseUrl}/matches/${externalMatchId}`;
-    Logger.info(`LOT Adapter [${this.hostname}]: Fetching match payload from ${url}`);
-
     try {
       const response = await fetch(url);
       if (!response.ok) {
+        if (response.status === 404) return null;
         throw new Error(`HTTP Error Status: ${response.status} from ${url}`);
       }
       const rawJson = await response.json();
       return rawJson;
     } catch (err) {
-      Logger.error(`LOT Adapter: Fetch failed - ${err.message}`);
-      throw err;
+      Logger.debug(`LOT Adapter: Match #${externalMatchId} not yet created on server (${err.message})`);
+      return null;
     }
   }
 

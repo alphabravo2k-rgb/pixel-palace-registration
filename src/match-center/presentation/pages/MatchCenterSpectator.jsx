@@ -3,7 +3,7 @@
  * Three lifecycle states driven by Kancha's Pixel Palace API:
  *   PRE-MATCH  → Shows real teams, schedule, format, countdown
  *   LIVE       → Shows live scores, current map, round progress
- *   COMPLETED  → Shows final scores, winner, stats (when API provides them)
+ *   COMPLETED  → Shows final scores, winner, stats & full player scoreboard (when API provides them)
  *
  * NO hardcoded stats. Everything comes from the API or displays "Not yet available".
  */
@@ -11,11 +11,48 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { tournamentService } from '../../../services/TournamentService.js';
 import { getTeamLogoUrl, getTeamTag } from '../../../utils/teamResolver.js';
+import { getMatchSchedule, formatVisitorLocalTime, getLiveCountdown } from '../../../utils/matchSchedule.js';
+import { getGoogleCalendarUrl } from '../../../utils/calendarHelper.js';
+import { lotFluxbotAdapter, lotDlanAdapter } from '../../infrastructure/LotGamingAdapter.js';
 import { Logger } from '../../shared/kernel/Logger.js';
+import { StreamModal } from '../../../components/match-center/StreamModal.jsx';
+import { CaptainCheckInModal } from '../../../components/team-portal/CaptainCheckInModal.jsx';
+import { generateSocialMatchCard } from '../../../utils/socialCardExporter.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const ROUND_NAMES = { 1: 'Round of 32', 2: 'Round of 16', 3: 'Quarterfinals', 4: 'Semifinals', 5: 'Grand Final' };
+
+const FACEIT_LEVEL_COLORS = {
+  1: '#cccccc', 2: '#cccccc', 3: '#f7a91e', 4: '#f7a91e', 5: '#f7a91e',
+  6: '#f36e39', 7: '#f36e39', 8: '#f36e39', 9: '#ff3333', 10: '#ff0000',
+};
+
+function FaceitBadge({ faceit }) {
+  if (!faceit) return null;
+  const level = faceit.level || faceit.skill_level || 10;
+  const elo = faceit.elo || faceit.faceit_elo || null;
+  const color = FACEIT_LEVEL_COLORS[level] || '#ff0000';
+  const url = (faceit.faceit_url || faceit.profileUrl)?.replace('{lang}', 'en');
+
+  const content = (
+    <span
+      className="inline-flex items-center gap-1 text-[9px] font-black px-1.5 py-0.5 rounded font-mono shrink-0"
+      style={{ background: `${color}20`, color, border: `1px solid ${color}44` }}
+      title={`FACEIT Level ${level}${elo ? ` · ${elo} ELO` : ''}`}
+    >
+      <svg width="8" height="8" viewBox="0 0 10 10" fill={color}>
+        <polygon points="5,0 6.2,3.8 10,3.8 7,6.2 8.1,10 5,7.8 1.9,10 3,6.2 0,3.8 3.8,3.8" />
+      </svg>
+      LVL {level}{elo ? ` · ${elo}` : ''}
+    </span>
+  );
+
+  if (url) {
+    return <a href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>{content}</a>;
+  }
+  return content;
+}
 
 function getMatchPhase(status) {
   if (!status) return 'PRE_MATCH';
@@ -150,9 +187,68 @@ function PlaceholderSection({ icon, label, note }) {
   );
 }
 
+// ─── Player Scoreboard Table Component ────────────────────────────────────────
+
+function PlayerScoreboardTable({ teamName, players = [], isWinner = false }) {
+  if (!players || players.length === 0) return null;
+
+  return (
+    <div className="rounded-xl overflow-hidden" style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(99,102,241,0.18)' }}>
+      <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'rgba(99,102,241,0.12)' }}>
+        <span className="font-black text-sm text-white font-mono flex items-center gap-2">
+          {teamName}
+          {isWinner && <span className="text-[9px] bg-amber-500/20 border border-amber-500/40 text-amber-400 px-2 py-0.5 rounded uppercase">WINNER</span>}
+        </span>
+        <span className="text-[10px] font-mono text-slate-500">{players.length} Players</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left border-collapse text-xs font-mono">
+          <thead>
+            <tr className="border-b text-[9px] uppercase text-slate-500 font-bold" style={{ borderColor: 'rgba(99,102,241,0.1)' }}>
+              <th className="py-2.5 px-4">Player</th>
+              <th className="py-2.5 px-2 text-center">K</th>
+              <th className="py-2.5 px-2 text-center">D</th>
+              <th className="py-2.5 px-2 text-center">A</th>
+              <th className="py-2.5 px-2 text-center">+/-</th>
+              <th className="py-2.5 px-2 text-center">ADR</th>
+              <th className="py-2.5 px-2 text-center">HS%</th>
+              <th className="py-2.5 px-3 text-right">Rating 2.0</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/40">
+            {players.map((p, idx) => {
+              const diff = (p.kills || 0) - (p.deaths || 0);
+              const rating = p.hltv_rating || p.rating || 0;
+              return (
+                <tr key={p.steam_id || p.steamId || p.name || idx} className="hover:bg-slate-800/30 transition-colors">
+                  <td className="py-2.5 px-4 font-bold text-slate-200 flex items-center gap-2">
+                    {p.name}
+                    <FaceitBadge faceit={p.faceit} />
+                  </td>
+                  <td className="py-2.5 px-2 text-center font-bold text-white">{p.kills || 0}</td>
+                  <td className="py-2.5 px-2 text-center text-slate-400">{p.deaths || 0}</td>
+                  <td className="py-2.5 px-2 text-center text-slate-400">{p.assists || 0}</td>
+                  <td className={`py-2.5 px-2 text-center font-bold ${diff > 0 ? 'text-emerald-400' : diff < 0 ? 'text-rose-400' : 'text-slate-500'}`}>
+                    {diff > 0 ? `+${diff}` : diff}
+                  </td>
+                  <td className="py-2.5 px-2 text-center text-slate-300">{p.adr ? Math.round(p.adr) : '-'}</td>
+                  <td className="py-2.5 px-2 text-center text-slate-400">{p.hs_pct ?? p.hsPct ?? 0}%</td>
+                  <td className="py-2.5 px-3 text-right font-black text-amber-400">
+                    {typeof rating === 'number' && rating > 0 ? rating.toFixed(2) : '-'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Map Result Row (for completed matches) ───────────────────────────────────
 
-function MapResultRow({ mapName, teamAScore, teamBScore, teamAName, teamBName, mapIndex }) {
+function MapResultRow({ mapName, teamAScore, teamBScore, mapIndex }) {
   const winner = teamAScore > teamBScore ? 'A' : 'B';
   return (
     <div
@@ -193,11 +289,16 @@ export function MatchCenterSpectator() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  // BO3 Map Selector Tab: 'SERIES' | 0 | 1 | 2
+  const [selectedMapTab, setSelectedMapTab] = useState('SERIES');
+  const [activeDetailTab, setActiveDetailTab] = useState('OVERVIEW');
+  const [isStreamOpen, setIsStreamOpen] = useState(false);
+  const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+
   // ── Data fetcher (used for initial load + polling) ─────────────────────────
   const fetchMatchData = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     try {
-      // Always bust cache on background poll to get latest updates from Kancha's API
       if (isBackground) tournamentService.clearCache();
 
       const data = await tournamentService.fetchBracket();
@@ -211,9 +312,35 @@ export function MatchCenterSpectator() {
       }
 
       const numericId = parseInt(matchId, 10);
-      const found = data.matches.find(m =>
+      let found = data.matches.find(m =>
         String(m.id) === String(matchId) || m.id === numericId
       );
+
+      // Attempt to load detailed LOT match payload ONLY if match is live or completed
+      if (numericId > 0 && found && (found.status === 'LIVE' || found.status === 'COMPLETED' || found.status === 'Live' || found.status === 'Completed')) {
+        try {
+          const rawLot = await lotFluxbotAdapter.fetchMatchData(numericId).catch(() => null) ||
+                         await lotDlanAdapter.fetchMatchData(numericId).catch(() => null);
+          if (rawLot) {
+            found = {
+              ...(found || {}),
+              ...rawLot,
+              id: rawLot.id || found?.id || numericId,
+              status: rawLot.status === 'finished' ? 'COMPLETED' : (rawLot.status === 'live' ? 'LIVE' : found?.status || 'PENDING'),
+              team1_players: rawLot.team1_players || [],
+              team2_players: rawLot.team2_players || [],
+              map_stats: rawLot.map_stats ? (typeof rawLot.map_stats === 'string' ? JSON.parse(rawLot.map_stats) : rawLot.map_stats) : [],
+              map_list: rawLot.map_list ? (typeof rawLot.map_list === 'string' ? JSON.parse(rawLot.map_list) : rawLot.map_list) : [],
+              seriesScore: {
+                teamAWins: rawLot.map_wins_team1 ?? 0,
+                teamBWins: rawLot.map_wins_team2 ?? 0,
+              }
+            };
+          }
+        } catch {
+          // Ignore LOT error and fallback to public bracket object
+        }
+      }
 
       if (found) {
         setMatch(found);
@@ -244,27 +371,48 @@ export function MatchCenterSpectator() {
 
   const phase = useMemo(() => getMatchPhase(match?.status), [match?.status]);
 
-  const teamA = match?.team1Obj || null;
-  const teamB = match?.team2Obj || null;
-  const teamAName = teamA?.name || match?.team1 || 'TBD';
-  const teamBName = teamB?.name || match?.team2 || 'TBD';
+  const teamA = match?.team1Obj || { name: match?.team1_name || match?.team1 || 'TBD' };
+  const teamB = match?.team2Obj || { name: match?.team2_name || match?.team2 || 'TBD' };
+  const teamAName = teamA?.name || match?.team1_name || match?.team1 || 'TBD';
+  const teamBName = teamB?.name || match?.team2_name || match?.team2 || 'TBD';
 
-  const seriesScoreA = match?.seriesScore?.teamAWins ?? null;
-  const seriesScoreB = match?.seriesScore?.teamBWins ?? null;
+  const seriesScoreA = match?.seriesScore?.teamAWins ?? match?.map_wins_team1 ?? null;
+  const seriesScoreB = match?.seriesScore?.teamBWins ?? match?.map_wins_team2 ?? null;
   const hasSeriesScore = seriesScoreA !== null;
 
-  const isWinnerA = phase === 'COMPLETED' && match?.winner === 'team1';
-  const isWinnerB = phase === 'COMPLETED' && match?.winner === 'team2';
+  const isWinnerA = phase === 'COMPLETED' && (match?.winner === 'team1' || match?.map_wins_team1 > match?.map_wins_team2);
+  const isWinnerB = phase === 'COMPLETED' && (match?.winner === 'team2' || match?.map_wins_team2 > match?.map_wins_team1);
 
-  const roundLabel = ROUND_NAMES[match?.roundNumber] || (match?.round) || 'Match';
-  const format = match?.format || 'BO1';
-  const scheduledDate = bracketScheduledDate || match?.scheduledDate || '2026-07-31';
-  const countdown = useCountdown(
-    scheduledDate ? `${scheduledDate}T17:00:00+05:00` : null
-  );
+  // 1-second live ticker for real-time D, H, M, S countdown
+  const [nowTick, setNowTick] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
 
-  // Maps data (only exists if API provides it on completion)
-  const mapResults = useMemo(() => match?.mapResults || match?.maps || [], [match]);
+  const scheduleInfo = useMemo(() => {
+    return getMatchSchedule(match?.id || matchId, match?.scheduled_date || match?.scheduledDate);
+  }, [match?.id, matchId, match?.scheduled_date, match?.scheduledDate]);
+
+  const visitorLocalTime = useMemo(() => {
+    return formatVisitorLocalTime(scheduleInfo.iso);
+  }, [scheduleInfo.iso]);
+
+  const liveCountdown = useMemo(() => {
+    return getLiveCountdown(scheduleInfo.iso);
+  }, [scheduleInfo.iso, nowTick]);
+
+  const roundLabel = scheduleInfo.round || ROUND_NAMES[match?.roundNumber || match?.round_number] || (match?.round) || 'Match';
+  const format = scheduleInfo.type || match?.format || (match?.best_of ? `BO${match.best_of}` : 'BO1');
+  const scheduledDate = visitorLocalTime.fullString || scheduleInfo.pkt || '31/07/2026';
+
+  // Maps data (if API provides it on completion)
+  const mapResults = useMemo(() => match?.map_stats || match?.mapResults || match?.maps || [], [match]);
+
+  // Active players list if available
+  const team1Players = match?.team1_players || match?.playerStats?.teamA || [];
+  const team2Players = match?.team2_players || match?.playerStats?.teamB || [];
+  const hasPlayerStats = team1Players.length > 0 || team2Players.length > 0;
 
   // ── Loading ──────────────────────────────────────────────────────────────
 
@@ -318,8 +466,30 @@ export function MatchCenterSpectator() {
           <span className="text-slate-700">|</span>
           <span className="text-slate-400 text-xs font-mono tracking-wider uppercase">Match #{match.id}</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <PhaseBadge phase={phase} />
+          <button
+            onClick={() => setIsCheckInOpen(true)}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-violet-600/30"
+            style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd' }}
+          >
+            🛡️ CAPTAIN CHECK-IN
+          </button>
+          <button
+            onClick={() => generateSocialMatchCard(match)}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
+            style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(100,116,139,0.3)', color: '#e2e8f0' }}
+          >
+            🖼️ SHARE CARD
+          </button>
+          <button
+            onClick={() => setIsStreamOpen(true)}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
+            style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34d399' }}
+          >
+            <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
+            📺 WATCH STREAM
+          </button>
           <Link
             to="/match-center"
             className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-colors"
@@ -362,10 +532,10 @@ export function MatchCenterSpectator() {
             >
               {format}
             </span>
-            {scheduledDate && (
+            {visitorLocalTime.fullString && (
               <>
                 <span className="text-slate-700">·</span>
-                <span className="text-xs font-mono text-slate-500">📅 {scheduledDate}</span>
+                <span className="text-xs font-mono text-emerald-400 font-bold">🌐 Your Local Time: {visitorLocalTime.fullString}</span>
               </>
             )}
           </div>
@@ -394,10 +564,12 @@ export function MatchCenterSpectator() {
                   >
                     VS
                   </div>
-                  {countdown && (
+                  {liveCountdown && (
                     <div className="text-center">
-                      <div className="text-[9px] font-mono text-slate-600 tracking-widest uppercase mb-0.5">STARTS IN</div>
-                      <div className="text-sm font-black text-violet-400 font-mono">{countdown}</div>
+                      <div className="text-[9px] font-mono text-slate-500 tracking-widest uppercase mb-0.5">STARTS IN</div>
+                      <div className="text-base font-black text-violet-400 font-mono tracking-wider">
+                        {liveCountdown.formatted}
+                      </div>
                     </div>
                   )}
                 </>
@@ -432,7 +604,7 @@ export function MatchCenterSpectator() {
                   className="inline-block text-xs font-mono tracking-widest uppercase px-4 py-1.5 rounded-full"
                   style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.25)', color: '#6366f1' }}
                 >
-                  Match scheduled for {scheduledDate || 'July 31, 2026'} · Pixel Palace Community Cup 2
+                  Match scheduled for {scheduledDate} · Pixel Palace Community Cup 2
                 </div>
               </div>
             )}
@@ -440,13 +612,13 @@ export function MatchCenterSpectator() {
               <div className="inline-flex items-center gap-2 text-xs font-mono tracking-widest uppercase px-4 py-1.5 rounded-full"
                 style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', color: '#34d399' }}>
                 <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-                Match is live — data updates automatically
+                Match is live — auto-refreshing every 30s
               </div>
             )}
             {phase === 'COMPLETED' && (
               <div className="inline-block text-xs font-mono tracking-widest uppercase px-4 py-1.5 rounded-full"
                 style={{ background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.25)', color: '#94a3b8' }}>
-                Match completed · {teamAName === teamA?.name && isWinnerA ? teamAName : isWinnerB ? teamBName : '—'} advances
+                Match completed · {isWinnerA ? teamAName : isWinnerB ? teamBName : '—'} advances
               </div>
             )}
           </div>
@@ -454,131 +626,186 @@ export function MatchCenterSpectator() {
       </div>
 
       {/* ── Content Sections ── */}
-      <div className="max-w-5xl mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-5xl mx-auto px-6 py-10 space-y-6">
 
-        {/* PRE-MATCH: Match Info Card */}
-        <div
-          className="rounded-xl p-6 space-y-5"
-          style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(99,102,241,0.18)' }}
-        >
-          <h2 className="text-xs font-black tracking-widest uppercase font-mono"
-            style={{ color: '#818cf8' }}>MATCH INFORMATION</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { label: 'Match ID', value: `#${match.id}` },
-              { label: 'Round', value: roundLabel },
-              { label: 'Format', value: format },
-              { label: 'Status', value: match.status || 'Pending' },
-              { label: 'Scheduled', value: scheduledDate || 'July 31, 2026' },
-              { label: 'Tournament', value: 'PP Community Cup 2' },
-              { label: 'Team 1', value: teamAName },
-              { label: 'Team 2', value: teamBName },
-            ].map(({ label, value }) => (
-              <div key={label} className="space-y-1">
-                <div className="text-[9px] font-mono tracking-widest uppercase text-slate-600">{label}</div>
-                <div className="text-sm font-bold text-slate-200 font-mono">{value}</div>
-              </div>
-            ))}
-          </div>
+        {/* ── Broadcast Navigation Tabs ── */}
+        <div className="flex border-b border-slate-800/80 font-mono text-xs uppercase font-bold gap-2">
+          <button
+            onClick={() => setActiveDetailTab('OVERVIEW')}
+            className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
+              activeDetailTab === 'OVERVIEW'
+                ? 'border-violet-500 text-white bg-slate-900/60'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            ⚔️ Match Overview
+          </button>
+          <button
+            onClick={() => setActiveDetailTab('MAPS')}
+            className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
+              activeDetailTab === 'MAPS'
+                ? 'border-violet-500 text-white bg-slate-900/60'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            🗺️ Map Pool & Veto
+          </button>
+          <button
+            onClick={() => setActiveDetailTab('SCOREBOARD')}
+            className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
+              activeDetailTab === 'SCOREBOARD'
+                ? 'border-violet-500 text-white bg-slate-900/60'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            📊 Scoreboard & Analytics
+          </button>
         </div>
 
-        {/* Map Results — only when API provides them (COMPLETED) */}
-        {phase === 'COMPLETED' && mapResults.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="text-xs font-black tracking-widest uppercase font-mono" style={{ color: '#818cf8' }}>
-              MAP RESULTS
-            </h2>
-            <div className="space-y-2">
-              {mapResults.map((map, idx) => (
-                <MapResultRow
-                  key={idx}
-                  mapName={map.name || map.map_name || `Map ${idx + 1}`}
-                  mapIndex={idx + 1}
-                  teamAScore={map.scoreA ?? map.score_team1 ?? 0}
-                  teamBScore={map.scoreB ?? map.score_team2 ?? 0}
-                  teamAName={teamAName}
-                  teamBName={teamBName}
-                />
-              ))}
+        {/* TAB 1: MATCH OVERVIEW */}
+        {activeDetailTab === 'OVERVIEW' && (
+          <div className="space-y-6 font-mono">
+            <div
+              className="rounded-xl p-6 space-y-5"
+              style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(99,102,241,0.18)' }}
+            >
+              <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">
+                MATCH INFORMATION & METADATA
+              </h2>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Match ID', value: `#${match.id}` },
+                  { label: 'Round', value: roundLabel },
+                  { label: 'Format', value: format },
+                  { label: 'Status', value: match.status || 'Pending' },
+                  { label: 'Scheduled', value: scheduledDate },
+                  { label: 'Tournament', value: 'PP Community Cup 2' },
+                  { label: 'Team 1', value: teamAName },
+                  { label: 'Team 2', value: teamBName },
+                ].map(({ label, value }) => (
+                  <div key={label} className="space-y-1">
+                    <div className="text-[9px] tracking-widest uppercase text-slate-500">{label}</div>
+                    <div className="text-sm font-bold text-slate-200">{value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Action & Timezone Toolbar */}
+            <div className="bg-[#0b0f20] border border-slate-800/80 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                {visitorLocalTime.fullString && (
+                  <span className="text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-800/40 px-3 py-1 rounded-md">
+                    🌐 Your Local Time: {visitorLocalTime.fullString}
+                  </span>
+                )}
+                <span className="text-slate-700 hidden sm:inline">|</span>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                  <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">🇵🇰 8:00 PM PKT</span>
+                  <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">🇦🇪 7:00 PM GST</span>
+                  <span className="bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-slate-300">🇸🇦 6:00 PM AST</span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <a
+                  href={getGoogleCalendarUrl(match)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-violet-600/20 hover:bg-violet-600/30 text-violet-300 border border-violet-800/40 text-xs font-bold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5"
+                >
+                  📅 <span>Google Calendar Sync</span>
+                </a>
+                <div className="bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                  🔒 <span>GOTV Demos Protected (Ops Access Only)</span>
+                </div>
+              </div>
             </div>
           </div>
         )}
 
-        {/* Phase-gated sections */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* Live Score / Map */}
-          {phase === 'LIVE' ? (
-            <div className="rounded-xl p-6" style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(16,185,129,0.25)' }}>
-              <h3 className="text-xs font-black tracking-widest uppercase font-mono text-emerald-400 mb-4 flex items-center gap-2">
-                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
-                LIVE MATCH DATA
-              </h3>
-              {match.activeMap ? (
-                <div className="space-y-2 font-mono text-sm">
-                  <div className="text-slate-400">Current Map: <span className="text-white font-bold">{match.activeMap.replace('de_', '').toUpperCase()}</span></div>
-                  <div className="text-slate-400">Round Score: <span className="text-white font-bold">{match.score?.teamAScore ?? 0} – {match.score?.teamBScore ?? 0}</span></div>
+        {/* TAB 2: MAP POOL & VETO */}
+        {activeDetailTab === 'MAPS' && (
+          <div className="space-y-6 font-mono">
+            {/* Map Results Breakdown (If Completed) */}
+            {phase === 'COMPLETED' && mapResults.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">
+                  MAP RESULTS BREAKDOWN
+                </h2>
+                <div className="space-y-2">
+                  {mapResults.map((map, idx) => (
+                    <MapResultRow
+                      key={idx}
+                      mapName={map.map_name || map.name || `Map ${idx + 1}`}
+                      mapIndex={idx + 1}
+                      teamAScore={map.score_team1 ?? map.scoreA ?? 0}
+                      teamBScore={map.score_team2 ?? map.scoreB ?? 0}
+                    />
+                  ))}
                 </div>
-              ) : (
-                <p className="text-slate-500 text-sm font-mono">Waiting for map data…</p>
-              )}
+              </div>
+            )}
+
+            {/* Active Duty Map Pool */}
+            <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-white uppercase tracking-wider">
+                  CS2 Active Duty Competitive Map Pool
+                </h3>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
+                  OFFICIAL MAP POOL
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+                {['Dust II', 'Mirage', 'Anubis', 'Ancient', 'Nuke', 'Inferno'].map((m) => (
+                  <div key={m} className="rounded-xl border border-slate-800/80 bg-slate-950 p-3 text-center">
+                    <span className="text-xs font-black text-white uppercase tracking-wider block">{m}</span>
+                    <span className="text-[8.5px] font-bold text-slate-500 mt-1 block">Active Duty</span>
+                  </div>
+                ))}
+              </div>
+              <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-slate-850">
+                Official Map Pick/Ban (Veto) sequence will be conducted live by team captains 30 mins prior to match start on Kancha Portal.
+              </div>
             </div>
-          ) : (
-            <PlaceholderSection
-              icon="📡"
-              label="Live Statistics"
-              note={phase === 'PRE_MATCH' ? 'Available once the match starts on ' + (scheduledDate || 'July 31') : 'Match not live'}
-            />
-          )}
-
-          {/* Player Statistics */}
-          {phase === 'COMPLETED' && match.playerStats ? (
-            <div className="rounded-xl p-6" style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(99,102,241,0.18)' }}>
-              <h3 className="text-xs font-black tracking-widest uppercase font-mono text-violet-400 mb-4">PLAYER STATISTICS</h3>
-              <p className="text-slate-500 text-sm font-mono">Stats available from API.</p>
-            </div>
-          ) : (
-            <PlaceholderSection
-              icon="👤"
-              label="Player Statistics"
-              note={phase === 'PRE_MATCH' ? 'Available after the match is played' : 'Loading player data…'}
-            />
-          )}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <PlaceholderSection
-            icon="💰"
-            label="Economy Timeline"
-            note={phase === 'PRE_MATCH' ? 'Available after match completion' : phase === 'LIVE' ? 'Will appear during match' : 'No economy data available'}
-          />
-          <PlaceholderSection
-            icon="🗺️"
-            label="Map Veto"
-            note={phase === 'PRE_MATCH' ? 'Published before match start' : 'Veto sequence completed'}
-          />
-          <PlaceholderSection
-            icon="🔒"
-            label="GOTV Demos & Replays"
-            note="Protected · Internal Tournament Ops Access Only"
-          />
-        </div>
-
-        {/* FACEIT Integration */}
-        <div
-          className="rounded-xl p-6 text-center"
-          style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(239,103,54,0.2)' }}
-        >
-          <div className="text-2xl mb-2">⚡</div>
-          <div className="text-sm font-bold text-orange-400 font-mono tracking-wide">FACEIT INTEGRATION</div>
-          <div className="text-[11px] text-slate-600 font-mono mt-1">
-            {phase === 'PRE_MATCH'
-              ? 'FACEIT match room will appear here when created by the tournament organizer.'
-              : 'FACEIT room link not yet linked to this match.'}
           </div>
-        </div>
+        )}
 
-
+        {/* TAB 3: SCOREBOARD & ANALYTICS */}
+        {activeDetailTab === 'SCOREBOARD' && (
+          <div className="space-y-6 font-mono">
+            {hasPlayerStats ? (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">
+                    PLAYER PERFORMANCE SCOREBOARD
+                  </h2>
+                  {lastUpdated && (
+                    <span className="text-[10px] text-slate-500">
+                      Auto-synced: {lastUpdated.toLocaleTimeString()}
+                    </span>
+                  )}
+                </div>
+                <div className="space-y-6">
+                  <PlayerScoreboardTable teamName={teamAName} players={team1Players} isWinner={isWinnerA} />
+                  <PlayerScoreboardTable teamName={teamBName} players={team2Players} isWinner={isWinnerB} />
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-10 text-center space-y-3">
+                <div className="text-3xl">📊</div>
+                <h3 className="text-sm font-bold text-white uppercase">Player Scoreboard Pending Match Execution</h3>
+                <p className="text-xs text-slate-500 max-w-md mx-auto">
+                  {phase === 'PRE_MATCH'
+                    ? 'Live player statistics, K/D/A ratios, and round-by-round ADR breakdown will stream automatically here once the match starts.'
+                    : 'Detailed player performance stats are currently sync-pending.'}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -588,6 +815,17 @@ export function MatchCenterSpectator() {
           Pixel Palace Tournament Operations System · Powered by Kancha Platform
         </p>
       </div>
+
+      <StreamModal
+        isOpen={isStreamOpen}
+        onClose={() => setIsStreamOpen(false)}
+        match={match}
+      />
+      <CaptainCheckInModal
+        isOpen={isCheckInOpen}
+        onClose={() => setIsCheckInOpen(false)}
+        match={match}
+      />
     </div>
   );
 }

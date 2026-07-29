@@ -12,11 +12,25 @@ import { MatchCenterDashboard } from './match-center/presentation/pages/MatchCen
 import { MatchCenterSpectator } from './match-center/presentation/pages/MatchCenterSpectator';
 import { MatchCenterList } from './match-center/presentation/pages/MatchCenterList';
 
+import { EsportsCommandPalette } from './components/common/EsportsCommandPalette';
+
 function App() {
   const [booting, setBooting] = useState(true);
+  const [isPaletteOpen, setIsPaletteOpen] = useState(false);
 
   useEffect(() => {
     Terminal.boot();
+
+    // Ctrl + K / Cmd + K listener
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setIsPaletteOpen(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   if (booting) {
@@ -25,6 +39,7 @@ function App() {
 
   return (
     <div className="flex flex-col min-h-screen">
+      <EsportsCommandPalette isOpen={isPaletteOpen} onClose={() => setIsPaletteOpen(false)} />
       <main className="flex-grow flex flex-col relative content-wrapper">
         <Routes>
           <Route path="/" element={<Home />} />

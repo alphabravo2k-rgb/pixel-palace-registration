@@ -59,197 +59,155 @@ export const TeamProfileModal = ({ team, onClose }) => {
   const CONTACT_STATUSES = ['OBJECTION', 'REJECTED', 'DISQUALIFIED', 'WAITLISTED'];
   const statusKey = team.status || 'PENDING REVIEW';
   const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['PENDING REVIEW'];
-  const StatusIcon = statusCfg.icon;
+  const StatusIcon = statusCfg.icon || CheckCircle2;
   const needsContact = CONTACT_STATUSES.includes(statusKey);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-300">
-      <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+      {/* Backdrop */}
+      <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={onClose} />
 
-      <div className="relative w-full max-w-3xl glass-panel p-0 overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-300">
-        {/* Header Background */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-neon-cyan/20 to-black pointer-events-none" />
-        <div className="absolute top-0 right-0 w-64 h-64 bg-neon-cyan/10 blur-[100px] pointer-events-none" />
-
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center bg-black/50 border border-white/10 rounded-full text-zinc-400 hover:text-white hover:border-neon-cyan/50 transition-all group"
-        >
-          <X size={16} className="group-hover:scale-110 transition-transform" />
-        </button>
-
-        <div className="p-8 relative z-10 flex flex-col md:flex-row items-center md:items-start gap-8 border-b border-white/5">
-          {/* Logo */}
-          <div className="w-32 h-32 rounded-xl bg-black border-2 border-white/10 p-2 shrink-0 shadow-2xl relative group">
-            <div className="absolute inset-0 bg-neon-cyan/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl blur-xl" />
-            <img
-              src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo}
-              alt={team.name}
-              className={`w-full h-full object-contain relative z-10 ${logoFailed ? 'opacity-20 grayscale' : ''}`}
-              onError={() => setLogoFailed(true)}
-            />
-          </div>
-
-          {/* Info */}
-          <div className="text-center md:text-left flex-grow">
-            <div className="inline-flex items-center gap-2 mb-2">
-              <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">
-                {team.tag || 'TEAM'}
-              </span>
-              <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusCfg.color}`}>
-                <StatusIcon size={10} />
-                {statusCfg.label}
-              </span>
-            </div>
-            <h2 className="text-4xl sm:text-5xl font-heading text-white uppercase tracking-widest leading-none drop-shadow-lg">
+      {/* Modal Card - Constrained to 88vh to fit any screen with internal scrolling */}
+      <div className="relative w-full max-w-3xl max-h-[88vh] bg-[#080b18] border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 z-10">
+        
+        {/* Sticky Top Header Bar */}
+        <div className="flex items-center justify-between px-6 py-4 bg-[#0b0e22] border-b border-slate-800/80 shrink-0">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-bold bg-violet-600/20 border border-violet-500/40 text-violet-300 px-2.5 py-1 rounded">
+              {team.tag || 'TEAM'}
+            </span>
+            <h2 className="text-lg font-black text-white font-mono uppercase tracking-wider truncate">
               {team.name}
             </h2>
+            <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusCfg.color}`}>
+              <StatusIcon size={10} />
+              {statusCfg.label}
+            </span>
+          </div>
 
-            <div className="mt-6 flex flex-wrap justify-center md:justify-start gap-6">
-              <div className="flex flex-col">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Average ELO</span>
-                <span className="text-xl font-heading text-neon-cyan tracking-widest">{team.averageElo || 'Not Available'}</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1 font-semibold">Team Seed</span>
-                <div className="flex items-center">
-                  <span className={`text-[11px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded border leading-none font-body ${getSeedStyle(team.seed).bg} ${getSeedStyle(team.seed).glow}`}>
+          <button
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-mono text-xs font-bold cursor-pointer"
+          >
+            <span>✕ Close</span>
+            <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">ESC</span>
+          </button>
+        </div>
+
+        {/* Scrollable Modal Body */}
+        <div className="overflow-y-auto max-h-[calc(88vh-70px)] p-6 space-y-6 font-mono custom-scrollbar">
+
+          {/* Team Meta Hero Banner */}
+          <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-[#0c1026] border border-slate-800/80 p-5 rounded-xl relative overflow-hidden">
+            {/* Logo */}
+            <div className="w-24 h-24 rounded-xl bg-slate-950 border border-slate-800 p-2 shrink-0 shadow-xl relative group">
+              <img
+                src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo}
+                alt={team.name}
+                className={`w-full h-full object-contain relative z-10 ${logoFailed ? 'opacity-20 grayscale' : ''}`}
+                onError={() => setLogoFailed(true)}
+              />
+            </div>
+
+            {/* Info Grid */}
+            <div className="flex-grow space-y-4 text-center md:text-left">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/60 border border-slate-800/60 p-3.5 rounded-lg">
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Average ELO</span>
+                  <span className="text-base font-bold text-cyan-400">{team.averageElo || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Team Seed</span>
+                  <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border mt-0.5 ${getSeedStyle(team.seed).bg}`}>
                     {team.seed || 'TBD'}
                   </span>
                 </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Active Roster</span>
+                  <span className="text-base font-bold text-white">{team.roster?.length || 0} Players</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Region</span>
+                  <span className="text-base font-bold text-slate-300">{team.region || 'PAK'}</span>
+                </div>
               </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Active Roster</span>
-                <span className="text-xl font-heading text-white tracking-widest">{team.roster?.length || 0} Players</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] font-body mb-1">Region</span>
-                <span className="text-xl font-heading text-zinc-300 tracking-widest">{team.region || 'Not Available'}</span>
+
+              <div className="grid grid-cols-2 gap-4 text-xs text-slate-400 border-t border-slate-800/60 pt-3">
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase block">Captain</span>
+                  <span className="text-white font-bold">{team.roster?.find(p => p.role === 'Captain')?.ign || 'Not Available'}</span>
+                </div>
+                <div>
+                  <span className="text-[9px] text-slate-500 uppercase block">Qualification</span>
+                  <span className="text-white font-bold">{team.inviteCode ? 'Invited Team' : 'Open Qualifier'}</span>
+                </div>
               </div>
             </div>
+          </div>
 
-            {/* Extended Metadata Trace */}
-            <div className="mt-5 grid grid-cols-2 gap-4 border-t border-white/5 pt-4 text-xs font-body text-left">
-              <div>
-                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Captain</span>
-                <span className="text-white font-semibold block mt-0.5">
-                  {team.roster?.find(p => p.role === 'Captain')?.ign || 'Not Available'}
-                </span>
-              </div>
-              <div>
-                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Qualification Path</span>
-                <span className="text-white font-semibold block mt-0.5">
-                  {team.inviteCode ? `Invited (${team.inviteCode})` : 'Open Qualifier'}
-                </span>
-              </div>
-              <div>
-                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Registered At</span>
-                <span className="text-white font-semibold block mt-0.5">
-                  {team.registeredAt ? new Date(team.registeredAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Pending Verification'}
-                </span>
-              </div>
-              <div>
-                <span className="text-[9px] text-zinc-500 font-bold uppercase block tracking-wider">Verification Status</span>
-                <span className="text-white font-semibold block mt-0.5 uppercase">
-                  {team.status || 'Pending Verification'}
-                </span>
-              </div>
+          {/* Contact Notice (Only if status requires admin action) */}
+          {needsContact && (
+            <div className="border rounded-xl p-4 bg-yellow-500/10 border-yellow-500/30 flex items-center justify-between gap-4">
+              <p className="text-xs text-yellow-300 leading-relaxed">
+                Registration verification pending. Please coordinate with ops admins on Discord.
+              </p>
+              <a
+                href="https://discord.com/invite/pixelpalacee"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 text-xs font-bold uppercase px-3 py-1.5 rounded border border-yellow-500/50 text-yellow-300 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all flex items-center gap-1.5"
+              >
+                <MessageSquare size={13} /> <span>Ops Discord</span>
+              </a>
             </div>
+          )}
 
-            {/* Admin Remarks Notice */}
-            {(team.adminRemarks || needsContact) && (
-              <div className={`mt-5 border rounded-lg p-4 flex flex-col gap-3 ${statusKey === 'OBJECTION' ? 'bg-orange-500/5 border-orange-500/30' :
-                  statusKey === 'REJECTED' ? 'bg-red-500/5 border-red-500/30' :
-                    statusKey === 'WAITLISTED' ? 'bg-purple-500/5 border-purple-500/30' :
-                      'bg-zinc-800/50 border-white/10'
-                }`}>
-                {team.adminRemarks && (
-                  <div>
-                    <p className="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1 font-body">Admin Remarks</p>
-                    <p className={`text-[11px] font-body leading-relaxed ${statusKey === 'OBJECTION' ? 'text-orange-300' :
-                        statusKey === 'REJECTED' ? 'text-red-300' :
-                          statusKey === 'WAITLISTED' ? 'text-purple-300' :
-                            'text-zinc-300'
-                      }`}>{team.adminRemarks}</p>
+          {/* Roster Grid */}
+          <div className="space-y-4">
+            <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
+              <Crosshair className="w-4 h-4 text-violet-400" /> REGISTERED SQUAD ROSTER ({team.roster?.length || 0})
+            </h3>
+
+            {!team.roster || team.roster.length === 0 ? (
+              <div className="text-center py-8 text-slate-500 text-xs uppercase tracking-widest bg-slate-950 border border-dashed border-slate-800 rounded-xl">
+                Roster details pending verification.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {team.roster.map((p, i) => (
+                  <div key={i} className="bg-[#0b0f24] border border-slate-800/80 p-4 rounded-xl hover:border-violet-500/40 transition-all space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                      <div className="flex items-center gap-2 truncate">
+                        <span className={`w-2 h-2 rounded-full ${p.role === 'Captain' ? 'bg-amber-400' : 'bg-cyan-400'}`} />
+                        <span className="text-xs font-bold text-white uppercase tracking-wider truncate">
+                          {p.ign || p.discord || `PLAYER #${i+1}`}
+                        </span>
+                      </div>
+                      <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${
+                        p.role === 'Captain' ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-400'
+                      }`}>
+                        {p.role || 'Member'}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-850">
+                        <span className="text-[9px] text-slate-500 uppercase">FACEIT LVL</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
+                          LVL {getFaceitLevelStyle(p.faceitLevel).label}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-850">
+                        <span className="text-[9px] text-slate-500 uppercase">FACEIT ELO</span>
+                        <span className="text-cyan-400 font-bold">{p.faceitElo || 'N/A'}</span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                {needsContact && (
-                  <a
-                    href="https://discord.com/invite/pixelpalacee"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 self-start text-[10px] font-bold uppercase tracking-widest px-3 py-1.5 rounded border border-neon-cyan/30 text-neon-cyan bg-neon-cyan/5 hover:bg-neon-cyan/10 hover:border-neon-cyan/60 transition-all"
-                  >
-                    <MessageSquare size={11} /> Contact Us on Discord
-                  </a>
-                )}
+                ))}
               </div>
             )}
           </div>
-        </div>
 
-        {/* Roster Grid */}
-        <div className="bg-black/60 p-8">
-          <h3 className="text-lg font-heading text-white uppercase tracking-widest mb-6 flex items-center gap-2 border-b border-white/5 pb-3">
-            <Crosshair className="w-5 h-5 text-neon-cyan" /> Registered Roster
-          </h3>
-
-          {!team.roster || team.roster.length === 0 ? (
-            <div className="text-center py-12 text-zinc-500 font-body text-xs uppercase tracking-widest bg-black/40 border border-dashed border-white/5 rounded-lg">
-              Roster details are currently unavailable or pending verification.
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {team.roster.map((p, i) => (
-                <div key={i} className="bg-black/40 border border-white/5 p-4 rounded-lg hover:border-white/20 transition-colors group relative overflow-hidden flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-3 relative z-10 border-b border-white/5 pb-2">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-1.5 h-1.5 rounded-full shadow-[0_0_5px_rgba(255,255,255,0.5)] ${p.role === 'Captain' ? 'bg-yellow-500 shadow-yellow-500/50' : p.role === 'Substitute' ? 'bg-neon-pink shadow-neon-pink/50' : 'bg-neon-cyan shadow-neon-cyan/50'}`} />
-                        <span className="text-sm font-bold text-white uppercase tracking-wider font-body truncate">
-                          {p.ign || p.discord || 'PLAYER'}
-                        </span>
-                      </div>
-                      <span className={`text-[8px] font-bold uppercase tracking-widest ${p.role === 'Captain' ? 'text-yellow-500' : p.role === 'Substitute' ? 'text-neon-pink' : 'text-neon-cyan'}`}>
-                        {p.role || 'Player'}
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2 relative z-10">
-                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT LVL</span>
-                        <span className={`w-5 h-5 flex items-center justify-center rounded-full text-[9px] font-black leading-none ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
-                          {getFaceitLevelStyle(p.faceitLevel).label}
-                        </span>
-                      </div>
-                      <div className="flex justify-between items-center bg-black/50 px-2 py-1.5 rounded border border-white/5">
-                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">FaceIT ELO</span>
-                        <span className="text-[10px] text-neon-cyan font-bold font-body">{p.faceitElo || 'Not Available'}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-start gap-4 mt-4 pt-3 border-t border-white/5 relative z-10 text-zinc-500">
-                    {p.discord && p.discord !== 'Not Available' && (
-                      <span className="text-[9px] text-zinc-400 font-bold uppercase flex items-center gap-1" title={`Discord: ${p.discord}`}>
-                        <MessageSquare className="w-3.5 h-3.5 text-[#5865F2]" />
-                        <span className="max-w-[65px] truncate">{p.discord}</span>
-                      </span>
-                    )}
-                    {p.steam && (
-                      <a href={p.steam} target="_blank" rel="noopener noreferrer" className="hover:text-neon-cyan transition-colors" title="Steam Profile">
-                        <Gamepad2 className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                    {p.faceit && (
-                      <a href={p.faceit} target="_blank" rel="noopener noreferrer" className="hover:text-neon-pink transition-colors" title="FACEIT Profile">
-                        <Crosshair className="w-3.5 h-3.5" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>
