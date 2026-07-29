@@ -144,8 +144,8 @@ export class PixelPalaceRepository {
       const t2Obj = m.team2_id ? teamLookup.get(String(m.team2_id)) || { id: m.team2_id } : null;
 
       const roundName = ROUND_NAMES[m.round_number] || `Round ${m.round_number}`;
-      const isBye = m.status === 'bye' || (m.team2_id === null && m.winner_id === m.team1_id && m.status === 'completed');
-      const status = this._normalizeStatus(m.status, isBye);
+      const isBye = m.status === 'bye' || (m.round_number === 1 && (m.team2_id === null || m.team1_id === null));
+      const status = isBye ? 'BYE' : this._normalizeStatus(m.status);
 
       let winner = null;
       if (m.winner_id) {

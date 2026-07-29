@@ -133,30 +133,59 @@ export function PreMatchTacticalCenter({ match, teamA, teamB, visitorTime, team1
         </div>
       </div>
 
-      {/* Honest CS2 Active Duty Map Pool & Veto Section */}
-      <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-5 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* CS2 Active Duty Map Pool & Live Veto Sequence */}
+      <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-5 space-y-6">
+        <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
           <div className="flex items-center gap-2">
             <Flame size={16} className="text-orange-400" />
             <h3 className="text-xs font-black text-white uppercase tracking-wider">
-              CS2 Active Duty Map Pool
+              CS2 Active Duty Map Pool & Pick/Ban Veto
             </h3>
           </div>
-          <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">
-            VETO IN PRE-MATCH (30 MINS PRIOR)
+          <span className="text-[10px] font-bold text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded">
+            LIVE CAPTAIN VETO PROTOCOL
           </span>
         </div>
 
+        {/* Active Duty Map Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-6 gap-2.5">
           {CS2_MAP_POOL.map((m) => (
-            <div key={m.id} className="rounded-xl border border-slate-800/80 bg-slate-950 p-2.5 text-center">
-              <span className="text-[10px] font-black text-white uppercase tracking-wider block">{m.name}</span>
-              <span className="text-[8.5px] font-bold text-slate-500 mt-0.5 block">Active Pool</span>
+            <div key={m.id} className="rounded-xl border border-slate-800/80 bg-slate-950 p-3 text-center hover:border-violet-500/50 transition">
+              <span className="text-[11px] font-black text-white uppercase tracking-wider block">{m.name}</span>
+              <span className="text-[9px] font-bold text-emerald-400 mt-1 block bg-emerald-950/60 border border-emerald-800/40 py-0.5 rounded">Active Pool</span>
             </div>
           ))}
         </div>
-        <div className="text-[10px] text-slate-500 text-center pt-1 border-t border-slate-850">
-          Official Map Pick/Ban (Veto) sequence will be conducted live by team captains 30 mins prior to match start on Kancha Portal.
+
+        {/* Turn-Based Veto Timeline */}
+        <div className="space-y-3 pt-2">
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block">Standard BO3 Veto Sequence Protocol</span>
+          <div className="grid grid-cols-1 sm:grid-cols-5 gap-2 font-mono text-[10px]">
+            <div className="p-2.5 rounded-lg bg-red-950/30 border border-red-800/40 text-center">
+              <span className="text-red-400 font-bold block">1. BAN</span>
+              <span className="text-white font-black truncate block mt-0.5">{teamAName} BAN</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-red-950/30 border border-red-800/40 text-center">
+              <span className="text-red-400 font-bold block">2. BAN</span>
+              <span className="text-white font-black truncate block mt-0.5">{teamBName} BAN</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-center">
+              <span className="text-emerald-400 font-bold block">3. PICK (MAP 1)</span>
+              <span className="text-white font-black truncate block mt-0.5">{teamAName} PICK</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-center">
+              <span className="text-emerald-400 font-bold block">4. PICK (MAP 2)</span>
+              <span className="text-white font-black truncate block mt-0.5">{teamBName} PICK</span>
+            </div>
+            <div className="p-2.5 rounded-lg bg-violet-950/40 border border-violet-800/50 text-center">
+              <span className="text-violet-300 font-bold block">5. DECIDER</span>
+              <span className="text-white font-black truncate block mt-0.5">DECIDER MAP</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-slate-850">
+          Official Map Pick/Ban sequence unlocks 30 mins prior to match start in the Captain Command Room.
         </div>
       </div>
     </div>

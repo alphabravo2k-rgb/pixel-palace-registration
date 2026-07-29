@@ -1,6 +1,6 @@
 /**
  * Match Center — API-Driven Match Detail Page
- * Three lifecycle states driven by Kancha's Pixel Palace API:
+ * Three lifecycle states driven by Pixel Palace Platform API:
  *   PRE-MATCH  → Shows real teams, schedule, format, countdown
  *   LIVE       → Shows live scores, current map, round progress
  *   COMPLETED  → Shows final scores, winner, stats & full player scoreboard (when API provides them)
@@ -294,6 +294,7 @@ export function MatchCenterSpectator() {
   const [activeDetailTab, setActiveDetailTab] = useState('OVERVIEW');
   const [isStreamOpen, setIsStreamOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   // ── Data fetcher (used for initial load + polling) ─────────────────────────
   const fetchMatchData = useCallback(async (isBackground = false) => {
@@ -481,6 +482,17 @@ export function MatchCenterSpectator() {
             style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(100,116,139,0.3)', color: '#e2e8f0' }}
           >
             🖼️ SHARE CARD
+          </button>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(window.location.href);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2000);
+            }}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
+            style={{ background: copiedLink ? 'rgba(16,185,129,0.2)' : 'rgba(30,41,59,0.8)', border: copiedLink ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(100,116,139,0.3)', color: copiedLink ? '#34d399' : '#e2e8f0' }}
+          >
+            {copiedLink ? '✓ COPIED!' : '📋 COPY LINK'}
           </button>
           <button
             onClick={() => setIsStreamOpen(true)}
@@ -812,7 +824,7 @@ export function MatchCenterSpectator() {
       {/* Footer */}
       <div className="text-center py-8 border-t" style={{ borderColor: 'rgba(99,102,241,0.08)' }}>
         <p className="text-[10px] font-mono text-slate-700 tracking-widest uppercase">
-          Pixel Palace Tournament Operations System · Powered by Kancha Platform
+          Pixel Palace Tournament Operations System · Enterprise Esports Edition v3.0
         </p>
       </div>
 

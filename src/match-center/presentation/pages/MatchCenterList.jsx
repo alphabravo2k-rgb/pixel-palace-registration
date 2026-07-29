@@ -900,31 +900,37 @@ export function MatchCenterList({ isAdmin = false }) {
                           <div className="flex items-center justify-center gap-3 flex-1 px-4 min-w-0">
                             <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
                               <span className="font-bold text-white truncate text-[11px] group-hover:text-violet-300 transition-colors">
-                                {m.teamA?.name || 'TBD'}
+                                {m.teamA?.name || m.team1Obj?.name || 'TBD'}
                               </span>
                               <div className="w-6 h-6 rounded bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 p-0.5 overflow-hidden">
-                                {m.teamA?.logo ? (
-                                  <img src={m.teamA.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                {m.teamA?.logo || m.team1Obj?.logo ? (
+                                  <img src={m.teamA?.logo || m.team1Obj?.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <span className="text-[9px] font-black text-slate-500">{m.teamA?.tag?.[0] || 'A'}</span>
+                                  <span className="text-[9px] font-black text-slate-500">{(m.teamA?.tag || m.team1Obj?.tag || 'A')[0]}</span>
                                 )}
                               </div>
                             </div>
 
-                            <span className="font-black text-slate-400 text-[10px] shrink-0 px-2 py-0.5 bg-slate-900/90 rounded border border-slate-800">
-                              {isLive || isFinished ? `${m.seriesScore?.teamAWins ?? 0}:${m.seriesScore?.teamBWins ?? 0}` : 'VS'}
-                            </span>
+                            {m.status === 'BYE' || m.isBye ? (
+                              <span className="font-black text-emerald-400 text-[9px] shrink-0 px-2 py-0.5 bg-emerald-950/80 rounded border border-emerald-800 uppercase tracking-wider">
+                                BYE — AUTO ADVANCED
+                              </span>
+                            ) : (
+                              <span className="font-black text-slate-400 text-[10px] shrink-0 px-2 py-0.5 bg-slate-900/90 rounded border border-slate-800">
+                                {isLive || isFinished ? `${m.seriesScore?.teamAWins ?? 0}:${m.seriesScore?.teamBWins ?? 0}` : 'VS'}
+                              </span>
+                            )}
 
                             <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
                               <div className="w-6 h-6 rounded bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 p-0.5 overflow-hidden">
-                                {m.teamB?.logo ? (
-                                  <img src={m.teamB.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                {m.teamB?.logo || m.team2Obj?.logo ? (
+                                  <img src={m.teamB?.logo || m.team2Obj?.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                                 ) : (
-                                  <span className="text-[9px] font-black text-slate-500">{m.teamB?.tag?.[0] || 'B'}</span>
+                                  <span className="text-[9px] font-black text-slate-500">{m.status === 'BYE' || m.isBye ? '-' : (m.teamB?.tag || m.team2Obj?.tag || 'B')[0]}</span>
                                 )}
                               </div>
                               <span className="font-bold text-white truncate text-[11px] group-hover:text-violet-300 transition-colors">
-                                {m.teamB?.name || 'TBD'}
+                                {m.status === 'BYE' || m.isBye ? 'BYE (No Match)' : (m.teamB?.name || m.team2Obj?.name || 'TBD')}
                               </span>
                             </div>
                           </div>
