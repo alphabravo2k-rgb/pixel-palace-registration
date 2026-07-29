@@ -79,6 +79,22 @@ export class PixelPalaceRepository {
   }
 
   /**
+   * Normalizes the inline match_status field returned when a bracket match
+   * has been linked to a LOT match (status = scheduled/live)
+   */
+  _normalizeLotMatchStatus(matchStatus) {
+    if (!matchStatus) return null;
+    switch (matchStatus.toLowerCase()) {
+      case 'live':      return 'LIVE';
+      case 'finished':  return 'COMPLETED';
+      case 'pending':   return 'PENDING';
+      case 'paused':    return 'PAUSED';
+      case 'cancelled': return 'CANCELLED';
+      default:          return matchStatus.toUpperCase();
+    }
+  }
+
+  /**
    * Retrieves full bracket & match dataset with 15-second TTL caching
    */
   async getBracket(input) {
@@ -162,15 +178,31 @@ export class PixelPalaceRepository {
         return `From ${src}`;
       };
 
+      // ── Inline LOT match data (present when kancha schedules/goes live) ──
+      // The bracket API embeds match_id + match_* fields for linked matches.
+      const hasLotData = m.match_id != null;
+      const lotMatchStatus = hasLotData ? this._normalizeLotMatchStatus(m.match_status) : null;
+      const liveMap = m.match_map || null;           // e.g. "de_nuke"
+      const mapScoreT1 = m.match_score_team1 ?? 0;
+      const mapScoreT2 = m.match_score_team2 ?? 0;
+      const mapWinsT1 = m.match_map_wins_team1 ?? 0;
+      const mapWinsT2 = m.match_map_wins_team2 ?? 0;
+      const mapStats = Array.isArray(m.match_map_stats) ? m.match_map_stats : [];
+
+      // The effective display status: prefer the live LOT match status over bracket status
+      const effectiveStatus = hasLotData && lotMatchStatus ? lotMatchStatus : status;
+
       return {
         id: m.id,
         matchId: m.id,
+        // The LOT platform match ID — used to look up live scoreboard data
+        lotMatchId: hasLotData ? m.match_id : null,
         bracketId: m.bracket_id,
         roundNumber: m.round_number,
         round: roundName,
         position: m.position,
         format: `BO${m.best_of || 1}`,
-        status,
+        status: effectiveStatus,
         isBye,
         team1Id: m.team1_id,
         team2Id: m.team2_id,
@@ -186,6 +218,19 @@ export class PixelPalaceRepository {
         score: m.score || (m.winner_id ? (m.winner_id === m.team1_id ? '1-0' : '0-1') : '0-0'),
         scheduleInfo,
         scheduledDate: scheduleInfo.iso,
+        // Live match intelligence from inline LOT data
+        hasLotData,
+        liveMap,
+        mapScoreT1,
+        mapScoreT2,
+        mapWinsT1,
+        mapWinsT2,
+        mapStats,
+        lotMatchStatus,
+        seriesScore: hasLotData ? {
+          teamAWins: mapWinsT1,
+          teamBWins: mapWinsT2,
+        } : null,
       };
     }) : [];
 

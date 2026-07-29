@@ -59,7 +59,7 @@ export class LotGamingAdapter {
 
   /**
    * Fetches raw match payload from the LOT Gaming endpoint.
-   * @param {string} externalMatchId e.g. "736"
+   * @param {string} externalMatchId e.g. "8"
    */
   async fetchMatchData(externalMatchId) {
     const url = `${this.baseUrl}/matches/${externalMatchId}`;
@@ -73,6 +73,27 @@ export class LotGamingAdapter {
       return rawJson;
     } catch (err) {
       Logger.debug(`LOT Adapter: Match #${externalMatchId} not yet created on server (${err.message})`);
+      return null;
+    }
+  }
+
+  /**
+   * Fetches a LOT match directly from the Pixel Palace platform API.
+   * This is the canonical source when the bracket provides a match_id.
+   * URL: https://pixelpalace.lotgaming.xyz/api/matches/:lotMatchId
+   * @param {number|string} lotMatchId
+   */
+  static async fetchFromPixelPalace(lotMatchId) {
+    const url = `https://pixelpalace.lotgaming.xyz/api/matches/${lotMatchId}`;
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status === 404) return null;
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return await response.json();
+    } catch (err) {
+      Logger.debug(`[PixelPalace LOT] Match #${lotMatchId} fetch failed: ${err.message}`);
       return null;
     }
   }
@@ -172,6 +193,7 @@ export class LotGamingAdapter {
       game: 'Counter-Strike 2',
       format: `BO${raw.best_of || 1}`,
       status: this.mapStatus(raw.status),
+      matchStage: raw.match_stage || null,   // 'warmup' | 'knife' | 'live' | ...
       teamA: {
         teamId: `T-${raw.team1_id}`,
         name: teamAName,
@@ -196,20 +218,36 @@ export class LotGamingAdapter {
       },
       activeMap: raw.map || null,
       mapImageUrl: raw.map_image_url || null,
+      startingSide: raw.starting_side || null,
+      currentMapIndex: raw.current_map_index ?? 0,
+      mapList: (() => {
+        try {
+          return typeof raw.map_list === 'string' ? JSON.parse(raw.map_list) : (raw.map_list || []);
+        } catch { return []; }
+      })(),
       winnerId,
       startedAt: raw.started_at || null,
       finishedAt: raw.finished_at || null,
       bestOf: raw.best_of || 1,
-      // Rich player stats — filter inactive bench players
+      // Pre-match roster (all players, including warmup — not filtered)
+      team1_players: raw.team1_players || [],
+      team2_players: raw.team2_players || [],
+      // Rich player stats — filter inactive bench players (post-match)
       playerStats: {
         teamA: (raw.team1_players || []).filter(isActivePlayer).map(mapPlayer),
         teamB: (raw.team2_players || []).filter(isActivePlayer).map(mapPlayer),
       },
-      // Server info
+      // Server & CSTV info
       server: raw.server_country_name ? {
         country: raw.server_country_name,
         city: raw.server_city,
         countryCode: raw.server_country_code,
+        serverPassword: raw.server_password_set || null,
+        cstvIp: raw.cstv1_ip || null,
+        cstvPassword: raw.cstv1_password || null,
+        cstvPublic: raw.cstv1_public === 1,
+        cstvViewers: raw.cstv1_viewers ?? 0,
+        sdrAddress: raw.sdr_address || null,
       } : null,
       // Demo links
       demoLinks: (raw.demo_links || []).map(d => ({

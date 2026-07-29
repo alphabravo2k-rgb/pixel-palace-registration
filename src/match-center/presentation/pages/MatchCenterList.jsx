@@ -4,7 +4,7 @@
  * Guarantees that the complete 31-match standard playoff bracket structure is always visible.
  * Features secure operator override mapping panel guarded by 4-digit security PIN access.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { platformProjectionRegistry } from '../../application/ProjectionManager.js';
 import { useMatchCenter } from '../hooks/useMatchCenter.js';
@@ -12,6 +12,7 @@ import { Logger } from '../../shared/kernel/Logger.js';
 import { fetchTeams } from '../../../services/api/client.js';
 import { matchCenter } from '../../../utils/navigation.js';
 import { tournamentService } from '../../../services/TournamentService.js';
+import { LotGamingAdapter } from '../../infrastructure/LotGamingAdapter.js';
 import { PPCC2_PERMANENT_SLOTS } from '../../../config/bracketLayout.js';
 import { resolveDisplayMatches } from '../../../utils/bracketSelector.js';
 import { getTeamTag, getTeamLogoUrl } from '../../../utils/teamResolver.js';
@@ -19,6 +20,15 @@ import { getMatchSchedule, formatVisitorLocalTime, getLiveCountdown } from '../.
 import { getGoogleCalendarUrl } from '../../../utils/calendarHelper.js';
 import { StreamModal } from '../../../components/match-center/StreamModal.jsx';
 import { exportElementAsImage } from '../../../utils/bracketExporter.js';
+
+// ─── Smart Poll Interval ──────────────────────────────────────────────────────
+function getPollInterval(lotStatus) {
+  const s = (lotStatus || '').toLowerCase();
+  if (s === 'live')     return 8_000;
+  if (s === 'warmup')   return 20_000;
+  if (s === 'finished') return null;
+  return 30_000;
+}
 
 // Dynamic SE round name resolver
 function getRoundLabel(stageName, roundNum, maxRound) {
@@ -163,49 +173,102 @@ export function MatchCenterList({ isAdmin = false }) {
   const [mapListOverride, setMapListOverride] = useState('');
   const { syncLotMatch, loading, error, clearError } = useMatchCenter('736');
 
-  // Fetch live matches directly from Flux API endpoint
-  useEffect(() => {
-    let active = true;
-    const fetchMatches = async () => {
-      try {
-        const bracket = await tournamentService.fetchBracket();
-        if (active && bracket && Array.isArray(bracket.matches)) {
-          const liveList = bracket.matches.map(m => ({
-            id: String(m.id),
-            matchId: String(m.id),
-            stage: 'Single Elimination',
-            round: m.roundNumber || m.round_number || 1,
-            round_number: m.round_number || m.roundNumber || 1,
-            position: typeof m.position === 'number' ? m.position : 0,
-            status: m.status || 'PENDING',
-            game: 'Counter-Strike 2',
-            format: m.format || `BO${m.best_of || 1}`,
-            teamA: {
-              name: m.team1Obj?.name || (typeof m.team1 === 'string' ? m.team1 : 'TBD'),
-              tag: m.team1Obj?.tag || getTeamTag(m.team1Obj || m.team1),
-              logo: m.team1Obj?.logo || m.team1Obj?.logo_url || getTeamLogoUrl(m.team1Obj || m.team1) || null
-            },
-            teamB: {
-              name: m.team2Obj?.name || (typeof m.team2 === 'string' ? m.team2 : 'TBD'),
-              tag: m.team2Obj?.tag || getTeamTag(m.team2Obj || m.team2),
-              logo: m.team2Obj?.logo || m.team2Obj?.logo_url || getTeamLogoUrl(m.team2Obj || m.team2) || null
-            },
-            score: typeof m.score === 'string' ? { teamAScore: m.score.split('-')[0] || 0, teamBScore: m.score.split('-')[1] || 0 } : (m.score || { teamAScore: 0, teamBScore: 0 })
-          }));
-          setMatches(liveList);
+  // ─── Score Flash State ──────────────────────────────────────────
+  // Tracks which match IDs have a score that just changed (for flash animation)
+  const [flashingMatches, setFlashingMatches] = useState(new Set());
+  const prevScoresRef = useRef({});
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  function triggerFlash(matchId) {
+    setFlashingMatches(prev => { const next = new Set(prev); next.add(String(matchId)); return next; });
+    setTimeout(() => setFlashingMatches(prev => { const next = new Set(prev); next.delete(String(matchId)); return next; }), 700);
+  }
+
+  // ─── Bracket Fetch + Smart Adaptive Polling ───────────────────────
+  const pollTimerRef = useRef(null);
+
+  const fetchBracket = useCallback(async () => {
+    try {
+      tournamentService.clearCache();
+      const bracket = await tournamentService.fetchBracket();
+      if (!bracket?.matches) return;
+
+      const liveList = bracket.matches.map(m => ({
+        id: String(m.id),
+        matchId: String(m.id),
+        lotMatchId: m.lotMatchId || null,
+        stage: 'Single Elimination',
+        round: m.roundNumber || m.round_number || 1,
+        round_number: m.round_number || m.roundNumber || 1,
+        position: typeof m.position === 'number' ? m.position : 0,
+        status: m.status || 'PENDING',
+        lotMatchStatus: m.lotMatchStatus || null,
+        matchStage: m.matchStage || null,
+        isBye: m.isBye || false,
+        game: 'Counter-Strike 2',
+        format: m.format || `BO${m.best_of || 1}`,
+        // Inline LOT data from bracket
+        liveMap: m.liveMap || null,
+        mapScoreT1: m.mapScoreT1 ?? 0,
+        mapScoreT2: m.mapScoreT2 ?? 0,
+        mapWinsT1: m.mapWinsT1 ?? 0,
+        mapWinsT2: m.mapWinsT2 ?? 0,
+        hasLotData: m.hasLotData || false,
+        // Server (available after LOT fetch)
+        server: m.server || null,
+        // Teams
+        teamA: {
+          name: m.team1Obj?.name || (typeof m.team1 === 'string' ? m.team1 : 'TBD'),
+          tag: m.team1Obj?.tag || getTeamTag(m.team1Obj || m.team1),
+          logo: m.team1Obj?.logo || m.team1Obj?.logo_url || getTeamLogoUrl(m.team1Obj || m.team1) || null,
+        },
+        teamB: {
+          name: m.team2Obj?.name || (typeof m.team2 === 'string' ? m.team2 : 'TBD'),
+          tag: m.team2Obj?.tag || getTeamTag(m.team2Obj || m.team2),
+          logo: m.team2Obj?.logo || m.team2Obj?.logo_url || getTeamLogoUrl(m.team2Obj || m.team2) || null,
+        },
+        seriesScore: m.seriesScore || { teamAWins: 0, teamBWins: 0 },
+        score: { teamAScore: m.mapScoreT1 ?? 0, teamBScore: m.mapScoreT2 ?? 0 },
+        winner: m.winner || null,
+        winnerId: m.winnerId || null,
+        scheduledDate: m.scheduledDate || null,
+      }));
+
+      // Detect score changes → trigger flash
+      liveList.forEach(m => {
+        const prev = prevScoresRef.current[m.id];
+        const scoreKey = `${m.mapScoreT1}-${m.mapScoreT2}`;
+        if (prev && prev !== scoreKey && (m.mapScoreT1 > 0 || m.mapScoreT2 > 0)) {
+          triggerFlash(m.id);
         }
-      } catch (err) {
-        Logger.warn(`[MatchCenterList] Error fetching live Flux matches: ${err.message}`);
-      }
-    };
-    
-    fetchMatches();
-    const interval = setInterval(fetchMatches, 15000);
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
+        prevScoresRef.current[m.id] = scoreKey;
+      });
+
+      setMatches(liveList);
+      setLastUpdated(new Date());
+
+      // Determine next poll interval based on most urgent match status
+      const hasLive = liveList.some(m => (m.lotMatchStatus || '').toLowerCase() === 'live' || (m.status || '').toUpperCase() === 'LIVE');
+      const hasWarmup = liveList.some(m => (m.lotMatchStatus || '').toLowerCase() === 'warmup' || (m.status || '').toUpperCase() === 'SCHEDULED');
+      const nextInterval = hasLive ? 8_000 : hasWarmup ? 20_000 : 30_000;
+
+      // Reschedule poll with correct interval
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = setTimeout(fetchBracket, nextInterval);
+    } catch (err) {
+      Logger.warn(`[MatchCenterList] Bracket fetch error: ${err.message}`);
+      // Retry in 30s on error
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current);
+      pollTimerRef.current = setTimeout(fetchBracket, 30_000);
+    }
   }, []);
+
+  // Boot the adaptive poll engine
+  useEffect(() => {
+    fetchBracket();
+    return () => { if (pollTimerRef.current) clearTimeout(pollTimerRef.current); };
+  }, [fetchBracket]);
+
 
   // Fetch registrations/teams on mount if in Admin Mode
   useEffect(() => {
@@ -850,12 +913,35 @@ export function MatchCenterList({ isAdmin = false }) {
           </div>
         )}
 
+        {/* ─── LIVE NOW BANNER ─── */}
+        {matches.some(m => (m.lotMatchStatus || m.status || '').toLowerCase() === 'live') && (
+          <div
+            className="rounded-xl px-5 py-3 flex items-center justify-between"
+            style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.35)' }}
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping" />
+              <span className="text-sm font-black text-emerald-400 font-mono tracking-widest uppercase">
+                🔴 MATCHES LIVE NOW
+              </span>
+              <span className="text-xs text-emerald-600 font-mono">
+                — Auto-updating every 8 seconds
+              </span>
+            </div>
+            {lastUpdated && (
+              <span className="text-[10px] font-mono text-slate-500">
+                Last sync: {lastUpdated.toLocaleTimeString()}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Match List Grouped by Round */}
         <div className="space-y-12">
           {rounds.map(roundNum => {
             const roundMatches = matchesByRound[roundNum] || [];
             if (roundMatches.length === 0) return null;
-            
+
             return (
               <div key={roundNum} className="space-y-4">
                 {/* Round Header */}
@@ -873,89 +959,61 @@ export function MatchCenterList({ isAdmin = false }) {
                 {layoutMode === 'LIST' ? (
                   <div className="space-y-2 font-mono">
                     {roundMatches.map(m => {
-                      const isLive = m.status === 'Live' || m.status === 'Paused';
-                      const isFinished = m.status === 'Completed';
+                      const isLive = (m.status || '').toUpperCase() === 'LIVE' || (m.lotMatchStatus || '').toLowerCase() === 'live';
+                      const isFinished = (m.status || '').toUpperCase() === 'COMPLETED' || (m.lotMatchStatus || '').toLowerCase() === 'finished';
+                      const isScheduled = m.hasLotData && !isLive && !isFinished;
                       const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate);
                       const visitorTime = formatVisitorLocalTime(schedInfo.iso);
                       const liveCd = getLiveCountdown(schedInfo.iso);
                       const calUrl = getGoogleCalendarUrl(m);
+                      const isFlashing = flashingMatches.has(String(m.id));
 
                       return (
                         <div
                           key={m.id}
                           onClick={() => navigate(matchCenter(m.id, false))}
-                          className="flex items-center justify-between px-3.5 py-2.5 rounded-lg bg-slate-950/80 border border-slate-800/80 hover:border-violet-500/50 hover:bg-slate-900/60 transition-all cursor-pointer group text-xs"
+                          className="flex items-center justify-between px-3.5 py-2.5 rounded-lg border hover:border-violet-500/50 transition-all cursor-pointer group text-xs"
+                          style={{
+                            background: isFlashing ? 'rgba(251,191,36,0.08)' : 'rgba(13,17,40,0.9)',
+                            borderColor: isFlashing ? 'rgba(251,191,36,0.5)' : isLive ? 'rgba(16,185,129,0.45)' : 'rgba(99,102,241,0.2)',
+                            transition: 'all 0.3s',
+                          }}
                         >
-                          {/* Left: Match ID + Round + BO */}
+                          {/* Left: Match ID + Status */}
                           <div className="flex items-center gap-2.5 shrink-0">
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                              #{m.id}
-                            </span>
-                            <span className="text-[10px] font-bold text-slate-400 hidden sm:inline">
-                              {m.format || 'BO1'}
-                            </span>
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">#{m.id}</span>
+                            {isLive && <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"/>LIVE</span>}
+                            {isScheduled && m.liveMap && (
+                              <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-1.5 py-0.5 rounded uppercase">
+                                🗺 {m.liveMap.replace('de_', '')}
+                              </span>
+                            )}
                           </div>
 
-                          {/* Center: Team A vs Team B */}
+                          {/* Center: Teams + Score */}
                           <div className="flex items-center justify-center gap-3 flex-1 px-4 min-w-0">
-                            <div className="flex items-center gap-2 flex-1 justify-end min-w-0">
-                              <span className="font-bold text-white truncate text-[11px] group-hover:text-violet-300 transition-colors">
-                                {m.teamA?.name || m.team1Obj?.name || 'TBD'}
-                              </span>
-                              <div className="w-6 h-6 rounded bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 p-0.5 overflow-hidden">
-                                {m.teamA?.logo || m.team1Obj?.logo ? (
-                                  <img src={m.teamA?.logo || m.team1Obj?.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <span className="text-[9px] font-black text-slate-500">{(m.teamA?.tag || m.team1Obj?.tag || 'A')[0]}</span>
-                                )}
-                              </div>
-                            </div>
-
-                            {m.status === 'BYE' || m.isBye ? (
-                              <span className="font-black text-emerald-400 text-[9px] shrink-0 px-2 py-0.5 bg-emerald-950/80 rounded border border-emerald-800 uppercase tracking-wider">
-                                BYE — AUTO ADVANCED
-                              </span>
-                            ) : (
-                              <span className="font-black text-slate-400 text-[10px] shrink-0 px-2 py-0.5 bg-slate-900/90 rounded border border-slate-800">
-                                {isLive || isFinished ? `${m.seriesScore?.teamAWins ?? 0}:${m.seriesScore?.teamBWins ?? 0}` : 'VS'}
-                              </span>
-                            )}
-
-                            <div className="flex items-center gap-2 flex-1 justify-start min-w-0">
-                              <div className="w-6 h-6 rounded bg-slate-900 border border-slate-800 flex items-center justify-center shrink-0 p-0.5 overflow-hidden">
-                                {m.teamB?.logo || m.team2Obj?.logo ? (
-                                  <img src={m.teamB?.logo || m.team2Obj?.logo} alt="" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                                ) : (
-                                  <span className="text-[9px] font-black text-slate-500">{m.status === 'BYE' || m.isBye ? '-' : (m.teamB?.tag || m.team2Obj?.tag || 'B')[0]}</span>
-                                )}
-                              </div>
-                              <span className="font-bold text-white truncate text-[11px] group-hover:text-violet-300 transition-colors">
-                                {m.status === 'BYE' || m.isBye ? 'BYE (No Match)' : (m.teamB?.name || m.team2Obj?.name || 'TBD')}
-                              </span>
-                            </div>
+                            <span className="font-bold text-white truncate text-[11px]">{m.teamA?.name || 'TBD'}</span>
+                            <span
+                              className="font-black text-[10px] shrink-0 px-2 py-0.5 rounded border"
+                              style={{
+                                background: isFlashing ? 'rgba(251,191,36,0.15)' : 'rgba(15,23,42,0.9)',
+                                borderColor: isFlashing ? 'rgba(251,191,36,0.4)' : 'rgba(99,102,241,0.3)',
+                                color: isFlashing ? '#fbbf24' : '#c4b5fd',
+                              }}
+                            >
+                              {m.isBye ? 'BYE' : (isLive || isFinished) ? `${m.mapScoreT1}:${m.mapScoreT2}` : 'VS'}
+                            </span>
+                            <span className="font-bold text-white truncate text-[11px]">{m.isBye ? '—' : (m.teamB?.name || 'TBD')}</span>
                           </div>
 
-                          {/* Right: Local Time + Countdown + Calendar Link */}
+                          {/* Right: Time + Location */}
                           <div className="flex items-center gap-3 shrink-0 text-[10px]">
-                            <span className="text-emerald-400 font-medium hidden md:inline">
-                              🌐 {visitorTime.localTime}
-                            </span>
-                            {!isLive && !isFinished && liveCd && (
-                              <span className="text-violet-300 font-bold hidden lg:inline">
-                                STARTS IN: {liveCd.formatted}
-                              </span>
+                            {m.server?.city && (
+                              <span className="text-slate-500 font-mono hidden md:inline">{m.server.city}</span>
                             )}
-                            {!isLive && !isFinished && (
-                              <a
-                                href={calUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Add to Google Calendar"
-                                className="text-[9px] px-2 py-0.5 rounded bg-violet-950/60 border border-violet-800/40 text-violet-300 hover:text-white hover:bg-violet-800/50 transition-colors font-bold flex items-center gap-1"
-                              >
-                                📅 <span className="hidden sm:inline">Remind</span>
-                              </a>
+                            <span className="text-emerald-400 font-medium hidden md:inline">🌐 {visitorTime.localTime}</span>
+                            {!isLive && !isFinished && liveCd && (
+                              <span className="text-violet-300 font-bold hidden lg:inline">IN: {liveCd.formatted}</span>
                             )}
                           </div>
                         </div>
@@ -963,154 +1021,222 @@ export function MatchCenterList({ isAdmin = false }) {
                     })}
                   </div>
                 ) : (
-                  /* GRID MODE */
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  /* ─── GRID VIEW ─── */
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {roundMatches.map(m => {
-                    const isLive = m.status === 'Live' || m.status === 'Paused';
-                    const isFinished = m.status === 'Completed';
+                    const statusUp = (m.status || '').toUpperCase();
+                    const lotStatus = (m.lotMatchStatus || '').toLowerCase();
+                    const isLive = statusUp === 'LIVE' || lotStatus === 'live';
+                    const isFinished = statusUp === 'COMPLETED' || lotStatus === 'finished';
+                    const isWarmup = !isLive && !isFinished && m.hasLotData && (lotStatus === 'warmup' || lotStatus === 'pending');
+                    const isScheduled = !isLive && !isFinished && !isWarmup && statusUp === 'SCHEDULED';
+                    const isPending = !isLive && !isFinished && !isWarmup && !isScheduled;
+                    const isFlashing = flashingMatches.has(String(m.id));
+
+                    const scoreA = m.mapScoreT1 ?? 0;
+                    const scoreB = m.mapScoreT2 ?? 0;
+                    const winsA = m.seriesScore?.teamAWins ?? m.mapWinsT1 ?? 0;
+                    const winsB = m.seriesScore?.teamBWins ?? m.mapWinsT2 ?? 0;
+                    const isWinnerA = isFinished && (m.winner === 'team1' || (winsA > winsB));
+                    const isWinnerB = isFinished && (m.winner === 'team2' || (winsB > winsA));
 
                     const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate);
                     const visitorTime = formatVisitorLocalTime(schedInfo.iso);
                     const liveCd = getLiveCountdown(schedInfo.iso);
 
-                    // Parse maps list and mapsStats
-                    const mapList = m.mapList ? (typeof m.mapList === 'string' ? JSON.parse(m.mapList) : m.mapList) : ['de_ancient'];
-                    const mapsStats = m.mapsStats || [];
-                    
+                    // Border / glow based on state
+                    const cardBorder = isFlashing ? 'rgba(251,191,36,0.6)'
+                      : isLive    ? 'rgba(16,185,129,0.55)'
+                      : isWarmup  ? 'rgba(6,182,212,0.45)'
+                      : isFinished ? 'rgba(100,116,139,0.3)'
+                      : 'rgba(99,102,241,0.22)';
+
+                    const cardGlow = isFlashing ? '0 0 24px rgba(251,191,36,0.18)'
+                      : isLive    ? '0 0 20px rgba(16,185,129,0.12)'
+                      : isWarmup  ? '0 0 16px rgba(6,182,212,0.08)'
+                      : '0 4px 16px rgba(0,0,0,0.5)';
+
                     return (
                       <div
                         key={m.id}
                         onClick={() => navigate(matchCenter(m.id, false))}
-                        className="relative overflow-hidden cursor-pointer group rounded-xl p-3.5 transition-all duration-200"
+                        className="relative overflow-hidden cursor-pointer group rounded-xl transition-all duration-200"
                         style={{
-                          background: 'linear-gradient(135deg, rgba(13, 17, 38, 0.95) 0%, rgba(8, 11, 23, 0.98) 100%)',
-                          border: isLive
-                            ? '1px solid rgba(16, 185, 129, 0.6)'
-                            : '1px solid rgba(139, 92, 246, 0.25)',
-                          boxShadow: isLive
-                            ? '0 0 20px rgba(16, 185, 129, 0.15)'
-                            : '0 4px 16px rgba(0, 0, 0, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(13,17,38,0.97) 0%, rgba(8,11,23,0.99) 100%)',
+                          border: `1px solid ${cardBorder}`,
+                          boxShadow: cardGlow,
+                          transition: 'all 0.25s',
                         }}
-                        onMouseEnter={e => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.borderColor = isLive ? 'rgba(16, 185, 129, 0.8)' : 'rgba(167, 139, 250, 0.5)';
-                        }}
-                        onMouseLeave={e => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.borderColor = isLive ? 'rgba(16, 185, 129, 0.6)' : 'rgba(139, 92, 246, 0.25)';
-                        }}
+                        onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
                       >
-                        {/* Top Bar: Match ID badge + Round Label + BO Format Pill + Status Badge */}
-                        <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
-                              MATCH #{m.id}
-                            </span>
-                            <span className="text-[10px] font-black font-mono tracking-widest text-violet-300 uppercase">
-                              {getRoundLabel(activeStageTab, m.round_number || m.round, maxRoundInActiveStage)}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-[9px] font-mono text-slate-400 font-bold px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/50">
-                              {m.format || 'BO1'}
-                            </span>
-                            <span
-                              className={`text-[9px] font-mono font-black px-2 py-0.5 rounded uppercase tracking-wider ${
-                                isLive
-                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 animate-pulse'
-                                  : isFinished
-                                  ? 'bg-slate-800 text-slate-400 border border-slate-700'
-                                  : 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20'
-                              }`}
-                            >
-                              {isLive ? '● LIVE' : isFinished ? '✓ COMPLETED' : 'UPCOMING'}
-                            </span>
-                          </div>
-                        </div>
+                        {/* Map image background (faint) */}
+                        {m.hasLotData && m.liveMap && (
+                          <div
+                            className="absolute inset-0 pointer-events-none opacity-5"
+                            style={{
+                              backgroundImage: `url(https://raw.githubusercontent.com/rpkaul/cs-map-images/refs/heads/main/${m.liveMap}.png)`,
+                              backgroundSize: 'cover',
+                              backgroundPosition: 'center',
+                            }}
+                          />
+                        )}
 
-                        {/* Main Versus Row (Horizontal Compact CS2 Esports Style) */}
-                        <div className="grid grid-cols-7 items-center gap-2">
-                          {/* Team A (3 cols: logo + name) */}
-                          <div className="col-span-3 flex items-center gap-2.5 min-w-0">
-                            <div className="w-10 h-10 rounded-md bg-slate-900/80 border border-slate-700/50 flex items-center justify-center shrink-0 overflow-hidden p-1">
-                              {m.teamA?.logo ? (
-                                <img src={m.teamA.logo} alt={m.teamA.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                              ) : (
-                                <span className="text-xs font-black text-violet-300">{m.teamA?.tag?.[0] || 'A'}</span>
+                        <div className="relative p-3.5">
+                          {/* ─── TOP BAR ─── */}
+                          <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-black font-mono px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
+                                #{m.id}
+                              </span>
+                              <span className="text-[10px] font-black font-mono tracking-widest text-violet-300 uppercase">
+                                {getRoundLabel(activeStageTab, m.round_number || m.round, maxRoundInActiveStage)}
+                              </span>
+                              {/* Map pill */}
+                              {m.liveMap && (
+                                <span className="text-[9px] font-bold font-mono px-1.5 py-0.5 rounded uppercase tracking-wide"
+                                  style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.3)', color: '#22d3ee' }}>
+                                  🗺 {m.liveMap.replace('de_', '')}
+                                </span>
                               )}
                             </div>
-                            <div className="min-w-0">
-                              <div className="font-bold text-white text-xs truncate group-hover:text-violet-300 transition-colors">
-                                {m.teamA?.name || 'TBD'}
-                              </div>
-                              <div className="text-[9px] font-mono text-slate-500 font-semibold truncate">
-                                {m.teamA?.tag || 'TBD'}
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Center VS / Score (1 col) */}
-                          <div className="col-span-1 flex flex-col items-center justify-center">
-                            {isLive || isFinished ? (
-                              <span className="font-black text-sm font-mono text-white tracking-tight">
-                                {m.seriesScore?.teamAWins ?? 0} : {m.seriesScore?.teamBWins ?? 0}
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-800/80 border border-slate-700/50 text-slate-400">
+                                {m.format || 'BO1'}
                               </span>
-                            ) : (
-                              <span className="text-[10px] font-black font-mono text-violet-400 bg-violet-950/60 px-2 py-0.5 rounded border border-violet-500/30">
-                                VS
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Team B (3 cols: name + logo right aligned) */}
-                          <div className="col-span-3 flex items-center justify-end gap-2.5 min-w-0 text-right">
-                            <div className="min-w-0">
-                              <div className="font-bold text-white text-xs truncate group-hover:text-violet-300 transition-colors">
-                                {m.teamB?.name || 'TBD'}
-                              </div>
-                              <div className="text-[9px] font-mono text-slate-500 font-semibold truncate">
-                                {m.teamB?.tag || 'TBD'}
-                              </div>
-                            </div>
-                            <div className="w-10 h-10 rounded-md bg-slate-900/80 border border-slate-700/50 flex items-center justify-center shrink-0 overflow-hidden p-1">
-                              {m.teamB?.logo ? (
-                                <img src={m.teamB.logo} alt={m.teamB.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                              ) : (
-                                <span className="text-xs font-black text-violet-300">{m.teamB?.tag?.[0] || 'B'}</span>
+                              {/* Status badge */}
+                              {isLive && (
+                                <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase flex items-center gap-1"
+                                  style={{ background: 'rgba(16,185,129,0.2)', border: '1px solid rgba(16,185,129,0.5)', color: '#34d399' }}>
+                                  <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />LIVE
+                                </span>
+                              )}
+                              {isWarmup && (
+                                <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase"
+                                  style={{ background: 'rgba(6,182,212,0.15)', border: '1px solid rgba(6,182,212,0.4)', color: '#22d3ee' }}>
+                                  🔵 WARMUP
+                                </span>
+                              )}
+                              {isScheduled && (
+                                <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase"
+                                  style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.35)', color: '#818cf8' }}>
+                                  SCHEDULED
+                                </span>
+                              )}
+                              {isFinished && (
+                                <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase"
+                                  style={{ background: 'rgba(100,116,139,0.15)', border: '1px solid rgba(100,116,139,0.3)', color: '#94a3b8' }}>
+                                  ✓ DONE
+                                </span>
+                              )}
+                              {isPending && (
+                                <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded uppercase"
+                                  style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(51,65,85,0.5)', color: '#475569' }}>
+                                  ⌛ TBD
+                                </span>
                               )}
                             </div>
                           </div>
-                        </div>
 
-                        {/* Bottom Schedule & Live Countdown Strip */}
-                        <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[9.5px] font-mono text-slate-400">
-                          <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                            <span className="text-[10px]">🌐</span> {visitorTime.fullString}
-                          </span>
-                          <div className="flex items-center gap-2">
-                            {!isLive && !isFinished && liveCd && (
-                              <span className="text-violet-300 font-bold tracking-wider">
-                                STARTS IN: {liveCd.formatted}
-                              </span>
-                            )}
-                            {!isLive && !isFinished && (
-                              <a
-                                href={getGoogleCalendarUrl(m)}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Add to Google Calendar"
-                                className="text-[9px] px-2 py-0.5 rounded bg-violet-950/60 border border-violet-800/40 text-violet-300 hover:text-white hover:bg-violet-800/50 transition-colors font-bold flex items-center gap-1 ml-1"
-                              >
-                                📅 Remind
-                              </a>
-                            )}
+                          {/* ─── TEAMS + SCORE ROW ─── */}
+                          <div className="grid grid-cols-7 items-center gap-2">
+                            {/* Team A */}
+                            <div className="col-span-3 flex items-center gap-2.5 min-w-0">
+                              <div className="w-10 h-10 rounded-md bg-slate-900/80 border flex items-center justify-center shrink-0 overflow-hidden p-1"
+                                style={{ borderColor: isWinnerA ? 'rgba(251,191,36,0.5)' : 'rgba(99,102,241,0.25)' }}>
+                                {m.teamA?.logo
+                                  ? <img src={m.teamA.logo} alt={m.teamA.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  : <span className="text-xs font-black text-violet-300">{m.teamA?.name?.[0] || 'A'}</span>}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs truncate group-hover:text-violet-300 transition-colors"
+                                  style={{ color: isWinnerA ? '#fbbf24' : '#f8fafc' }}>
+                                  {m.teamA?.name || 'TBD'}
+                                  {isWinnerA && <span className="ml-1 text-[9px] text-amber-400">🏆</span>}
+                                </div>
+                                <div className="text-[9px] font-mono text-slate-500 truncate">{m.teamA?.tag || ''}</div>
+                              </div>
+                            </div>
+
+                            {/* Center: Score or VS */}
+                            <div className="col-span-1 flex flex-col items-center justify-center">
+                              {m.isBye ? (
+                                <span className="text-[9px] font-black text-emerald-400 text-center">BYE</span>
+                              ) : isLive ? (
+                                <div className="text-center">
+                                  <div
+                                    className="font-black text-base font-mono tracking-tight transition-colors"
+                                    style={{ color: isFlashing ? '#fbbf24' : '#f8fafc' }}>
+                                    {scoreA} – {scoreB}
+                                  </div>
+                                  <div className="text-[8px] font-mono text-slate-500">Rd {scoreA + scoreB + 1}</div>
+                                </div>
+                              ) : isFinished ? (
+                                <div className="text-center">
+                                  <div className="font-black text-sm font-mono text-white">{winsA} – {winsB}</div>
+                                  <div className="text-[8px] font-mono text-slate-500">FINAL</div>
+                                </div>
+                              ) : (
+                                <span className="text-[10px] font-black font-mono text-violet-400 bg-violet-950/60 px-2 py-0.5 rounded border border-violet-500/30">VS</span>
+                              )}
+                            </div>
+
+                            {/* Team B */}
+                            <div className="col-span-3 flex items-center justify-end gap-2.5 min-w-0 text-right">
+                              <div className="min-w-0">
+                                <div className="font-bold text-xs truncate group-hover:text-violet-300 transition-colors"
+                                  style={{ color: isWinnerB ? '#fbbf24' : '#f8fafc' }}>
+                                  {isWinnerB && <span className="mr-1 text-[9px] text-amber-400">🏆</span>}
+                                  {m.isBye ? '—' : (m.teamB?.name || 'TBD')}
+                                </div>
+                                <div className="text-[9px] font-mono text-slate-500 truncate">{m.isBye ? '' : (m.teamB?.tag || '')}</div>
+                              </div>
+                              <div className="w-10 h-10 rounded-md bg-slate-900/80 border flex items-center justify-center shrink-0 overflow-hidden p-1"
+                                style={{ borderColor: isWinnerB ? 'rgba(251,191,36,0.5)' : 'rgba(99,102,241,0.25)' }}>
+                                {!m.isBye && (m.teamB?.logo
+                                  ? <img src={m.teamB.logo} alt={m.teamB.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                                  : <span className="text-xs font-black text-violet-300">{m.teamB?.name?.[0] || 'B'}</span>)}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* ─── BOTTOM STRIP ─── */}
+                          <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between text-[9.5px] font-mono text-slate-400">
+                            <div className="flex items-center gap-2">
+                              {m.server?.city && (
+                                <span className="text-slate-500 flex items-center gap-1">
+                                  🌍 {m.server.city}, {m.server.countryCode}
+                                </span>
+                              )}
+                              {isWarmup && (
+                                <span className="text-cyan-600 font-bold uppercase text-[9px]">Warming Up</span>
+                              )}
+                              {visitorTime.fullString && (
+                                <span className="text-emerald-400 font-medium">🌐 {visitorTime.fullString}</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {!isLive && !isFinished && liveCd && (
+                                <span className="text-violet-300 font-bold">IN: {liveCd.formatted}</span>
+                              )}
+                              {!isLive && !isFinished && (
+                                <a
+                                  href={getGoogleCalendarUrl(m)}
+                                  target="_blank" rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  className="text-[9px] px-2 py-0.5 rounded bg-violet-950/60 border border-violet-800/40 text-violet-300 hover:text-white hover:bg-violet-800/50 transition-colors font-bold flex items-center gap-1"
+                                >
+                                  📅
+                                </a>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
                     );
                   })}
-                </div>
+                  </div>
                 )}
               </div>
             );
@@ -1119,12 +1245,10 @@ export function MatchCenterList({ isAdmin = false }) {
           {/* Empty state */}
           {rounds.length === 0 && (
             <div className="bg-slate-900/20 border border-slate-800/80 rounded-2xl p-12 text-center">
-              <div className="w-12 h-12 rounded-full bg-slate-850 flex items-center justify-center text-xl mx-auto mb-4">
-                🎮
-              </div>
+              <div className="w-12 h-12 rounded-full bg-slate-850 flex items-center justify-center text-xl mx-auto mb-4">🎮</div>
               <h3 className="text-sm font-bold text-slate-350 mb-1">No matches found</h3>
               <p className="text-xs text-slate-500 max-w-sm mx-auto mb-6">
-                No matches are registered or match the selected filters. Use the sync panel at the top to fetch an active match.
+                No matches match the selected filters. Bracket data auto-refreshes every 30 seconds.
               </p>
             </div>
           )}

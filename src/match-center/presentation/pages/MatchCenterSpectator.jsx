@@ -13,7 +13,7 @@ import { tournamentService } from '../../../services/TournamentService.js';
 import { getTeamLogoUrl, getTeamTag } from '../../../utils/teamResolver.js';
 import { getMatchSchedule, formatVisitorLocalTime, getLiveCountdown } from '../../../utils/matchSchedule.js';
 import { getGoogleCalendarUrl } from '../../../utils/calendarHelper.js';
-import { lotFluxbotAdapter, lotDlanAdapter } from '../../infrastructure/LotGamingAdapter.js';
+import { lotFluxbotAdapter, lotDlanAdapter, LotGamingAdapter } from '../../infrastructure/LotGamingAdapter.js';
 import { Logger } from '../../shared/kernel/Logger.js';
 import { StreamModal } from '../../../components/match-center/StreamModal.jsx';
 import { CaptainCheckInModal } from '../../../components/team-portal/CaptainCheckInModal.jsx';
@@ -317,29 +317,55 @@ export function MatchCenterSpectator() {
         String(m.id) === String(matchId) || m.id === numericId
       );
 
-      // Attempt to load detailed LOT match payload ONLY if match is live or completed
-      if (numericId > 0 && found && (found.status === 'LIVE' || found.status === 'COMPLETED' || found.status === 'Live' || found.status === 'Completed')) {
+      // Fetch LOT match data when:
+      //  a) bracket has linked a lotMatchId (SCHEDULED + match_id present), OR
+      //  b) match is LIVE or COMPLETED (always need live scoreboard)
+      const hasLotLink = found?.lotMatchId != null;
+      const shouldFetchLot = found && (hasLotLink || found.status === 'LIVE' || found.status === 'COMPLETED');
+      if (numericId > 0 && shouldFetchLot) {
+        const lotFetchId = found.lotMatchId || numericId;
         try {
-          const rawLot = await lotFluxbotAdapter.fetchMatchData(numericId).catch(() => null) ||
-                         await lotDlanAdapter.fetchMatchData(numericId).catch(() => null);
+          // Primary: Pixel Palace canonical API (always has latest data for linked matches)
+          const rawLot = await LotGamingAdapter.fetchFromPixelPalace(lotFetchId) ||
+                         await lotFluxbotAdapter.fetchMatchData(lotFetchId).catch(() => null) ||
+                         await lotDlanAdapter.fetchMatchData(lotFetchId).catch(() => null);
           if (rawLot) {
             found = {
               ...(found || {}),
               ...rawLot,
-              id: rawLot.id || found?.id || numericId,
-              status: rawLot.status === 'finished' ? 'COMPLETED' : (rawLot.status === 'live' ? 'LIVE' : found?.status || 'PENDING'),
+              id: found?.id || numericId,           // always preserve bracket match ID
+              lotMatchId: lotFetchId,
+              status: rawLot.status === 'finished' ? 'COMPLETED'
+                : rawLot.status === 'live' ? 'LIVE'
+                : rawLot.match_stage === 'warmup' ? 'SCHEDULED'
+                : found?.status || 'PENDING',
               team1_players: rawLot.team1_players || [],
               team2_players: rawLot.team2_players || [],
+              liveMap: rawLot.map || found?.liveMap || null,
+              mapImageUrl: rawLot.map_image_url || null,
+              matchStage: rawLot.match_stage || null,
+              mapScoreT1: rawLot.score_team1 ?? found?.mapScoreT1 ?? 0,
+              mapScoreT2: rawLot.score_team2 ?? found?.mapScoreT2 ?? 0,
               map_stats: rawLot.map_stats ? (typeof rawLot.map_stats === 'string' ? JSON.parse(rawLot.map_stats) : rawLot.map_stats) : [],
               map_list: rawLot.map_list ? (typeof rawLot.map_list === 'string' ? JSON.parse(rawLot.map_list) : rawLot.map_list) : [],
+              server: rawLot.server_country_name ? {
+                country: rawLot.server_country_name,
+                city: rawLot.server_city,
+                countryCode: rawLot.server_country_code,
+                serverPassword: rawLot.server_password_set || null,
+                cstvIp: rawLot.cstv1_ip || null,
+                cstvPassword: rawLot.cstv1_password || null,
+                cstvPublic: rawLot.cstv1_public === 1,
+                cstvViewers: rawLot.cstv1_viewers ?? 0,
+              } : found?.server || null,
               seriesScore: {
-                teamAWins: rawLot.map_wins_team1 ?? 0,
-                teamBWins: rawLot.map_wins_team2 ?? 0,
+                teamAWins: rawLot.map_wins_team1 ?? found?.mapWinsT1 ?? 0,
+                teamBWins: rawLot.map_wins_team2 ?? found?.mapWinsT2 ?? 0,
               }
             };
           }
         } catch {
-          // Ignore LOT error and fallback to public bracket object
+          // Ignore LOT error — fall back to bracket inline data
         }
       }
 
@@ -598,6 +624,26 @@ export function MatchCenterSpectator() {
                   </div>
                 </div>
               )}
+
+              {/* Live Map Pill — shown as soon as bracket links a LOT match */}
+              {match?.liveMap && (
+                <div className="flex items-center justify-center gap-2 mt-3">
+                  <span
+                    className="inline-flex items-center gap-2 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-widest"
+                    style={{ background: 'rgba(6,182,212,0.12)', border: '1px solid rgba(6,182,212,0.35)', color: '#22d3ee' }}
+                  >
+                    🗺️ MAP: {match.liveMap.replace('de_', '').toUpperCase()}
+                  </span>
+                  {match?.mapScoreT1 > 0 || match?.mapScoreT2 > 0 ? (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs font-mono font-bold px-3 py-1 rounded-full uppercase tracking-widest"
+                      style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.35)', color: '#a78bfa' }}
+                    >
+                      SCORE {match.mapScoreT1} – {match.mapScoreT2}
+                    </span>
+                  ) : null}
+                </div>
+              )}
             </div>
 
             <TeamDisplay
@@ -694,7 +740,12 @@ export function MatchCenterSpectator() {
                   { label: 'Tournament', value: 'PP Community Cup 2' },
                   { label: 'Team 1', value: teamAName },
                   { label: 'Team 2', value: teamBName },
-                ].map(({ label, value }) => (
+                  ...(match.liveMap ? [{ label: 'Vetoed Map', value: match.liveMap.replace('de_', '').toUpperCase() }] : []),
+                  ...(match.lotMatchId ? [{ label: 'LOT Match Ref', value: `#${match.lotMatchId}`, highlight: true }] : []),
+                  ...(match.hasLotData && (match.mapScoreT1 > 0 || match.mapScoreT2 > 0) ? [
+                    { label: 'Live Score', value: `${match.mapScoreT1} – ${match.mapScoreT2}`, highlight: true }
+                  ] : []),
+                ].map(({ label, value, highlight }) => (
                   <div key={label} className="space-y-1">
                     <div className="text-[9px] tracking-widest uppercase text-slate-500">{label}</div>
                     <div className="text-sm font-bold text-slate-200">{value}</div>
@@ -779,7 +830,7 @@ export function MatchCenterSpectator() {
                 ))}
               </div>
               <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-slate-850">
-                Official Map Pick/Ban (Veto) sequence will be conducted live by team captains 30 mins prior to match start on Kancha Portal.
+                Official Map Pick/Ban sequence will be conducted live by team captains 30 mins prior to match start.
               </div>
             </div>
           </div>
@@ -788,6 +839,102 @@ export function MatchCenterSpectator() {
         {/* TAB 3: SCOREBOARD & ANALYTICS */}
         {activeDetailTab === 'SCOREBOARD' && (
           <div className="space-y-6 font-mono">
+
+            {/* ─── Server & CSTV Connection Box (when LOT data is available) ─── */}
+            {match?.server?.cstvIp && (
+              <div className="rounded-xl p-5 space-y-4" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-black tracking-widest uppercase text-cyan-400">🎮 SERVER &amp; SPECTATOR INFO</h2>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/50 border border-emerald-800/40 px-2 py-0.5 rounded uppercase">
+                    {match.server.city}, {match.server.country}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px]">
+                  <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                    <div className="text-[9px] text-cyan-600 uppercase tracking-widest mb-1">GOTV / CSTV IP</div>
+                    <div className="font-black text-cyan-300 font-mono">{match.server.cstvIp}</div>
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.2)' }}>
+                    <div className="text-[9px] text-cyan-600 uppercase tracking-widest mb-1">GOTV PASSWORD</div>
+                    <div className="font-black text-cyan-300 font-mono">{match.server.cstvPassword || 'None'}</div>
+                  </div>
+                  {match.server.serverPassword && (
+                    <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                      <div className="text-[9px] text-violet-500 uppercase tracking-widest mb-1">SERVER PASSWORD</div>
+                      <div className="font-black text-violet-300 font-mono">{match.server.serverPassword}</div>
+                    </div>
+                  )}
+                  {match.matchStage && (
+                    <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                      <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Match Stage</div>
+                      <div className="font-black text-white uppercase font-mono">{match.matchStage}</div>
+                    </div>
+                  )}
+                  {match.server.cstvViewers > 0 && (
+                    <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                      <div className="text-[9px] text-emerald-600 uppercase tracking-widest mb-1">GOTV Spectators</div>
+                      <div className="font-black text-emerald-400 font-mono">{match.server.cstvViewers} watching</div>
+                    </div>
+                  )}
+                </div>
+                <div className="text-[10px] text-slate-600 pt-1 border-t border-slate-800/60">
+                  Connect via CS2 console: <span className="text-cyan-500 font-mono">connect {match.server.cstvIp}; password {match.server.cstvPassword || ''}</span>
+                </div>
+              </div>
+            )}
+
+            {/* ─── Pre-Match Lineup Cards (shown during warmup / pending) ─── */}
+            {phase === 'PRE_MATCH' && (match?.team1_players?.length > 0 || match?.team2_players?.length > 0) && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">⚔️ PRE-MATCH PLAYER LINEUP</h2>
+                  <span className="text-[10px] font-mono text-slate-500">FACEIT ELO · All Registered Players</span>
+                </div>
+                {[{ name: teamAName, players: match.team1_players }, { name: teamBName, players: match.team2_players }].map(({ name, players }) => (
+                  <div key={name} className="rounded-xl overflow-hidden" style={{ background: 'rgba(13,17,40,0.8)', border: '1px solid rgba(99,102,241,0.18)' }}>
+                    <div className="px-5 py-3 border-b flex items-center justify-between" style={{ borderColor: 'rgba(99,102,241,0.12)' }}>
+                      <span className="font-black text-sm text-white font-mono">{name}</span>
+                      <span className="text-[10px] font-mono text-slate-500">{players.length} Players Registered</span>
+                    </div>
+                    <div className="divide-y divide-slate-800/40">
+                      {players.map((p, idx) => {
+                        const faceit = p.faceit;
+                        const level = faceit?.skill_level || null;
+                        const elo = faceit?.faceit_elo || null;
+                        const avatar = faceit?.avatar || null;
+                        const profileUrl = faceit?.faceit_url?.replace('{lang}', 'en');
+                        const levelColor = FACEIT_LEVEL_COLORS[level] || '#94a3b8';
+                        return (
+                          <div key={p.steam_id || idx} className="flex items-center justify-between px-5 py-2.5 hover:bg-slate-800/20 transition">
+                            <div className="flex items-center gap-3">
+                              {avatar
+                                ? <img src={avatar} alt={p.name} className="w-7 h-7 rounded-full object-cover border border-slate-700" referrerPolicy="no-referrer" />
+                                : <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-[10px] font-black text-slate-400">{(p.name || '?')[0].toUpperCase()}</div>
+                              }
+                              <span className="text-sm font-bold text-slate-200 font-mono">{p.name}</span>
+                              {faceit?.country && <span className="text-[9px] text-slate-600 uppercase">{faceit.country}</span>}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {level && (
+                                <a href={profileUrl} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[9px] font-black px-2 py-0.5 rounded font-mono"
+                                  style={{ background: `${levelColor}20`, color: levelColor, border: `1px solid ${levelColor}44` }}
+                                >
+                                  <svg width="8" height="8" viewBox="0 0 10 10" fill={levelColor}><polygon points="5,0 6.2,3.8 10,3.8 7,6.2 8.1,10 5,7.8 1.9,10 3,6.2 0,3.8 3.8,3.8" /></svg>
+                                  LVL {level} · {elo?.toLocaleString()} ELO
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* ─── Live / Post-Match Scoreboard ─── */}
             {hasPlayerStats ? (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
@@ -805,14 +952,12 @@ export function MatchCenterSpectator() {
                   <PlayerScoreboardTable teamName={teamBName} players={team2Players} isWinner={isWinnerB} />
                 </div>
               </div>
-            ) : (
+            ) : phase !== 'PRE_MATCH' && (
               <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-10 text-center space-y-3">
                 <div className="text-3xl">📊</div>
                 <h3 className="text-sm font-bold text-white uppercase">Player Scoreboard Pending Match Execution</h3>
                 <p className="text-xs text-slate-500 max-w-md mx-auto">
-                  {phase === 'PRE_MATCH'
-                    ? 'Live player statistics, K/D/A ratios, and round-by-round ADR breakdown will stream automatically here once the match starts.'
-                    : 'Detailed player performance stats are currently sync-pending.'}
+                  Detailed player performance stats are currently sync-pending.
                 </p>
               </div>
             )}
