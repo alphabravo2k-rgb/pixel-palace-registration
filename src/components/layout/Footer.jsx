@@ -1,74 +1,130 @@
 import React from 'react';
-import { ShieldAlert, Tv, Instagram } from 'lucide-react';
+import { ShieldAlert, Tv, Instagram, MessageCircle, Globe, Terminal, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function Footer() {
   return (
-    <footer className="w-full bg-black/90 border-t border-white/10 mt-20 py-12 relative z-10 shadow-[0_-10px_30px_rgba(0,0,0,0.8)]">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 grid grid-cols-1 md:grid-cols-3 gap-10 items-center">
-
-        {/* LEFT: Identity */}
-        <div className="flex items-center gap-5 justify-center md:justify-start group cursor-pointer">
-          <img
-            src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png"
-            alt="Pixel Palace Logo"
-            className="w-16 h-16 object-contain filter grayscale opacity-40 group-hover:opacity-100 group-hover:grayscale-0 group-hover:drop-shadow-[0_0_15px_rgba(240,0,255,0.5)] transition-all duration-500"
-          />
-          <div className="h-12 w-[2px] bg-white/10 group-hover:bg-[#f000ff] transition-colors"></div>
-          <div className="text-left flex flex-col justify-center">
-            <h4 className="font-heading text-3xl text-zinc-300 group-hover:text-white leading-none tracking-[0.15em] transition-colors">PIXEL PALACE</h4>
-            <p className="text-[9px] uppercase tracking-[0.3em] text-zinc-600 mt-1 font-bold font-body">
-              © 2026 Sovereign Systems
+    <footer className="w-full bg-[#050507] border-t border-white/10 mt-16 py-10 relative z-10 font-mono shadow-[0_-10px_30px_rgba(0,0,0,0.9)]">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-8">
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 items-start">
+          
+          {/* Col 1: Brand Emblem & Identity */}
+          <div className="space-y-3 md:col-span-1">
+            <Link to="/" className="flex items-center gap-3 group">
+              <img
+                src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png"
+                alt="Pixel Palace Official Logo"
+                className="w-12 h-12 object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-[0_0_12px_rgba(240,0,255,0.6)]"
+              />
+              <div>
+                <h4 className="font-heading text-lg font-black text-white tracking-widest leading-none">PIXEL PALACE</h4>
+                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-bold block mt-1">CS2 PRO SERIES PORTAL</span>
+              </div>
+            </Link>
+            <p className="text-[10px] text-zinc-400 leading-relaxed">
+              Official tournament operating platform powered by real-time bracket sync, server anti-cheat protocols, and live spectator analytics.
             </p>
+          </div>
+
+          {/* Col 2: Platform Navigation */}
+          <div className="space-y-2">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">QUICK NAVIGATION</span>
+            <ul className="space-y-1.5 text-xs text-zinc-400">
+              <li>
+                <Link to="/match-center" className="hover:text-neon-cyan transition-colors flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3 text-neon-cyan" /> Match Center & Live Streams
+                </Link>
+              </li>
+              <li>
+                <a href="#rules" className="hover:text-neon-cyan transition-colors flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3 text-neon-cyan" /> Official CS2 Rulebook
+                </a>
+              </li>
+              <li>
+                <a href="#track" className="hover:text-neon-cyan transition-colors flex items-center gap-1">
+                  <ChevronRight className="w-3 h-3 text-neon-cyan" /> Captain Team Portal
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Col 3: Anti-Cheat & Infrastructure */}
+          <div className="space-y-2">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block mb-2">INFRASTRUCTURE</span>
+            <div className="space-y-1 text-xs">
+              <div className="text-emerald-400 font-bold flex items-center gap-1.5">
+                <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+                <span>AKROS ANTI-CHEAT V3.2 ACTIVE</span>
+              </div>
+              <p className="text-[10px] text-zinc-500">128-Tick Dedicated Match Servers</p>
+              <p className="text-[10px] text-zinc-500">CSTV 128-Tick Auto-Recording</p>
+            </div>
+          </div>
+
+          {/* Col 4: Community & Support */}
+          <div className="space-y-3">
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block">COMMUNITY & SUPPORT</span>
+            <div className="flex items-center gap-2">
+              <a
+                href="https://discord.com/invite/pixelpalacee"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-zinc-900 hover:bg-neon-purple/20 border border-white/10 hover:border-neon-purple/50 text-white p-2.5 rounded-lg transition"
+                title="Discord Community"
+              >
+                <MessageCircle className="w-4 h-4 text-neon-cyan" />
+              </a>
+              <a
+                href="https://www.twitch.tv/pXpLgg"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-zinc-900 hover:bg-[#6441a5]/20 border border-white/10 hover:border-[#9146FF]/50 text-white p-2.5 rounded-lg transition"
+                title="Twitch Stream"
+              >
+                <Tv className="w-4 h-4 text-[#9146FF]" />
+              </a>
+              <a
+                href="https://www.instagram.com/pixelpalace.gg"
+                target="_blank"
+                rel="noreferrer"
+                className="bg-zinc-900 hover:bg-neon-pink/20 border border-white/10 hover:border-neon-pink/50 text-white p-2.5 rounded-lg transition"
+                title="Instagram"
+              >
+                <Instagram className="w-4 h-4 text-neon-pink" />
+              </a>
+            </div>
+
+            <a
+              href="https://discord.com/invite/pixelpalacee"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 text-xs font-bold text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/30 px-3 py-1.5 rounded hover:bg-neon-cyan/20 transition"
+            >
+              <ShieldAlert className="w-3.5 h-3.5" />
+              <span>DISCORD LIVE SUPPORT</span>
+            </a>
+          </div>
+
+        </div>
+
+        {/* Bottom Bar: Rights & Engineering Credit */}
+        <div className="border-t border-white/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[10px] text-zinc-500">
+          <div>© 2026 PIXEL PALACE ESPORTS. ALL RIGHTS RESERVED.</div>
+
+          <div className="flex items-center gap-2">
+            <span>ENGINEERED BY</span>
+            <a
+              href="https://discordapp.com/users/bravo.gg"
+              target="_blank"
+              rel="noreferrer"
+              className="text-white font-bold tracking-widest hover:text-neon-pink transition-colors font-heading"
+            >
+              BRAVO<span className="text-neon-pink">.</span>GG
+            </a>
           </div>
         </div>
 
-        {/* CENTER: Credit */}
-        <div className="flex flex-col items-center justify-center text-center">
-          <span className="text-[8px] uppercase tracking-[0.5em] text-zinc-700 font-bold mb-2 font-body">Engineered By</span>
-          <a
-            href="https://discordapp.com/users/bravo.gg"
-            target="_blank"
-            rel="noreferrer"
-            className="text-lg font-black tracking-[0.3em] uppercase text-zinc-400 hover:text-white hover:drop-shadow-[0_0_15px_rgba(255,255,255,0.8)] transition-all duration-300 font-heading"
-          >
-            BRAVO<span className="text-[#f000ff]">.</span>GG
-          </a>
-        </div>
-
-        {/* RIGHT: Socials & Support */}
-        <div className="flex items-center justify-center md:justify-end gap-3">
-          <a
-            href="https://www.twitch.tv/pXpLgg"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center bg-black border border-white/10 hover:border-[#9146FF] transition-all p-3 shadow-[0_5px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(145,70,255,0.3)] group"
-          >
-            <Tv className="w-5 h-5 text-zinc-500 group-hover:text-[#9146FF] transition-colors" />
-          </a>
-
-          <a
-            href="https://www.instagram.com/pixelpalace.gg"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center justify-center bg-black border border-white/10 hover:border-[#f000ff] transition-all p-3 shadow-[0_5px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_15px_rgba(240,0,255,0.3)] group"
-          >
-            <Instagram className="w-5 h-5 text-zinc-500 group-hover:text-[#f000ff] transition-colors" />
-          </a>
-
-          <a
-            href="https://discord.com/invite/pixelpalacee"
-            target="_blank"
-            rel="noreferrer"
-            className="group flex items-center gap-3 px-5 py-2.5 bg-black border border-white/10 hover:border-[#00f0ff] transition-all duration-300 shadow-[0_5px_15px_rgba(0,0,0,0.5)] hover:shadow-[0_0_20px_rgba(0,240,255,0.2)]"
-          >
-            <div className="bg-zinc-900 group-hover:bg-[#00f0ff]/20 p-2 rounded-sm transition-colors">
-              <ShieldAlert className="w-4 h-4 text-zinc-500 group-hover:text-[#00f0ff] transition-colors" />
-            </div>
-            <div className="flex flex-col text-left font-body">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-300 group-hover:text-white leading-none transition-colors">Contact Support</span>
-            </div>
-          </a>
-        </div>
       </div>
     </footer>
   );

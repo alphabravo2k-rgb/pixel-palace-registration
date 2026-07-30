@@ -38,15 +38,15 @@ export const ppcc2PublishedBracket = [
   { id: null, slotKey: "R16-M08", round_number: 2, position: 7, team1: "Winner of R32-M13", team2: "Winner of R32-M14", best_of: 1, status: "PENDING" },
 
   // Quarterfinals (4 matches: QF-M01 to QF-M04)
-  { id: null, slotKey: "QF-M01", round_number: 3, position: 0, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
-  { id: null, slotKey: "QF-M02", round_number: 3, position: 1, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
-  { id: null, slotKey: "QF-M03", round_number: 3, position: 2, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
-  { id: null, slotKey: "QF-M04", round_number: 3, position: 3, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "QF-M01", round_number: 3, position: 0, team1: "Winner of R16-M01", team2: "Winner of R16-M02", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "QF-M02", round_number: 3, position: 1, team1: "Winner of R16-M03", team2: "Winner of R16-M04", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "QF-M03", round_number: 3, position: 2, team1: "Winner of R16-M05", team2: "Winner of R16-M06", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "QF-M04", round_number: 3, position: 7, team1: "Winner of R16-M07", team2: "Winner of R16-M08", best_of: 3, status: "PENDING" },
 
   // Semifinals (2 matches: SF-M01 to SF-M02)
-  { id: null, slotKey: "SF-M01", round_number: 4, position: 0, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
-  { id: null, slotKey: "SF-M02", round_number: 4, position: 1, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "SF-M01", round_number: 4, position: 0, team1: "Winner of QF-M01", team2: "Winner of QF-M02", best_of: 3, status: "PENDING" },
+  { id: null, slotKey: "SF-M02", round_number: 4, position: 1, team1: "Winner of QF-M03", team2: "Winner of QF-M04", best_of: 3, status: "PENDING" },
 
   // Grand Finals (1 match: GF-M01)
-  { id: null, slotKey: "GF-M01", round_number: 5, position: 0, team1: "TBD", team2: "TBD", best_of: 3, status: "PENDING" }
+  { id: null, slotKey: "GF-M01", round_number: 5, position: 0, team1: "Winner of SF-M01", team2: "Winner of SF-M02", best_of: 3, status: "PENDING" }
 ];

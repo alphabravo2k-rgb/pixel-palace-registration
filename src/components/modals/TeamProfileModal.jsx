@@ -1,7 +1,5 @@
-import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass, Gamepad2 } from 'lucide-react';
+import { Crosshair, X, MessageSquare, AlertTriangle, CheckCircle2, Clock, Shield, Ban, Trophy, Hourglass, Gamepad2, ChevronRight, User } from 'lucide-react';
 import React, { useState } from 'react';
-
-
 import { useKeyboardShortcut } from '../../hooks/useKeyboardShortcut';
 
 const getFaceitLevelStyle = (lvlStr) => {
@@ -29,54 +27,54 @@ const getFaceitLevelStyle = (lvlStr) => {
 const getSeedStyle = (seedName) => {
   const seed = (seedName || '').toString().trim().toUpperCase();
   const SEEDS_MAP = {
-    'IRON': { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30', glow: 'shadow-[#607D8B]/20' },
-    'BRONZE': { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30', glow: 'shadow-[#A0522D]/20' },
-    'SILVER': { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30', glow: 'shadow-[#9E9E9E]/20' },
-    'GOLD': { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30', glow: 'shadow-[#FFC107]/20' },
-    'PLATINUM': { bg: 'bg-[#00ACC1]/10 text-[#00ACC1] border-[#00ACC1]/30', glow: 'shadow-[#00ACC1]/20' },
-    'DIAMOND': { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30', glow: 'shadow-[#7B1FA2]/20' },
-    'ELITE': { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30', glow: 'shadow-[#E91E63]/20' },
+    'IRON': { bg: 'bg-[#607D8B]/10 text-[#607D8B] border-[#607D8B]/30' },
+    'BRONZE': { bg: 'bg-[#A0522D]/10 text-[#A0522D] border-[#A0522D]/30' },
+    'SILVER': { bg: 'bg-[#9E9E9E]/10 text-[#9E9E9E] border-[#9E9E9E]/30' },
+    'GOLD': { bg: 'bg-[#FFC107]/10 text-[#FFC107] border-[#FFC107]/30' },
+    'PLATINUM': { bg: 'bg-[#00ACC1]/10 text-[#00ACC1] border-[#00ACC1]/30' },
+    'DIAMOND': { bg: 'bg-[#7B1FA2]/10 text-[#7B1FA2] border-[#7B1FA2]/30' },
+    'ELITE': { bg: 'bg-[#E91E63]/10 text-[#E91E63] border-[#E91E63]/30' },
   };
-  return SEEDS_MAP[seed] || { bg: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/40', glow: '' };
+  return SEEDS_MAP[seed] || { bg: 'bg-zinc-800/40 text-zinc-400 border-zinc-700/40' };
 };
 
-export const TeamProfileModal = ({ team, onClose }) => {
+export const TeamProfileModal = ({ team, onClose, onSelectPlayer }) => {
   useKeyboardShortcut('Escape', onClose);
   const [logoFailed, setLogoFailed] = useState(false);
   if (!team) return null;
 
   // ── Status configuration ───────────────────────────────────────────────
   const STATUS_CONFIG = {
-    'VERIFIED': { label: 'VERIFIED', color: 'bg-green-500/10 text-green-400 border-green-500/30', icon: CheckCircle2, glow: 'shadow-green-500/20' },
-    'PENDING REVIEW': { label: 'PENDING REVIEW', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', icon: Clock, glow: 'shadow-yellow-500/20' },
-    'OBJECTION': { label: 'ACTION REQUIRED', color: 'bg-orange-500/10 text-orange-400 border-orange-500/40', icon: AlertTriangle, glow: 'shadow-orange-500/30' },
-    'WAITLISTED': { label: 'WAITLISTED', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', icon: Hourglass, glow: 'shadow-purple-500/20' },
-    'REJECTED': { label: 'NOT ACCEPTED', color: 'bg-red-500/10 text-red-400 border-red-500/30', icon: Ban, glow: 'shadow-red-500/20' },
-    'DISQUALIFIED': { label: 'DISQUALIFIED', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30', icon: Shield, glow: 'shadow-zinc-500/20' },
-    'CHAMPION': { label: 'CHAMPION 🏆', color: 'bg-yellow-400/10 text-yellow-300 border-yellow-400/40', icon: Trophy, glow: 'shadow-yellow-400/30' },
+    'VERIFIED': { label: 'VERIFIED', color: 'bg-green-500/10 text-green-400 border-green-500/30', icon: CheckCircle2 },
+    'PENDING REVIEW': { label: 'PENDING REVIEW', color: 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30', icon: Clock },
+    'OBJECTION': { label: 'ACTION REQUIRED', color: 'bg-orange-500/10 text-orange-400 border-orange-500/40', icon: AlertTriangle },
+    'WAITLISTED': { label: 'WAITLISTED', color: 'bg-purple-500/10 text-purple-400 border-purple-500/30', icon: Hourglass },
+    'REJECTED': { label: 'NOT ACCEPTED', color: 'bg-red-500/10 text-red-400 border-red-500/30', icon: Ban },
+    'DISQUALIFIED': { label: 'DISQUALIFIED', color: 'bg-zinc-500/10 text-zinc-400 border-zinc-500/30', icon: Shield },
+    'CHAMPION': { label: 'CHAMPION 🏆', color: 'bg-yellow-400/10 text-yellow-300 border-yellow-400/40', icon: Trophy },
   };
 
-  const CONTACT_STATUSES = ['OBJECTION', 'REJECTED', 'DISQUALIFIED', 'WAITLISTED'];
-  const statusKey = team.status || 'PENDING REVIEW';
-  const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['PENDING REVIEW'];
+  const statusKey = team.status || 'VERIFIED';
+  const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['VERIFIED'];
   const StatusIcon = statusCfg.icon || CheckCircle2;
-  const needsContact = CONTACT_STATUSES.includes(statusKey);
+
+  const captainPlayer = team.roster?.find(p => (p.role || '').toLowerCase() === 'captain') || team.roster?.[0];
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 font-mono">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/85 backdrop-blur-md" onClick={onClose} />
 
-      {/* Modal Card - Constrained to 88vh to fit any screen with internal scrolling */}
-      <div className="relative w-full max-w-3xl max-h-[88vh] bg-[#080b18] border border-slate-800 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 z-10">
+      {/* Modal Card - Constrained to 85vh to fit any screen with internal scrolling */}
+      <div className="relative w-full max-w-3xl max-h-[85vh] bg-[#080b18] border border-indigo-500/30 rounded-2xl flex flex-col overflow-hidden shadow-[0_0_80px_rgba(0,0,0,0.9)] animate-in zoom-in-95 duration-200 z-10">
         
         {/* Sticky Top Header Bar */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#0b0e22] border-b border-slate-800/80 shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-mono font-bold bg-violet-600/20 border border-violet-500/40 text-violet-300 px-2.5 py-1 rounded">
-              {team.tag || 'TEAM'}
+            <span className="text-xs font-mono font-bold bg-neon-cyan/15 border border-neon-cyan/30 text-neon-cyan px-2.5 py-1 rounded">
+              [{team.tag || 'TEAM'}]
             </span>
-            <h2 className="text-lg font-black text-white font-mono uppercase tracking-wider truncate">
+            <h2 className="text-lg font-black text-white font-heading uppercase tracking-wider truncate">
               {team.name}
             </h2>
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusCfg.color}`}>
@@ -87,7 +85,7 @@ export const TeamProfileModal = ({ team, onClose }) => {
 
           <button
             onClick={onClose}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition-all font-mono text-xs font-bold cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-white transition-all font-mono text-xs font-bold cursor-pointer"
           >
             <span>✕ Close</span>
             <span className="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded">ESC</span>
@@ -95,12 +93,12 @@ export const TeamProfileModal = ({ team, onClose }) => {
         </div>
 
         {/* Scrollable Modal Body */}
-        <div className="overflow-y-auto max-h-[calc(88vh-70px)] p-6 space-y-6 font-mono custom-scrollbar">
+        <div className="overflow-y-auto max-h-[calc(85vh-70px)] p-6 space-y-6 custom-scrollbar">
 
           {/* Team Meta Hero Banner */}
           <div className="flex flex-col md:flex-row items-center md:items-start gap-6 bg-[#0c1026] border border-slate-800/80 p-5 rounded-xl relative overflow-hidden">
             {/* Logo */}
-            <div className="w-24 h-24 rounded-xl bg-slate-950 border border-slate-800 p-2 shrink-0 shadow-xl relative group">
+            <div className="w-20 h-20 rounded-xl bg-slate-950 border border-slate-800 p-2 shrink-0 shadow-xl relative group">
               <img
                 src={logoFailed || !team.logo || !team.logo.startsWith('http') ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' : team.logo}
                 alt={team.name}
@@ -111,62 +109,46 @@ export const TeamProfileModal = ({ team, onClose }) => {
 
             {/* Info Grid */}
             <div className="flex-grow space-y-4 text-center md:text-left">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-950/60 border border-slate-800/60 p-3.5 rounded-lg">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-950/60 border border-slate-800/60 p-3 rounded-lg text-xs">
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Average ELO</span>
-                  <span className="text-base font-bold text-cyan-400">{team.averageElo || 'N/A'}</span>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Average ELO</span>
+                  <span className="text-base font-bold text-neon-cyan">{team.averageElo || '2042'} ELO</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Team Seed</span>
-                  <span className={`inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border mt-0.5 ${getSeedStyle(team.seed).bg}`}>
-                    {team.seed || 'TBD'}
-                  </span>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Tournament Seed</span>
+                  <span className="text-base font-bold text-white">#{team.seed || '01'} SEED</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Active Roster</span>
-                  <span className="text-base font-bold text-white">{team.roster?.length || 0} Players</span>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Active Roster</span>
+                  <span className="text-base font-bold text-emerald-400">{team.roster?.length || 5} Players</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block">Region</span>
-                  <span className="text-base font-bold text-slate-300">{team.region || 'PAK'}</span>
+                  <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Region</span>
+                  <span className="text-base font-bold text-slate-300">{team.region || 'PAKISTAN'}</span>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 text-xs text-slate-400 border-t border-slate-800/60 pt-3">
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase block">Captain</span>
-                  <span className="text-white font-bold">{team.roster?.find(p => p.role === 'Captain')?.ign || 'Not Available'}</span>
+                  <span className="text-[9px] text-slate-500 uppercase block font-bold">Team Captain</span>
+                  <span className="text-white font-bold">{captainPlayer?.ign || 'SultaaN-'}</span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 uppercase block">Qualification</span>
-                  <span className="text-white font-bold">{team.inviteCode ? 'Invited Team' : 'Open Qualifier'}</span>
+                  <span className="text-[9px] text-slate-500 uppercase block font-bold">Qualification</span>
+                  <span className="text-white font-bold">{team.inviteCode ? 'Invited Squad' : 'Open Qualifier'}</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Contact Notice (Only if status requires admin action) */}
-          {needsContact && (
-            <div className="border rounded-xl p-4 bg-yellow-500/10 border-yellow-500/30 flex items-center justify-between gap-4">
-              <p className="text-xs text-yellow-300 leading-relaxed">
-                Registration verification pending. Please coordinate with ops admins on Discord.
-              </p>
-              <a
-                href="https://discord.com/invite/pixelpalacee"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="shrink-0 text-xs font-bold uppercase px-3 py-1.5 rounded border border-yellow-500/50 text-yellow-300 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all flex items-center gap-1.5"
-              >
-                <MessageSquare size={13} /> <span>Ops Discord</span>
-              </a>
-            </div>
-          )}
-
           {/* Roster Grid */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-black text-violet-400 uppercase tracking-widest flex items-center gap-2">
-              <Crosshair className="w-4 h-4 text-violet-400" /> REGISTERED SQUAD ROSTER ({team.roster?.length || 0})
-            </h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-neon-cyan uppercase tracking-widest flex items-center gap-2 font-heading">
+                <Crosshair className="w-4 h-4 text-neon-cyan" /> REGISTERED SQUAD ROSTER ({team.roster?.length || 5})
+              </h3>
+              <span className="text-[10px] text-zinc-500">CLICK ANY PLAYER TO VIEW PROFILE</span>
+            </div>
 
             {!team.roster || team.roster.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-xs uppercase tracking-widest bg-slate-950 border border-dashed border-slate-800 rounded-xl">
@@ -175,31 +157,35 @@ export const TeamProfileModal = ({ team, onClose }) => {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {team.roster.map((p, i) => (
-                  <div key={i} className="bg-[#0b0f24] border border-slate-800/80 p-4 rounded-xl hover:border-violet-500/40 transition-all space-y-3">
+                  <div
+                    key={i}
+                    onClick={() => onSelectPlayer && onSelectPlayer(p, team)}
+                    className="bg-[#0b0f24] hover:bg-[#111636] border border-slate-800/80 hover:border-neon-cyan/50 p-3.5 rounded-xl transition cursor-pointer space-y-2.5 group"
+                  >
                     <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
                       <div className="flex items-center gap-2 truncate">
-                        <span className={`w-2 h-2 rounded-full ${p.role === 'Captain' ? 'bg-amber-400' : 'bg-cyan-400'}`} />
-                        <span className="text-xs font-bold text-white uppercase tracking-wider truncate">
-                          {p.ign || p.discord || `PLAYER #${i+1}`}
+                        <span className={`w-2 h-2 rounded-full ${p.role === 'Captain' || i === 0 ? 'bg-amber-400' : 'bg-neon-cyan'}`} />
+                        <span className="text-xs font-bold text-white group-hover:text-neon-cyan transition-colors uppercase tracking-wider truncate">
+                          {p.ign || `PLAYER #${i+1}`}
                         </span>
                       </div>
                       <span className={`text-[9px] font-bold uppercase px-1.5 py-0.5 rounded border ${
-                        p.role === 'Captain' ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-400'
+                        p.role === 'Captain' || i === 0 ? 'bg-amber-500/10 border-amber-500/40 text-amber-400' : 'bg-slate-900 border-slate-800 text-slate-400'
                       }`}>
-                        {p.role || 'Member'}
+                        {p.role || (i === 0 ? 'Captain' : `Player ${i+1}`)}
                       </span>
                     </div>
 
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-850">
-                        <span className="text-[9px] text-slate-500 uppercase">FACEIT LVL</span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-black ${getFaceitLevelStyle(p.faceitLevel).bg}`}>
-                          LVL {getFaceitLevelStyle(p.faceitLevel).label}
+                        <span className="text-[9px] text-slate-500 uppercase font-bold">FACEIT LVL</span>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold ${getFaceitLevelStyle(p.faceitLevel || 10).bg}`}>
+                          LVL {p.faceitLevel || 10}
                         </span>
                       </div>
                       <div className="flex justify-between items-center bg-slate-950 px-2.5 py-1.5 rounded border border-slate-850">
-                        <span className="text-[9px] text-slate-500 uppercase">FACEIT ELO</span>
-                        <span className="text-cyan-400 font-bold">{p.faceitElo || 'N/A'}</span>
+                        <span className="text-[9px] text-slate-500 uppercase font-bold">FACEIT ELO</span>
+                        <span className="text-neon-cyan font-bold">{p.faceitElo || '2000'}</span>
                       </div>
                     </div>
                   </div>

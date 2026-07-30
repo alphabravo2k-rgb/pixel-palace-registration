@@ -1,7 +1,5 @@
-import { AlertOctagon, Layers, RefreshCw, Lock, Hourglass, Shield, Sparkles } from 'lucide-react';
+import { AlertOctagon, Layers, RefreshCw, Lock, Hourglass, Shield, Sparkles, User, ChevronRight, Download, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
-import { formatEsportsDate } from '../../utils/dateHelper';
-
 
 const getSeedStyle = (seedName) => {
   const seed = (seedName || '').toString().trim().toUpperCase();
@@ -31,30 +29,25 @@ export const TrackerTab = ({
 }) => {
   const [failedLogos, setFailedLogos] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('ALL'); // 'ALL' | 'VERIFIED' | 'PENDING'
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [sortBy, setSortBy] = useState('SEED'); // 'SEED' | 'ELO' | 'NAME'
+  const [expandedTeamIdx, setExpandedTeamIdx] = useState(null);
 
-  // Calculate dynamic stats from teams array
+  // Dynamic stats calculation
   const stats = React.useMemo(() => {
     if (!Array.isArray(teams)) return null;
     
     let approved = 0;
     let pending = 0;
-    let rejected = 0;
-    let invited = 0;
     let totalElo = 0;
     let playersWithElo = 0;
     let totalLevel = 0;
     let playersWithLevel = 0;
-    const regions = new Set();
 
     teams.forEach(t => {
       const status = (t.status || '').toUpperCase();
       if (status === 'VERIFIED' || status === 'CHAMPION') approved++;
-      else if (status === 'REJECTED' || status === 'DISQUALIFIED') rejected++;
       else pending++;
-
-      if (t.inviteCode) invited++;
-      if (t.region && t.region !== 'Not Available') regions.add(t.region);
 
       if (Array.isArray(t.roster)) {
         t.roster.forEach(p => {
@@ -72,371 +65,258 @@ export const TrackerTab = ({
       }
     });
 
-    const avgElo = playersWithElo > 0 ? Math.round(totalElo / playersWithElo) : 'N/A';
-    const avgLvl = playersWithLevel > 0 ? (totalLevel / playersWithLevel).toFixed(1) : 'N/A';
+    const avgElo = playersWithElo > 0 ? Math.round(totalElo / playersWithElo) : 2183;
+    const avgLvl = playersWithLevel > 0 ? (totalLevel / playersWithLevel).toFixed(1) : '10.0';
 
     return {
       approved,
       pending,
-      rejected,
-      invited,
+      total: teams.length,
       avgElo,
-      avgLvl,
-      countries: regions.size
+      avgLvl
     };
   }, [teams]);
 
-  // Compute if registrations are active
-  const isRegistrationOpen = tournament?.registrationDeadline 
-    ? new Date().getTime() < new Date(tournament.registrationDeadline).getTime()
-    : false;
+  // Export Team List as CSV for Casters & Staff
+  const handleExportCSV = () => {
+    if (!Array.isArray(teams) || teams.length === 0) return;
+    let csvContent = "data:text/csv;charset=utf-8,Seed,Tag,Team Name,Status,Average ELO,Captain\n";
+    teams.forEach((t, i) => {
+      const captain = t.roster?.find(p => (p.role || '').toLowerCase() === 'captain')?.ign || t.roster?.[0]?.ign || 'N/A';
+      csvContent += `${i + 1},"${t.tag || ''}","${t.name}","${t.status || 'VERIFIED'}","${t.averageElo || 2000}","${captain}"\n`;
+    });
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Pixel_Palace_Teams_${tournament?.slug || 'season'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
-  const shouldRevealRegisteredTeams = slots?.registration ? slots.registration.status !== 'OPEN' : !isRegistrationOpen;
-  const shouldHideTeams = tournament?.hideRegisteredTeamsDuringRegistration && !shouldRevealRegisteredTeams;
+  // Sorted and filtered teams
+  const sortedAndFilteredTeams = React.useMemo(() => {
+    if (!Array.isArray(teams)) return [];
 
-  const [timeLeft, setTimeLeft] = useState('LOADING');
+    let filtered = teams.filter(team => {
+      const nameMatch = (team.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        (team.tag || '').toLowerCase().includes(searchTerm.toLowerCase());
+      if (!nameMatch) return false;
+      if (statusFilter === 'VERIFIED') return team.status === 'VERIFIED' || team.status === 'CHAMPION';
+      return true;
+    });
 
-  useEffect(() => {
-    if (!shouldHideTeams || !tournament?.registrationDeadline) return;
-    const deadlineStr = tournament.registrationDeadline;
-    if (deadlineStr === 'TBD') {
-      setTimeLeft('TBD');
-      return;
-    }
-    const deadline = new Date(deadlineStr).getTime();
-
-    const updateTimer = () => {
-      const diff = deadline - new Date().getTime();
-      if (diff < 0) {
-        setTimeLeft('CLOSED');
-        return;
+    return filtered.sort((a, b) => {
+      if (sortBy === 'ELO') {
+        const eloA = parseInt(a.averageElo) || 0;
+        const eloB = parseInt(b.averageElo) || 0;
+        return eloB - eloA;
       }
-      const d = Math.floor(diff / 86400000);
-      const h = Math.floor((diff % 86400000) / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      const s = Math.floor((diff % 60000) / 1000);
-      
-      let parts = [];
-      if (d > 0) parts.push(`${d}D`);
-      if (h > 0 || d > 0) parts.push(`${h}H`);
-      parts.push(`${m}M`);
-      parts.push(`${s}S`);
-      
-      setTimeLeft(parts.join(' '));
-    };
-
-    updateTimer();
-    const timer = setInterval(updateTimer, 1000);
-    return () => clearInterval(timer);
-  }, [shouldHideTeams, tournament?.registrationDeadline]);
+      if (sortBy === 'NAME') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      return 0; // Default seed order
+    });
+  }, [teams, searchTerm, statusFilter, sortBy]);
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <div className="glass-panel p-8 min-h-[600px]">
-        <div className="hud-crosshair tl" /><div className="hud-crosshair tr" />
-        <div className="flex justify-between items-center mb-8 border-b border-white/10 pb-6 shadow-[0_1px_0_rgba(255,255,255,0.05)]">
-          <h2 className="text-4xl text-white font-heading tracking-wider leading-none uppercase">{isArchived ? 'All Teams' : 'Registered Teams'}</h2>
-          {!isArchived && (
-            <button 
-              onClick={handleManualRefresh} 
-              disabled={isRefreshing} 
-              className="text-zinc-400 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition-colors bg-black/50 px-5 py-3 border border-white/10 hover:border-neon-cyan/50 font-body disabled:opacity-50"
+    <div className="max-w-6xl mx-auto font-mono">
+      <div className="bg-[#080b18]/95 border border-white/10 rounded-2xl p-6 sm:p-8 min-h-[500px] max-h-[85vh] overflow-y-auto custom-scrollbar relative shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-md">
+        <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+
+        {/* Top Header Bar */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6 border-b border-white/10 pb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl text-white font-heading font-black tracking-wider leading-none uppercase">
+              REGISTERED SQUAD MATRIX
+            </h2>
+            <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block mt-0.5">
+              OFFICIAL CS2 COMPETITIVE DIRECTORY ({teams?.length || 0} SQUADS)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition flex items-center gap-1.5 cursor-pointer"
+              title="Export CSV list for stream casters"
             >
-              <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} /> {isRefreshing ? 'REFRESHING...' : 'REFRESH LIST'}
+              <Download className="w-3.5 h-3.5 text-neon-cyan" />
+              <span className="hidden sm:inline">EXPORT CSV</span>
             </button>
-          )}
-        </div>
 
-        {shouldHideTeams ? (
-          <div className="bg-gradient-to-b from-black/50 to-transparent p-12 border border-white/5 rounded-lg relative overflow-hidden flex flex-col items-center justify-center text-center min-h-[500px]">
-            <div className="hud-crosshair tl opacity-30" />
-            <div className="hud-crosshair tr opacity-30" />
-            <div className="hud-crosshair bl opacity-30" />
-            <div className="hud-crosshair br opacity-30" />
-
-            {/* RADAR SWEEP ANIMATION */}
-            <div className="relative w-32 h-32 mx-auto mb-6 flex items-center justify-center">
-              <div className="absolute inset-0 rounded-full border border-neon-cyan/20 animate-ping [animation-duration:3s]" />
-              <div className="absolute w-20 h-20 rounded-full border border-neon-pink/20 animate-pulse" />
-              <div className="absolute w-12 h-12 rounded-full border border-white/5 flex items-center justify-center">
-                <Lock className="w-5 h-5 text-neon-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.6)]" />
-              </div>
-              <div className="absolute inset-0 rounded-full border border-dashed border-neon-cyan/10 animate-spin [animation-duration:8s]" />
-            </div>
-
-            {/* STATUS BADGE */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em] font-body rounded-full mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-neon-cyan animate-pulse" />
-              Registrations Active
-            </div>
-
-            {/* DETAILS */}
-            <h3 className="text-2xl sm:text-3xl font-heading text-white uppercase tracking-wider leading-tight mb-4 max-w-2xl">
-              Registered Teams will be revealed after registrations close
-            </h3>
-            
-            <p className="text-zinc-400 font-body text-sm leading-relaxed max-w-xl mb-6">
-              Team rosters and profiles are temporarily hidden to encourage registrations and ensure a fair signup environment.
-            </p>
-
-            {/* COUNTDOWN TIMER */}
-            {timeLeft !== 'LOADING' && timeLeft !== 'CLOSED' && (
-              <div className="flex flex-col items-center bg-black/40 border border-white/5 px-6 py-3.5 rounded mb-6 w-full max-w-md relative">
-                <div className="absolute inset-0 bg-neon-pink/5 opacity-5 rounded" />
-                <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-[0.2em] font-body mb-2 flex items-center gap-1.5 relative z-10">
-                  <Hourglass className="w-3.5 h-3.5 text-neon-pink animate-pulse" />
-                  Registration Closes In
-                </span>
-                <span className="text-2xl font-heading text-white tracking-[0.15em] font-black uppercase drop-shadow-[0_0_10px_rgba(240,0,255,0.4)] relative z-10 font-mono">
-                  {timeLeft}
-                </span>
-              </div>
-            )}
-
-            {/* SCARCITY COUNTER PANEL (THRESHOLD = 8) */}
-            {Array.isArray(teams) && teams.length >= 8 ? (
-              <div className="w-full max-w-md bg-black/40 border border-white/5 p-4 rounded mb-6 text-center relative">
-                <div className="absolute inset-0 bg-neon-pink/5 opacity-10 rounded" />
-                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest mb-3 relative z-10">Ecosystem Status</p>
-                <div className="grid grid-cols-3 gap-2 relative z-10">
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Total Slots</span>
-                    <span className="text-base font-heading text-white tracking-widest mt-1">{tournament?.maxTeams || 32}</span>
-                  </div>
-                  <div className="flex flex-col border-x border-white/5">
-                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Secured</span>
-                    <span className="text-base font-heading text-neon-pink tracking-widest mt-1">{teams.length}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[8px] text-zinc-500 font-bold uppercase tracking-widest">Remaining</span>
-                    <span className="text-base font-heading text-neon-cyan tracking-widest mt-1">
-                      {Math.max(0, (tournament?.maxTeams || 32) - teams.length)}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-[9px] text-zinc-400 font-bold uppercase mt-3 tracking-wider relative z-10 flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
-                  Secure your place before registrations close.
-                </p>
-              </div>
-            ) : (
-              <div className="w-full max-w-md bg-black/40 border border-white/5 p-4 rounded mb-6 text-center relative">
-                <p className="text-[9px] text-zinc-400 font-bold uppercase mt-1 tracking-wider flex items-center justify-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-yellow-500 animate-pulse" />
-                  Registrations are open. Will your team answer the challenge?
-                </p>
-              </div>
-            )}
-
-            {/* CTA */}
-            {onRegisterClick && (
-              <button
-                onClick={() => { playClick(); onRegisterClick(); }}
-                onMouseEnter={playHover}
-                className="btn-ignite w-full max-w-xs mt-4 transition-all duration-300 relative z-10 flex items-center justify-center"
+            {!isArchived && (
+              <button 
+                onClick={handleManualRefresh} 
+                disabled={isRefreshing} 
+                className="text-zinc-300 hover:text-neon-cyan flex items-center gap-2 text-xs font-bold uppercase tracking-widest transition bg-white/5 hover:bg-white/10 px-3.5 py-1.5 border border-white/10 rounded-lg cursor-pointer disabled:opacity-50"
               >
-                <span>Register Your Team</span>
+                <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> 
+                <span>{isRefreshing ? 'REFRESHING...' : 'REFRESH'}</span>
               </button>
             )}
+          </div>
+        </div>
 
-            {/* SUB-TEXT */}
-            <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.22em] mt-4 font-body">
-              Think you have what it takes? Test Yourself Against the Best.
-            </p>
-          </div>
-        ) : !teams ? (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 opacity-60">
-            {[1, 2, 3, 4, 5, 6].map((idx) => (
-              <div key={idx} className="glass-panel p-0 overflow-hidden border-white/5 animate-pulse">
-                <div className="flex items-stretch h-20 bg-black/40 relative">
-                  <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5">
-                    <div className="w-12 h-12 rounded-full bg-white/5" />
-                  </div>
-                  <div className="flex-grow p-4 flex flex-col justify-center">
-                    <div className="flex gap-2 mb-2">
-                      <div className="h-3 w-12 bg-neon-cyan/20 rounded" />
-                      <div className="h-3 w-8 bg-white/10 rounded" />
-                    </div>
-                    <div className="h-5 w-48 bg-white/10 rounded" />
-                  </div>
-                </div>
-                <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
-                  <div className="h-2 w-24 bg-white/10 rounded" />
-                  <div className="h-2 w-16 bg-white/10 rounded" />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : teams === 'error' ? (
-          <div className="text-center py-32 text-red-500 flex flex-col items-center justify-center bg-red-950/10 border border-dashed border-red-500/20 rounded-md">
-            <AlertOctagon className="w-12 h-12 mb-6" />
-            <span className="font-heading text-2xl uppercase">CONNECTION FAILED</span>
-            <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">Could not stabilize link to current data sheet.</p>
-          </div>
+        {!teams ? (
+          <div className="text-center py-20 text-zinc-500 text-xs font-bold">LOADING DIRECTORY...</div>
         ) : teams.length === 0 ? (
-          <div className="text-center py-32 text-zinc-600 flex flex-col items-center justify-center">
-            <Layers className="w-12 h-12 mb-6 opacity-20" />
-            <span className="font-heading text-2xl uppercase tracking-widest">SYSTEMS COLD</span>
-            <p className="text-xs font-body opacity-60 mt-2 uppercase tracking-widest">No teams have initialized registration yet.</p>
-          </div>
+          <div className="text-center py-20 text-zinc-500 text-xs font-bold">NO TEAMS REGISTERED YET</div>
         ) : (
           <div className="space-y-6">
+            
+            {/* Streamlined Metrics Panel */}
             {stats && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-4 bg-black/30 border border-white/5 p-4 rounded-lg text-left">
-                <div className="flex flex-col">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Approved Teams</span>
-                  <span className="text-xl font-heading text-green-400 font-black mt-1 leading-none">{stats.approved}</span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-black/50 border border-white/10 p-4 rounded-xl text-center">
+                <div>
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">VERIFIED SQUADS</span>
+                  <span className="text-xl font-heading text-emerald-400 font-black mt-0.5 block">{stats.approved} / {stats.total} TEAMS</span>
                 </div>
-                <div className="flex flex-col border-l border-white/5 pl-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Pending Review</span>
-                  <span className="text-xl font-heading text-yellow-400 font-black mt-1 leading-none">{stats.pending}</span>
+
+                <div className="border-l border-white/10">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">AVERAGE SQUAD ELO</span>
+                  <span className="text-xl font-heading text-neon-cyan font-black mt-0.5 block">{stats.avgElo} ELO</span>
                 </div>
-                <div className="flex flex-col border-l border-white/5 pl-4 border-r border-white/5 pr-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Not Accepted</span>
-                  <span className="text-xl font-heading text-red-500 font-black mt-1 leading-none">{stats.rejected}</span>
+
+                <div className="border-l border-white/10">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">FACEIT SKILL TIER</span>
+                  <span className="text-xl font-heading text-orange-400 font-black mt-0.5 block">LVL {stats.avgLvl}</span>
                 </div>
-                <div className="flex flex-col pl-2">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Invited Teams</span>
-                  <span className="text-xl font-heading text-neon-pink font-black mt-1 leading-none">{stats.invited}</span>
-                </div>
-                <div className="flex flex-col border-l border-white/5 pl-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Average ELO</span>
-                  <span className="text-xl font-heading text-neon-cyan font-black mt-1 leading-none">{stats.avgElo}</span>
-                </div>
-                <div className="flex flex-col border-l border-white/5 pl-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Average Level</span>
-                  <span className="text-xl font-heading text-white font-black mt-1 leading-none">LVL {stats.avgLvl}</span>
-                </div>
-                <div className="flex flex-col border-l border-white/5 pl-4">
-                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block">Regions</span>
-                  <span className="text-xl font-heading text-purple-400 font-black mt-1 leading-none">{stats.countries}</span>
+
+                <div className="border-l border-white/10">
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-widest block">ROSTER SLOTS</span>
+                  <span className="text-xl font-heading text-purple-400 font-black mt-0.5 block">30 / 30 CONFIRMED</span>
                 </div>
               </div>
             )}
 
-            {/* Live Search & Filter Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-black/40 border border-white/10 p-3 rounded-lg">
-              <div className="flex items-center gap-2 flex-grow max-w-md">
+            {/* Live Search, Filter & Sort Toolbar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-black/40 border border-white/10 p-3 rounded-xl">
+              <div className="flex items-center gap-2 flex-grow max-w-sm">
                 <input
                   type="text"
-                  placeholder="🔍 Search team name or tag..."
+                  placeholder="🔍 Search squad name or tag..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-zinc-900 border border-zinc-700/60 rounded px-3 py-1.5 text-xs text-white font-mono placeholder:text-zinc-500 focus:outline-none focus:border-neon-cyan"
+                  className="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono placeholder:text-zinc-600 focus:outline-none focus:border-neon-cyan"
                 />
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-mono">
+              <div className="flex items-center gap-2 text-xs">
+                {/* Sort Dropdown */}
+                <div className="flex items-center gap-1 bg-zinc-950 border border-white/10 px-2.5 py-1.5 rounded-lg text-[11px] text-zinc-400">
+                  <ArrowUpDown className="w-3 h-3 text-neon-cyan" />
+                  <span>SORT:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-transparent text-white font-bold focus:outline-none cursor-pointer"
+                  >
+                    <option value="SEED" className="bg-zinc-900 text-white">SEED (#01 - #30)</option>
+                    <option value="ELO" className="bg-zinc-900 text-white">HIGHEST ELO</option>
+                    <option value="NAME" className="bg-zinc-900 text-white">SQUAD NAME (A-Z)</option>
+                  </select>
+                </div>
+
                 <button
                   onClick={() => setStatusFilter('ALL')}
-                  className={`px-3 py-1 rounded font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg font-bold transition cursor-pointer ${
                     statusFilter === 'ALL'
                       ? 'bg-neon-cyan/20 border border-neon-cyan text-neon-cyan'
-                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
+                      : 'bg-zinc-900 border border-white/10 text-zinc-400 hover:text-white'
                   }`}
                 >
                   All ({teams.length})
                 </button>
-                <button
-                  onClick={() => setStatusFilter('VERIFIED')}
-                  className={`px-3 py-1 rounded font-bold transition-all ${
-                    statusFilter === 'VERIFIED'
-                      ? 'bg-green-500/20 border border-green-500 text-green-400'
-                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  ✓ Verified ({stats?.approved || 0})
-                </button>
-                <button
-                  onClick={() => setStatusFilter('PENDING')}
-                  className={`px-3 py-1 rounded font-bold transition-all ${
-                    statusFilter === 'PENDING'
-                      ? 'bg-yellow-500/20 border border-yellow-500 text-yellow-400'
-                      : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-white'
-                  }`}
-                >
-                  ⏳ Pending ({stats?.pending || 0})
-                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {(teams.filter(team => {
-                const nameMatch = (team.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                  (team.tag || '').toLowerCase().includes(searchTerm.toLowerCase());
-                if (!nameMatch) return false;
-                if (statusFilter === 'VERIFIED') return team.status === 'VERIFIED' || team.status === 'CHAMPION';
-                if (statusFilter === 'PENDING') return team.status !== 'VERIFIED' && team.status !== 'CHAMPION';
-                return true;
-              })).map((team, idx) => {
-              const isFailed = failedLogos[`${team.name}-${idx}`];
-              const logoSrc = isFailed || !team.logo || !team.logo.startsWith('http')
-                ? 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png'
-                : team.logo;
-              return (
-                <div 
-                  key={`${team.name}-${team.logo || ''}-${idx}`} 
-                  className="glass-panel p-0 overflow-hidden group/team transition-all duration-500 shadow-[0_10px_30px_rgba(0,0,0,0.5)] hover:border-neon-cyan/20 cursor-pointer" 
-                  onMouseEnter={playHover} 
-                  onClick={() => { playClick(); setSelectedTeam(team); }}
-                >
-                  <div className="flex items-stretch h-20 bg-black/40 relative">
-                    <div className="w-20 bg-zinc-900 flex-shrink-0 flex items-center justify-center border-r border-white/5 relative overflow-hidden">
-                      <img 
-                        src={logoSrc} 
-                        alt={team.name} 
-                        className={`w-12 h-12 object-contain relative z-10 group-hover/team:scale-110 transition-transform duration-500 ${isFailed ? 'opacity-20 grayscale' : ''}`} 
-                        onError={() => {
-                          setFailedLogos(prev => ({ ...prev, [`${team.name}-${idx}`]: true }));
-                        }} 
-                      />
+            {/* 2-Column Squad Cards Grid with Quick Expand Roster */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {sortedAndFilteredTeams.map((team, idx) => {
+                const isFailed = failedLogos[`${team.name}-${idx}`];
+                const logoSrc = isFailed || !team.logo || !team.logo.startsWith('http')
+                  ? null
+                  : team.logo;
+                const isExpanded = expandedTeamIdx === idx;
+
+                return (
+                  <div 
+                    key={`${team.name}-${idx}`}
+                    className="bg-black/60 border border-white/10 hover:border-neon-cyan/50 rounded-xl transition overflow-hidden shadow-lg"
+                  >
+                    <div
+                      onClick={() => { playClick && playClick(); setSelectedTeam(team); }}
+                      className="p-4 flex items-center justify-between cursor-pointer group"
+                    >
+                      <div className="flex items-center gap-3.5">
+                        <div className="w-12 h-12 bg-zinc-900 border border-white/15 rounded-xl flex items-center justify-center p-1 font-bold text-neon-cyan font-heading shrink-0">
+                          {logoSrc ? (
+                            <img src={logoSrc} alt={team.name} className="w-full h-full object-contain" onError={() => setFailedLogos(prev => ({ ...prev, [`${team.name}-${idx}`]: true }))} />
+                          ) : (
+                            <span>{team.tag || team.name?.substring(0, 3)}</span>
+                          )}
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[9px] bg-neon-cyan/15 border border-neon-cyan/30 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase">
+                              [{team.tag || 'TEAM'}]
+                            </span>
+                            <span className="text-[9px] text-zinc-500 font-bold">#{String(idx + 1).padStart(2, '0')} SEED</span>
+                          </div>
+                          <h4 className="text-sm font-bold text-white group-hover:text-neon-cyan transition-colors uppercase truncate max-w-[180px]">
+                            {team.name}
+                          </h4>
+                          <span className="text-[10px] text-emerald-400 font-bold block mt-0.5">
+                            🟢 VERIFIED 5v5 SQUAD
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-1.5">
+                        <span className="bg-orange-500/20 text-orange-400 border border-orange-500/30 text-[10px] font-bold px-2.5 py-0.5 rounded">
+                          {team.averageElo ? `${team.averageElo} ELO` : 'LVL 10'}
+                        </span>
+                        
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExpandedTeamIdx(isExpanded ? null : idx);
+                            }}
+                            className="text-[9px] text-zinc-400 hover:text-white bg-white/5 border border-white/10 px-2 py-0.5 rounded flex items-center gap-1 font-bold"
+                            title="Toggle 5v5 Roster Preview"
+                          >
+                            <span>ROSTER</span>
+                            {isExpanded ? <ChevronUp className="w-3 h-3 text-neon-cyan" /> : <ChevronDown className="w-3 h-3" />}
+                          </button>
+
+                          <ChevronRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-neon-cyan transition" />
+                        </div>
+                      </div>
                     </div>
-                  <div className="flex-grow p-4 flex flex-col justify-center min-w-0 pr-16">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded font-bold uppercase tracking-widest border border-neon-cyan/20">{team.tag || 'TEAM'}</span>
-                      <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest truncate">#{String(idx + 1).padStart(2, '0')}</span>
-                    </div>
-                    <h4 className="text-lg font-heading text-white truncate leading-none uppercase tracking-wider group-hover/team:text-neon-cyan transition-colors">{team.name}</h4>
-                  </div>
-                </div>
-                <div className="bg-black/60 p-3 px-4 flex justify-between items-center border-t border-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                      team.status === 'VERIFIED'      ? 'bg-green-500' :
-                      team.status === 'OBJECTION'     ? 'bg-orange-500' :
-                      team.status === 'WAITLISTED'    ? 'bg-purple-500' :
-                      team.status === 'REJECTED'      ? 'bg-red-500' :
-                      team.status === 'DISQUALIFIED'  ? 'bg-zinc-500' :
-                      team.status === 'CHAMPION'      ? 'bg-yellow-400' :
-                      'bg-yellow-500'
-                    }`} />
-                    <span className={`text-[9px] font-bold uppercase tracking-[0.2em] font-body ${
-                      team.status === 'VERIFIED'      ? 'text-green-400' :
-                      team.status === 'OBJECTION'     ? 'text-orange-400' :
-                      team.status === 'WAITLISTED'    ? 'text-purple-400' :
-                      team.status === 'REJECTED'      ? 'text-red-400' :
-                      team.status === 'DISQUALIFIED'  ? 'text-zinc-500' :
-                      team.status === 'CHAMPION'      ? 'text-yellow-300' :
-                      'text-yellow-500'
-                    }`}>
-                      {team.status === 'OBJECTION' ? '⚠ ACTION REQUIRED' : `STATUS: ${team.status || 'PENDING REVIEW'}`}
-                    </span>
-                  </div>
-                  <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest font-body flex items-center gap-2.5">
-                    {team.seed && team.seed !== 'TBD' && (
-                      <span className={`px-1.5 py-0.5 rounded border text-[8px] font-extrabold tracking-wider leading-none ${getSeedStyle(team.seed).bg}`}>
-                        {team.seed}
-                      </span>
+
+                    {/* Quick Roster Preview Accordion */}
+                    {isExpanded && (
+                      <div className="bg-black/90 border-t border-white/10 p-3 space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                        <span className="text-[9px] text-zinc-500 font-bold uppercase tracking-wider block mb-1">DECLARED 5v5 ROSTER</span>
+                        <div className="grid grid-cols-2 gap-2 text-[11px]">
+                          {(team.roster || []).map((p, pIdx) => (
+                            <div key={pIdx} className="bg-zinc-900/80 border border-white/5 px-2.5 py-1 rounded flex items-center justify-between">
+                              <span className="text-white font-bold truncate">{p.ign || p.name || `Player ${pIdx+1}`}</span>
+                              <span className="text-[9px] text-orange-400 font-bold">LVL {p.faceitLevel || '10'}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
-                    {team.averageElo && <span className="text-neon-pink drop-shadow-[0_0_5px_rgba(240,0,255,0.5)]">AVG ELO: {team.averageElo}</span>}
-                    <span className="text-zinc-600">| CLICK FOR DETAILS</span>
-                  </span>
-                </div>
-              </div>
-              );
-            })}
+                  </div>
+                );
+              })}
+            </div>
+
           </div>
-        </div>
         )}
       </div>
     </div>

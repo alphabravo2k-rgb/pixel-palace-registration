@@ -1,13 +1,13 @@
 import React, { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ExternalLink, Check, Play } from 'lucide-react';
+import { ExternalLink, Check } from 'lucide-react';
 import { matchCenter } from '../../utils/navigation';
 import { DESIGN_SYSTEM } from '../../config/ppcc2Layout';
 
 /**
  * Enterprise Tournament Operations Match Card Component (Memoized)
  * Parametric width, 56px compact height, clean typography, single winner accent line.
- * Handles normal match cards, live match state, and distinct BYE card layouts.
+ * Resolves topology feeder match keys accurately (e.g. Winner of R32-M02, Winner of QF-M01).
  */
 export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
   const navigate = useNavigate();
@@ -20,9 +20,31 @@ export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
   const isLive = matchData?.status === 'LIVE';
   const isBye = matchData?.status === 'BYE';
 
-  // Resolve team names prioritize live API matchData
-  const t1Name = (matchData && matchData.team1 && matchData.team1 !== 'TBD') ? matchData.team1 : (slot.defaultTeam1 || 'TBD');
-  const t2Name = isBye ? 'BYE' : ((matchData && matchData.team2 && matchData.team2 !== 'TBD') ? matchData.team2 : 'TBD');
+  // Default topology feeder labels
+  const feeder1 = slot.feedsFrom && slot.feedsFrom[0] ? `Winner of ${slot.feedsFrom[0]}` : 'TBD';
+  const feeder2 = slot.feedsFrom && slot.feedsFrom[1] ? `Winner of ${slot.feedsFrom[1]}` : 'TBD';
+
+  const rawT1 = (matchData && matchData.team1 && matchData.team1 !== 'TBD') ? matchData.team1 : (slot.defaultTeam1 || 'TBD');
+  const rawT2 = isBye ? 'BYE' : ((matchData && matchData.team2 && matchData.team2 !== 'TBD') ? matchData.team2 : 'TBD');
+
+  // Sanitize generic fallback strings like "Winner of Match #1", "Winner of Match #2", etc.
+  const cleanTeam = (name, defaultFeeder) => {
+    if (!name || typeof name !== 'string') return defaultFeeder;
+    const trimmed = name.trim();
+    const upper = trimmed.toUpperCase();
+    if (
+      upper === 'TBD' ||
+      upper.startsWith('WINNER OF MATCH') ||
+      upper.startsWith('FROM W-') ||
+      upper.startsWith('FROM ')
+    ) {
+      return defaultFeeder;
+    }
+    return trimmed;
+  };
+
+  const t1Name = cleanTeam(rawT1, feeder1);
+  const t2Name = isBye ? 'BYE' : cleanTeam(rawT2, feeder2);
 
   const t1Logo = getTeamLogo(matchData?.team1Obj || t1Name);
   const t2Logo = getTeamLogo(matchData?.team2Obj || t2Name);
@@ -105,7 +127,7 @@ export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
           </span>
         ) : (
           <span className="text-[7px] text-zinc-600 uppercase tracking-widest font-semibold">
-            AWAITING TEAMS
+            SCHEDULED
           </span>
         )}
       </div>
@@ -150,5 +172,3 @@ export const BracketMatchCard = memo(({ slot, matchData, getTeamLogo }) => {
     </div>
   );
 });
-
-BracketMatchCard.displayName = 'BracketMatchCard';

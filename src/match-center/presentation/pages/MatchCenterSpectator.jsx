@@ -17,6 +17,7 @@ import { lotFluxbotAdapter, lotDlanAdapter, LotGamingAdapter } from '../../infra
 import { Logger } from '../../shared/kernel/Logger.js';
 import { StreamModal } from '../../../components/match-center/StreamModal.jsx';
 import { CaptainCheckInModal } from '../../../components/team-portal/CaptainCheckInModal.jsx';
+import { MatchShareCardModal } from '../../../components/modals/MatchShareCardModal.jsx';
 import { generateSocialMatchCard } from '../../../utils/socialCardExporter.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -279,8 +280,9 @@ function MapResultRow({ mapName, teamAScore, teamBScore, mapIndex }) {
 // Poll interval: 30 seconds (matches can update when Kancha changes status on portal)
 const POLL_INTERVAL_MS = 30_000;
 
-export function MatchCenterSpectator() {
-  const { matchId } = useParams();
+export function MatchCenterSpectator({ matchIdProp, onClose }) {
+  const { matchId: routeMatchId } = useParams();
+  const matchId = matchIdProp || routeMatchId;
   const navigate = useNavigate();
 
   const [match, setMatch] = useState(null);
@@ -294,6 +296,7 @@ export function MatchCenterSpectator() {
   const [activeDetailTab, setActiveDetailTab] = useState('OVERVIEW');
   const [isStreamOpen, setIsStreamOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // ── Data fetcher (used for initial load + polling) ─────────────────────────
@@ -478,34 +481,40 @@ export function MatchCenterSpectator() {
   // ── Match Page ────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen" style={{ background: '#070a14', color: '#e2e8f0' }}>
+    <div className="w-full text-slate-100 font-body relative bg-[#070a14]" style={{ color: '#e2e8f0' }}>
 
       {/* ── Top Nav Bar ── */}
       <div
-        className="sticky top-0 z-50 flex items-center justify-between px-6 py-3"
-        style={{ background: 'rgba(7,10,20,0.95)', borderBottom: '1px solid rgba(99,102,241,0.15)', backdropFilter: 'blur(12px)' }}
+        className="sticky top-0 z-50 flex flex-wrap items-center justify-between px-6 py-3 border-b border-white/10"
+        style={{ background: 'rgba(7,10,20,0.95)', backdropFilter: 'blur(12px)' }}
       >
         <div className="flex items-center gap-3">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded bg-violet-600 flex items-center justify-center text-white font-black text-sm">P</div>
-            <span className="text-white font-black text-sm tracking-wide">PIXEL PALACE</span>
-          </Link>
-          <span className="text-slate-700">|</span>
-          <span className="text-slate-400 text-xs font-mono tracking-wider uppercase">Match #{match.id}</span>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-center">
+              <div className="absolute inset-0 bg-neon-pink/30 blur-md rounded-full animate-pulse" />
+              <img
+                src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png"
+                alt="Pixel Palace Official Logo"
+                className="h-9 object-contain relative z-10"
+              />
+            </div>
+          </div>
+          <span className="text-zinc-700">|</span>
+          <span className="text-neon-cyan text-xs font-mono tracking-wider uppercase font-bold bg-neon-cyan/10 border border-neon-cyan/30 px-2 py-0.5 rounded">
+            Match #{match.id}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           <PhaseBadge phase={phase} />
           <button
             onClick={() => setIsCheckInOpen(true)}
-            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-violet-600/30"
-            style={{ background: 'rgba(139,92,246,0.15)', border: '1px solid rgba(139,92,246,0.4)', color: '#c4b5fd' }}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/40"
           >
             🛡️ CAPTAIN CHECK-IN
           </button>
           <button
-            onClick={() => generateSocialMatchCard(match)}
-            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
-            style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(100,116,139,0.3)', color: '#e2e8f0' }}
+            onClick={() => setIsShareModalOpen(true)}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-neon-pink/20 bg-neon-pink/10 border border-neon-pink/40 text-neon-pink shadow-[0_0_12px_rgba(255,0,127,0.2)]"
           >
             🖼️ SHARE CARD
           </button>
@@ -515,26 +524,32 @@ export function MatchCenterSpectator() {
               setCopiedLink(true);
               setTimeout(() => setCopiedLink(false), 2000);
             }}
-            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-800"
-            style={{ background: copiedLink ? 'rgba(16,185,129,0.2)' : 'rgba(30,41,59,0.8)', border: copiedLink ? '1px solid rgba(16,185,129,0.5)' : '1px solid rgba(100,116,139,0.3)', color: copiedLink ? '#34d399' : '#e2e8f0' }}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-slate-800 bg-slate-900 border border-slate-700 text-slate-200"
           >
             {copiedLink ? '✓ COPIED!' : '📋 COPY LINK'}
           </button>
           <button
             onClick={() => setIsStreamOpen(true)}
-            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105"
-            style={{ background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)', color: '#34d399' }}
+            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
           >
             <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping" />
             📺 WATCH STREAM
           </button>
-          <Link
-            to="/match-center"
-            className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-colors"
-            style={{ background: 'rgba(30,41,59,0.8)', border: '1px solid rgba(100,116,139,0.3)', color: '#94a3b8' }}
-          >
-            ← BRACKETS LIST
-          </Link>
+          {onClose ? (
+            <button
+              onClick={onClose}
+              className="text-xs font-mono font-bold px-3 py-1.5 rounded bg-rose-500/20 border border-rose-500/40 text-rose-400 hover:bg-rose-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <span>✕ CLOSE</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => navigate('/register/community-cup-2')}
+              className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-colors bg-slate-900 border border-slate-700 text-slate-400 hover:text-white"
+            >
+              ← BRACKETS LIST
+            </button>
+          )}
         </div>
       </div>
 
@@ -741,7 +756,7 @@ export function MatchCenterSpectator() {
                   { label: 'Team 1', value: teamAName },
                   { label: 'Team 2', value: teamBName },
                   ...(match.liveMap ? [{ label: 'Vetoed Map', value: match.liveMap.replace('de_', '').toUpperCase() }] : []),
-                  ...(match.lotMatchId ? [{ label: 'LOT Match Ref', value: `#${match.lotMatchId}`, highlight: true }] : []),
+                  ...(match.lotMatchId ? [{ label: 'Server Session Ref', value: `#${match.lotMatchId}`, highlight: true }] : []),
                   ...(match.hasLotData && (match.mapScoreT1 > 0 || match.mapScoreT2 > 0) ? [
                     { label: 'Live Score', value: `${match.mapScoreT1} – ${match.mapScoreT2}`, highlight: true }
                   ] : []),
@@ -840,8 +855,8 @@ export function MatchCenterSpectator() {
         {activeDetailTab === 'SCOREBOARD' && (
           <div className="space-y-6 font-mono">
 
-            {/* ─── Server & CSTV Connection Box (when LOT data is available) ─── */}
-            {match?.server?.cstvIp && (
+            {/* ─── Protected Server & Spectator Info Box ─── */}
+            {match?.server && (
               <div className="rounded-xl p-5 space-y-4" style={{ background: 'rgba(6,182,212,0.06)', border: '1px solid rgba(6,182,212,0.25)' }}>
                 <div className="flex items-center justify-between">
                   <h2 className="text-xs font-black tracking-widest uppercase text-cyan-400">🎮 SERVER &amp; SPECTATOR INFO</h2>
@@ -851,34 +866,34 @@ export function MatchCenterSpectator() {
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-[11px]">
                   <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.2)' }}>
-                    <div className="text-[9px] text-cyan-600 uppercase tracking-widest mb-1">GOTV / CSTV IP</div>
-                    <div className="font-black text-cyan-300 font-mono">{match.server.cstvIp}</div>
-                  </div>
-                  <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(6,182,212,0.2)' }}>
-                    <div className="text-[9px] text-cyan-600 uppercase tracking-widest mb-1">GOTV PASSWORD</div>
-                    <div className="font-black text-cyan-300 font-mono">{match.server.cstvPassword || 'None'}</div>
-                  </div>
-                  {match.server.serverPassword && (
-                    <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                      <div className="text-[9px] text-violet-500 uppercase tracking-widest mb-1">SERVER PASSWORD</div>
-                      <div className="font-black text-violet-300 font-mono">{match.server.serverPassword}</div>
+                    <div className="text-[9px] text-cyan-600 uppercase tracking-widest mb-1">GOTV / CSTV FEED</div>
+                    <div className="font-black text-cyan-300 font-mono flex items-center gap-1.5">
+                      <span>🔒</span> Official Broadcast Stream
                     </div>
-                  )}
+                  </div>
+                  <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                    <div className="text-[9px] text-emerald-600 uppercase tracking-widest mb-1">SERVER INFRASTRUCTURE</div>
+                    <div className="font-black text-emerald-400 font-mono flex items-center gap-1.5">
+                      <span>🟢</span> Protected Match Server
+                    </div>
+                  </div>
                   {match.matchStage && (
                     <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(99,102,241,0.2)' }}>
                       <div className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Match Stage</div>
                       <div className="font-black text-white uppercase font-mono">{match.matchStage}</div>
                     </div>
                   )}
-                  {match.server.cstvViewers > 0 && (
-                    <div className="p-3 rounded-lg" style={{ background: 'rgba(15,23,42,0.8)', border: '1px solid rgba(16,185,129,0.2)' }}>
-                      <div className="text-[9px] text-emerald-600 uppercase tracking-widest mb-1">GOTV Spectators</div>
-                      <div className="font-black text-emerald-400 font-mono">{match.server.cstvViewers} watching</div>
-                    </div>
-                  )}
                 </div>
-                <div className="text-[10px] text-slate-600 pt-1 border-t border-slate-800/60">
-                  Connect via CS2 console: <span className="text-cyan-500 font-mono">connect {match.server.cstvIp}; password {match.server.cstvPassword || ''}</span>
+                <div className="text-[10px] text-slate-500 pt-2 border-t border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <span className="flex items-center gap-1.5">
+                    <span>🔒</span> Direct IP addresses and passwords are protected to secure servers against DDoS &amp; cyber attacks.
+                  </span>
+                  <button
+                    onClick={() => setIsStreamOpen(true)}
+                    className="text-violet-400 hover:text-violet-300 font-bold underline transition-colors shrink-0"
+                  >
+                    Watch Official Stream ↗
+                  </button>
                 </div>
               </div>
             )}
@@ -983,6 +998,12 @@ export function MatchCenterSpectator() {
         onClose={() => setIsCheckInOpen(false)}
         match={match}
       />
+      {isShareModalOpen && (
+        <MatchShareCardModal
+          match={match}
+          onClose={() => setIsShareModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

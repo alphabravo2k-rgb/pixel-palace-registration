@@ -4,12 +4,18 @@ import { Link, Navigate, useParams } from 'react-router-dom';
 
 import { DiscordGate } from '../components/modals/DiscordGate';
 import { TeamProfileModal } from '../components/modals/TeamProfileModal';
+import { PlayerProfileModal } from '../components/modals/PlayerProfileModal';
+import { DiscordMatchSheetModal } from '../components/modals/DiscordMatchSheetModal';
 import { BracketsTab } from '../components/registration/BracketsTab';
+import { MatchCenterList } from '../match-center/presentation/pages/MatchCenterList';
+import { MatchCenterSpectator } from '../match-center/presentation/pages/MatchCenterSpectator';
 // Decomposed Tab Components
 import { RegistrationTab } from '../components/registration/RegistrationTab';
 import { ResultsTab } from '../components/registration/ResultsTab';
 import { TrackerTab } from '../components/registration/TrackerTab';
 import { TrackTab } from '../components/registration/TrackTab';
+import { RulebookTab } from '../components/registration/RulebookTab';
+import { OpsCenterTab } from '../components/registration/OpsCenterTab';
 import { getTournamentBySlug } from '../config/tournaments';
 import { useAudio } from '../hooks/useAudio';
 import { fetchTournamentBracket, fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
@@ -24,18 +30,14 @@ export const Register = () => {
   const isArchived = tournament?.status === 'ARCHIVED';
   const timeOffsetRef = React.useRef(0);
   const [prevVersion, setPrevVersion] = useState(null);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedDiscordMatch, setSelectedDiscordMatch] = useState(null);
+  const [selectedMatchId, setSelectedMatchId] = useState(null);
   const [activeTab, setActiveTab] = useState(() => {
     if (tournament?.status === 'ARCHIVED' && tournament?.tournamentComplete) return 'results';
     if (tournament?.status === 'ARCHIVED' && tournament?.bracketsEnabled) return 'brackets';
     if (tournament?.status === 'ARCHIVED') return 'teams';
-    
-    // Default to Registered Teams if registration deadline has passed
-    const now = Date.now();
-    const deadline = tournament?.registrationDeadline ? new Date(tournament.registrationDeadline).getTime() : 0;
-    if (deadline && now > deadline) {
-      return 'teams';
-    }
-    return 'register';
+    return 'ops';
   });
 
   useEffect(() => {
@@ -388,92 +390,148 @@ export const Register = () => {
       {activeTab === 'register' && showForm && !isRulesAccepted && !isArchived && (
         <DiscordGate tournament={tournament} onAccept={() => setIsRulesAccepted(true)} />
       )}
-      {selectedTeam && <TeamProfileModal team={selectedTeam} isOpen={!!selectedTeam} onClose={() => setSelectedTeam(null)} />}
+      {selectedTeam && <TeamProfileModal team={selectedTeam} isOpen={!!selectedTeam} onClose={() => setSelectedTeam(null)} onSelectPlayer={setSelectedPlayer} />}
+      {selectedPlayer && <PlayerProfileModal player={selectedPlayer} team={selectedTeam} isOpen={!!selectedPlayer} onClose={() => setSelectedPlayer(null)} />}
+      {selectedDiscordMatch && <DiscordMatchSheetModal match={selectedDiscordMatch} tournament={tournament} isOpen={!!selectedDiscordMatch} onClose={() => setSelectedDiscordMatch(null)} />}
 
       <div className="min-h-screen bg-[#050507] text-white selection:bg-neon-cyan/30 flex flex-col relative overflow-x-hidden">
         <div className="app-bg-void" />
         <div className="app-bg-scanlines" />
 
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-8 md:py-12 flex-grow">
-          <nav className="absolute top-0 left-4 md:left-8 z-50 pt-6 animate-in fade-in duration-1000">
-            <Link to="/" className="group flex items-center gap-3 bg-white/5 hover:bg-white/10 backdrop-blur-md border border-white/10 hover:border-neon-cyan/50 px-5 py-2.5 rounded-sm transition-all duration-300 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
-              <div className="w-5 h-5 flex items-center justify-center bg-zinc-900 rounded-full border border-white/10 group-hover:border-neon-cyan/50 transition-colors"><ChevronLeft className="w-3 h-3 text-zinc-400 group-hover:text-neon-cyan transition-colors" /></div>
-              <div className="flex flex-col"><span className="text-white font-heading text-xs tracking-[0.2em] font-bold group-hover:text-neon-cyan transition-colors">BACK TO HUB</span><span className="text-[7px] text-zinc-500 tracking-[0.4em] font-body uppercase opacity-60 group-hover:opacity-100 transition-all font-bold">EXIT PROTOCOL</span></div>
+        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 py-6 md:py-8 flex-grow">
+          
+          {/* Top Bar Header */}
+          <div className="flex items-center justify-between border-b border-white/10 pb-4 mb-8 font-mono text-[10px] text-zinc-400">
+            <Link to="/" className="group flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-neon-cyan/50 px-3.5 py-1.5 rounded transition-all duration-300">
+              <ChevronLeft className="w-3.5 h-3.5 text-zinc-400 group-hover:text-neon-cyan transition-colors" />
+              <span className="text-white font-bold tracking-widest group-hover:text-neon-cyan uppercase">BACK TO HUB</span>
             </Link>
-          </nav>
 
-          <header className="text-center mb-12 flex flex-col items-center relative pt-12 md:pt-4">
-            <span className="absolute top-0 left-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">INIT_SEQ // 0x4F9A</span>
-            <span className="absolute top-0 right-5 font-body text-[0.5rem] text-white/20 uppercase tracking-widest pointer-events-none">SYS_STATUS // ONLINE</span>
-            <Link to="/" className="relative group block cursor-pointer mb-2">
-              <div className="absolute inset-0 bg-neon-pink/20 blur-[60px] rounded-full scale-150 opacity-40 group-hover:opacity-80 transition-opacity duration-700 animate-pulse-fast" />
-              <img src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png" alt="Pixel Palace Logo" className="w-40 h-40 md:w-56 md:h-56 object-contain relative z-20 transition-all duration-500 hover:scale-105 animate-logo-breathe hover:drop-shadow-[0_0_30px_rgba(240,0,255,0.8)]" />
-            </Link>
-            <h1 className="text-5xl sm:text-[5rem] md:text-[6.5rem] font-black text-white italic tracking-tighter font-heading leading-none relative z-10 drop-shadow-2xl uppercase">
-              PIXEL PALACE <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-white to-neon-cyan inline-block tracking-tight">{tournament.name.replace('Pixel Palace ', '')}</span>
-            </h1>
-
-            <div className="flex items-center justify-center w-full max-w-2xl mx-auto mt-2 mb-8 relative z-20">
-              {isArchived && tournament.champion ? (
-                <div className="flex flex-col items-center gap-3 w-full">
-                  <div className="text-[10px] text-yellow-500/70 font-bold tracking-[0.4em] font-body">Winner Declared // {tournament.displayDate} {tournament.displayYear}</div>
-                  <div className="flex items-center gap-4">
-                    <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] shrink-0" />
-                    <div className="text-4xl md:text-6xl font-heading uppercase tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 drop-shadow-[0_0_20px_rgba(234,179,8,0.5)] shimmer-effect">{tournament.champion.name}</div>
-                    <Trophy className="w-8 h-8 text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] shrink-0" />
-                  </div>
-                  <div className="text-zinc-500 font-body text-sm font-bold tracking-[0.3em] uppercase">Grand Champions — {tournament.gameMode}</div>
-                </div>
-              ) : tournament.displayTime ? (
-                <div className="flex flex-col items-center gap-1">
-                  <div className="text-neon-cyan font-heading text-2xl tracking-[0.2em] font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)] uppercase">{tournament.displayTime}</div>
-                  <div className="flex items-center gap-4 w-full"><div className="h-[1px] bg-white/10 flex-grow" /><div className="font-heading text-4xl text-white italic tracking-tighter whitespace-nowrap px-2">{tournament.displayDate}</div><div className="h-[1px] bg-white/10 flex-grow" /></div>
-                  <div className="text-zinc-500 font-body text-xl font-bold tracking-[0.5em] uppercase">{tournament.displayYear}</div>
-                </div>
-              ) : <div className="flex items-center gap-6 w-full opacity-80"><div className="h-[1px] bg-zinc-500 flex-grow" /><div className="px-6 py-1 tracking-[0.3em] font-bold text-lg sm:text-xl text-white font-body uppercase">{formatEsportsDate(tournament.tournamentDate)}</div><div className="h-[1px] bg-zinc-500 flex-grow" /></div>}
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="w-2 h-2 bg-emerald-400 rounded-full animate-ping" />
+              <span className="text-emerald-400 font-bold uppercase tracking-widest">OFFICIAL TOURNAMENT PORTAL // ONLINE</span>
             </div>
 
-            <div className="w-full max-w-4xl mx-auto mt-6 relative z-20">
-              <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
-              <div className="glass-panel p-2 grid grid-cols-2 md:grid-cols-4 gap-1">
-                {isArchived ? (
-                  <div className="bg-yellow-500/10 border-r border-yellow-500/20 p-4 text-center flex flex-col items-center justify-center">
-                    <p className="text-[10px] text-yellow-500 uppercase tracking-[0.2em] font-bold mb-1">Season Status</p>
-                    <p className="text-sm font-heading font-bold text-yellow-400 tracking-widest">CONCLUDED</p>
-                  </div>
-                ) : (
-                  <div className="bg-black/40 p-4 text-center flex flex-col justify-center">
-                    <p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Slots (Filled / Total)</p>
-                    {!slots ? (
-                      <div className="text-neon-cyan font-heading text-xl animate-pulse">LOADING</div>
-                    ) : slots === 'error' ? (
-                      <div className="text-red-500 font-heading text-xl">OFFLINE</div>
-                    ) : (
-                      <div className="text-sm font-heading font-bold text-neon-cyan drop-shadow-[0_0_10px_rgba(0,240,255,0.5)]">
-                        <div>INVITE: {slots.inviteConfirmed || 0} / {tournament.inviteSlots}</div>
-                        <div>OPEN: {slots.openConfirmed || 0} / {tournament.openSlots}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-                <div className="bg-black/40 p-4 text-center flex flex-col justify-center"><p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Prize Pool</p><p className="text-3xl text-white font-heading leading-none">{tournament.prizePool}</p></div>
-                <div className="bg-black/40 p-4 text-center relative group cursor-help flex flex-col justify-center"><p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Format</p><p className="text-3xl text-neon-pink font-heading leading-none drop-shadow-[0_0_10px_rgba(240,0,255,0.5)]">{tournament.format}</p><div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-max px-4 py-2 bg-black border border-neon-pink text-white text-xs font-body font-bold tracking-widest rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 shadow-[0_0_15px_rgba(240,0,255,0.3)]">{tournament.gameMode.toUpperCase()} FORMAT | BO3 Finals</div></div>
-                <div className="bg-black/40 p-4 text-center flex flex-col justify-center items-center"><p className="text-[10px] text-zinc-500 uppercase tracking-[0.2em] font-bold mb-1">Anti Cheat</p><p className="text-sm font-body text-green-400 font-bold tracking-widest mt-1 flex items-center gap-1"><ShieldCheck className="w-4 h-4" /> {tournament.antiCheat.toUpperCase()}</p></div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+                }}
+                className="bg-white/5 hover:bg-white/10 border border-white/10 hover:border-neon-cyan/50 text-zinc-300 hover:text-white px-2.5 py-1 rounded text-[10px] font-mono font-bold flex items-center gap-1.5 transition cursor-pointer"
+                title="Open Global Esports Command Search"
+              >
+                <span className="hidden sm:inline">SEARCH</span>
+                <kbd className="bg-zinc-900 text-neon-cyan px-1.5 py-0.5 rounded text-[9px] border border-white/10 font-mono">CTRL + K</kbd>
+              </button>
+              <span className="text-zinc-500 hidden md:inline">REGION: SOUTH ASIA / MENA</span>
+              <span className="bg-neon-pink/15 text-neon-pink border border-neon-pink/30 px-2 py-0.5 rounded font-bold uppercase tracking-wider">
+                CS2 PRO DIVISION
+              </span>
+            </div>
+          </div>
+
+          <header className="text-center mb-10 flex flex-col items-center relative">
+            {/* Brand Logo & Glow */}
+            <Link to="/" className="relative group block cursor-pointer mb-3">
+              <div className="absolute inset-0 bg-neon-pink/20 blur-[50px] rounded-full scale-125 opacity-50 group-hover:opacity-90 transition-opacity duration-700 animate-pulse-fast" />
+              <img
+                src="https://raw.githubusercontent.com/alphabravo2k-rgb/pixel-palace-registration/1a7d90c43796fd037316bdaf4f3b4de9a485d615/image_4379f9.png"
+                alt="Pixel Palace Official Emblem"
+                className="w-24 h-24 md:w-32 md:h-32 object-contain relative z-20 transition-all duration-500 hover:scale-105"
+              />
+            </Link>
+
+            {/* Official Tournament Title */}
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white italic tracking-tight font-heading leading-tight uppercase drop-shadow-2xl">
+              PIXEL PALACE <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-neon-pink via-white to-neon-cyan inline-block tracking-tighter">
+                {tournament.name.replace('Pixel Palace ', '')}
+              </span>
+            </h1>
+
+            {/* Regional Timezones & Date Info */}
+            <div className="flex flex-col items-center justify-center my-4 font-mono">
+              <div className="text-neon-cyan font-heading text-sm sm:text-base md:text-lg tracking-[0.2em] font-black drop-shadow-[0_0_12px_rgba(0,240,255,0.6)] uppercase">
+                8PM PAKISTAN &nbsp;|&nbsp; 8:30PM INDIA &nbsp;|&nbsp; 7PM UAE
+              </div>
+              <div className="flex items-center gap-4 w-full max-w-md my-1.5">
+                <div className="h-[1px] bg-white/20 flex-grow" />
+                <div className="font-heading text-lg sm:text-2xl text-white italic tracking-wider font-bold whitespace-nowrap px-3">
+                  July 31 – August 03
+                </div>
+                <div className="h-[1px] bg-white/20 flex-grow" />
+              </div>
+              <div className="text-zinc-500 font-body text-[11px] font-bold tracking-[0.6em] uppercase">
+                2 0 2 6
               </div>
             </div>
 
-            <div className="mt-10 flex flex-col sm:flex-row justify-center gap-6 w-full sm:w-auto relative z-10">
+            {/* Enterprise HUD Stats Panel */}
+            <div className="w-full max-w-4xl mx-auto mt-2 relative z-20">
+              <div className="hud-crosshair tl" /><div className="hud-crosshair tr" /><div className="hud-crosshair bl" /><div className="hud-crosshair br" />
+              <div className="glass-panel p-2.5 grid grid-cols-2 md:grid-cols-4 gap-2 font-mono">
+                {isArchived ? (
+                  <div className="bg-black/50 border border-white/10 p-3 rounded-xl text-center flex flex-col justify-between min-h-[76px]">
+                    <p className="text-[9px] text-yellow-500 uppercase tracking-widest font-bold">SEASON STATUS</p>
+                    <p className="text-xs font-heading font-bold text-yellow-400 tracking-widest">CONCLUDED</p>
+                    <span className="text-[9px] text-zinc-500 font-bold uppercase">ARCHIVED</span>
+                  </div>
+                ) : (
+                  <div className="bg-black/50 border border-white/10 p-3 rounded-xl text-center flex flex-col justify-between min-h-[76px]">
+                    <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">ROSTER SLOTS</p>
+                    {!slots ? (
+                      <div className="text-neon-cyan font-heading text-xs animate-pulse font-bold">SYNCING...</div>
+                    ) : (
+                      <p className="text-sm font-black text-white font-heading tracking-wider">
+                        {(slots.openConfirmed || 26) + (slots.inviteConfirmed || 4)} / 32 SQUADS
+                      </p>
+                    )}
+                    <div className="flex items-center justify-center gap-1.5 text-[9px] font-bold">
+                      <span className="text-emerald-400">OPEN: {slots?.openConfirmed || 26}/26</span>
+                      <span className="text-zinc-600">•</span>
+                      <span className="text-neon-cyan">INVITE: {slots?.inviteConfirmed || 4}/6</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-black/50 border border-white/10 p-3 rounded-xl text-center flex flex-col justify-between min-h-[76px]">
+                  <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">PRIZE POOL</p>
+                  <p className="text-sm font-black text-white font-heading tracking-wider">
+                    $2,750 USD
+                  </p>
+                  <span className="text-[9px] text-zinc-400 font-bold uppercase">1ST: $2,000 | 2ND: $750</span>
+                </div>
+
+                <div className="bg-black/50 border border-white/10 p-3 rounded-xl text-center flex flex-col justify-between min-h-[76px]">
+                  <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">MATCH FORMAT</p>
+                  <p className="text-sm font-black text-neon-pink font-heading tracking-wider">
+                    5v5 COMPETITIVE
+                  </p>
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase">MR12 • BO1 & BO3</span>
+                </div>
+
+                <div className="bg-black/50 border border-white/10 p-3 rounded-xl text-center flex flex-col justify-between min-h-[76px]">
+                  <p className="text-[9px] text-zinc-400 uppercase tracking-widest font-bold">ANTI-CHEAT</p>
+                  <p className="text-xs text-emerald-400 font-bold tracking-wider flex items-center justify-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> AKROS CLIENT
+                  </p>
+                  <span className="text-[9px] text-zinc-500 font-bold uppercase">VERIFIED v3.2</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Social Action Strip */}
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3 w-full max-w-2xl font-mono text-xs">
               <a
                 href="https://discord.com/invite/pixelpalacee"
                 target="_blank"
                 rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
-                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-purple/20 transition-all duration-300"
+                className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-neon-purple/20 transition-all text-white font-bold"
               >
-                <MessageCircle className="w-5 h-5 text-neon-cyan group-hover:text-white transition-colors" />
-                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">JOIN DISCORD SERVER</span>
+                <MessageCircle className="w-3.5 h-3.5 text-neon-cyan" />
+                <span>DISCORD</span>
               </a>
               <a
                 href="https://www.twitch.tv/pXpLgg"
@@ -481,10 +539,10 @@ export const Register = () => {
                 rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
-                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-[#6441a5]/20 transition-all duration-300"
+                className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-[#6441a5]/20 transition-all text-white font-bold"
               >
-                <Tv className="w-5 h-5 text-[#9146FF] group-hover:text-white transition-colors" />
-                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">WATCH TWITCH STREAM</span>
+                <Tv className="w-3.5 h-3.5 text-[#9146FF]" />
+                <span>TWITCH</span>
               </a>
               <a
                 href="https://www.instagram.com/pixelpalace.gg"
@@ -492,89 +550,127 @@ export const Register = () => {
                 rel="noreferrer"
                 onMouseEnter={playHover}
                 onClick={playClick}
-                className="glass-panel px-8 py-3 flex items-center justify-center gap-3 group hover:bg-neon-pink/20 transition-all duration-300"
+                className="glass-panel px-4 py-2 flex items-center gap-2 hover:bg-neon-pink/20 transition-all text-white font-bold"
               >
-                <Instagram className="w-5 h-5 text-neon-pink group-hover:text-white transition-colors" />
-                <span className="font-bold text-lg uppercase tracking-widest text-white font-body">FOLLOW INSTAGRAM</span>
+                <Instagram className="w-3.5 h-3.5 text-neon-pink" />
+                <span>INSTAGRAM</span>
               </a>
             </div>
 
-            <div className="flex justify-center gap-6 sm:gap-12 w-full max-w-4xl mt-16 relative px-4 flex-wrap pb-4 sm:pb-0 sticky top-4 z-40 bg-[#050507]/90 backdrop-blur-md pt-4 rounded-t-xl border-t border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.8)]">
-              <div className="hidden sm:block absolute bottom-0 w-full h-[1px] bg-white/10" />
-              {tournament.tournamentComplete && (
+            {/* Single-Row Horizontal Tab Navigation */}
+            <div className="w-full max-w-5xl mt-8 sticky top-4 z-40 bg-[#050507]/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-white/10 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
+              <div className="flex items-center justify-around font-heading text-xs sm:text-sm uppercase tracking-wider overflow-x-auto no-scrollbar gap-1">
                 <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('results'); }}
-                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'results' ? 'text-yellow-400 font-black' : 'text-white/40 hover:text-white/80'}`}
-                >
-                  Results<span className="bg-yellow-500/20 border border-yellow-500/40 text-yellow-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest">FINAL</span>
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,1)] transition-all duration-300 ${activeTab === 'results' ? 'w-full' : 'w-0'}`} />
-                </button>
-              )}
-              {!isArchived && (
-                <button
-                  disabled={!isRegistrationAccepting && !activeTeam}
-                  onMouseEnter={playHover}
-                  onClick={() => {
-                    if (isRegistrationAccepting || activeTeam) {
-                      playClick();
-                      setActiveTab('register');
-                    }
-                  }}
-                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${
-                    activeTab === 'register' 
-                      ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' 
-                      : (!isRegistrationAccepting && !activeTeam) 
-                        ? 'text-white/20 cursor-not-allowed line-through' 
-                        : 'text-white/40 hover:text-white/80'
+                  onClick={() => { playClick(); setActiveTab('ops'); }}
+                  className={`px-3 py-2 rounded transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    activeTab === 'ops' 
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                      : 'text-zinc-400 hover:text-white'
                   }`}
                 >
-                  {activeTeam ? 'Team Portal' : isRegistrationAccepting ? 'Register Team' : 'Register Team (Closed)'}
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'register' ? 'w-full' : 'w-0'}`} />
+                  <span>OPS CENTER</span>
+                  <span className="bg-neon-pink text-white text-[8px] px-1.5 py-0.5 rounded font-mono font-bold animate-pulse">LIVE</span>
                 </button>
-              )}
-              {!isArchived && (
+                {!isArchived && (
+                  <button
+                    disabled={!isRegistrationAccepting && !activeTeam}
+                    onMouseEnter={playHover}
+                    onClick={() => {
+                      if (isRegistrationAccepting || activeTeam) {
+                        playClick();
+                        setActiveTab('register');
+                      }
+                    }}
+                    className={`px-3 py-2 rounded transition-all whitespace-nowrap ${
+                      activeTab === 'register' 
+                        ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                        : (!isRegistrationAccepting && !activeTeam) 
+                          ? 'text-white/20 cursor-not-allowed line-through' 
+                          : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    {activeTeam ? 'Roster Portal' : isRegistrationAccepting ? 'Register Team' : 'Register (Closed)'}
+                  </button>
+                )}
+                {!isArchived && (
+                  <button
+                    onMouseEnter={playHover}
+                    onClick={() => { playClick(); setActiveTab('track'); }}
+                    className={`px-3 py-2 rounded transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                      activeTab === 'track' 
+                        ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    <span>Team Tracker</span>
+                  </button>
+                )}
                 <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('track'); }}
-                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'track' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                  onClick={() => { playClick(); setActiveTab('teams'); }}
+                  className={`px-3 py-2 rounded transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    activeTab === 'teams' 
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
                 >
-                  Team Portal
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'track' ? 'w-full' : 'w-0'}`} />
+                  <span>{isArchived ? 'All Teams' : 'Registered Teams'}</span>
                 </button>
-              )}
-              <button
-                onMouseEnter={playHover}
-                onClick={() => { playClick(); setActiveTab('teams'); }}
-                className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 flex items-center gap-3 ${activeTab === 'teams' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
-              >
-                {isArchived ? 'All Teams' : 'Registered Teams'}
-                {!isArchived && <span className="bg-neon-pink text-white text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest animate-pulse">LIVE</span>}
-                <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'teams' ? 'w-full' : 'w-0'}`} />
-              </button>
-              {tournament.bracketsEnabled && (
                 <button
                   onMouseEnter={playHover}
-                  onClick={() => { playClick(); setActiveTab('brackets'); }}
-                  className={`font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 ${activeTab === 'brackets' ? 'text-neon-cyan font-black drop-shadow-[0_0_10px_rgba(0,240,255,0.4)]' : 'text-white/40 hover:text-white/80'}`}
+                  onClick={() => { playClick(); setActiveTab('rules'); }}
+                  className={`px-3 py-2 rounded transition-all whitespace-nowrap ${
+                    activeTab === 'rules' 
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
                 >
-                  Brackets
-                  <div className={`absolute bottom-[-1px] left-1/2 -translate-x-1/2 h-[3px] bg-neon-cyan shadow-[0_0_15px_rgba(0,240,255,1)] transition-all duration-300 ${activeTab === 'brackets' ? 'w-full' : 'w-0'}`} />
+                  Rulebook
                 </button>
-              )}
-              <Link
-                to="/match-center"
-                onMouseEnter={playHover}
-                onClick={playClick}
-                className="font-heading text-xl sm:text-3xl uppercase tracking-[2px] pb-[5px] relative transition-all duration-300 text-white/40 hover:text-white/80 flex items-center gap-1.5"
-              >
-                Match Center
-                <span className="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[10px] px-2 py-0.5 rounded-sm font-sans font-bold tracking-widest shrink-0">STATS</span>
-              </Link>
+                {tournament.bracketsEnabled && (
+                  <button
+                    onMouseEnter={playHover}
+                    onClick={() => { playClick(); setActiveTab('brackets'); }}
+                    className={`px-3 py-2 rounded transition-all whitespace-nowrap ${
+                      activeTab === 'brackets' 
+                        ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                        : 'text-zinc-400 hover:text-white'
+                    }`}
+                  >
+                    Brackets
+                  </button>
+                )}
+                <button
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('match-center'); }}
+                  className={`px-3 py-2 rounded transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    activeTab === 'match-center' 
+                      ? 'bg-neon-cyan/20 border border-neon-cyan/50 text-neon-cyan font-bold shadow-[0_0_12px_rgba(0,240,255,0.3)]' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span>Match Center</span>
+                  <span className="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold">STATS</span>
+                </button>
+              </div>
             </div>
           </header>
 
           <div className="tab-content-wrapper mt-8">
+            {activeTab === 'ops' && (
+              <OpsCenterTab
+                tournament={tournament}
+                teams={teams || []}
+                bracketData={bracketData}
+                slots={slots}
+                playHover={playHover}
+                playClick={playClick}
+                onSelectTeam={setSelectedTeam}
+                onGenerateDiscordSheet={setSelectedDiscordMatch}
+              />
+            )}
+
             {activeTab === 'register' && (
                activeTeam && !showForm ? (
                  renderCommandDeck()
@@ -594,6 +690,7 @@ export const Register = () => {
                  tournament={tournament}
                  playHover={playHover}
                  playClick={playClick}
+                 onSelectPlayer={setSelectedPlayer}
                />
              )}
 
@@ -612,7 +709,11 @@ export const Register = () => {
                />
              )}
 
-            {activeTab === 'brackets' && (
+             {activeTab === 'rules' && (
+               <RulebookTab tournament={tournament} />
+             )}
+
+             {activeTab === 'brackets' && (
               <BracketsTab
                 bracketData={bracketData}
                 tournament={tournament}
@@ -620,6 +721,12 @@ export const Register = () => {
                 formatLocalTime={formatLocalTime}
                 teams={teams}
               />
+            )}
+
+            {activeTab === 'match-center' && (
+              <div className="max-w-7xl mx-auto bg-[#080b18]/95 border border-white/10 p-6 rounded-2xl max-h-[85vh] overflow-y-auto custom-scrollbar shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-md animate-in fade-in duration-300">
+                <MatchCenterList onSelectMatch={(id) => setSelectedMatchId(id)} />
+              </div>
             )}
 
             {activeTab === 'results' && (
@@ -633,6 +740,18 @@ export const Register = () => {
           </div>
         </div>
       </div>
+
+      {/* ── IN-PAGE MATCH SPECTATOR MODAL OVERLAY ── */}
+      {selectedMatchId && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+          <div className="w-full max-w-5xl bg-[#080b18] border border-white/10 rounded-2xl overflow-hidden shadow-[0_0_80px_rgba(0,240,255,0.15)] max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <MatchCenterSpectator
+              matchIdProp={selectedMatchId}
+              onClose={() => setSelectedMatchId(null)}
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 };

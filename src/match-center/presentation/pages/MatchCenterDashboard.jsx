@@ -197,7 +197,7 @@ export function MatchCenterDashboard() {
                   <div className="flex items-center bg-slate-950 border border-slate-800 rounded px-3 py-1.5 space-x-2">
                     <input type="text" value={lotInput} onChange={e => setLotInput(e.target.value)} placeholder="URL or match ID" className="w-48 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-white font-mono text-xs focus:outline-none" />
                     <button onClick={() => syncLotMatch(lotInput)} className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded shadow transition">
-                      Fetch & Sync LOT Match
+                      Fetch & Sync Official Match
                     </button>
                   </div>
                 </div>
