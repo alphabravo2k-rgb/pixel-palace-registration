@@ -213,13 +213,27 @@ function PlayerScoreboardTable({ teamName, players = [], isWinner = false }) {
               <th className="py-2.5 px-2 text-center">+/-</th>
               <th className="py-2.5 px-2 text-center">ADR</th>
               <th className="py-2.5 px-2 text-center">HS%</th>
+              <th className="py-2.5 px-2 text-center" title="KAST % (Kill, Assist, Survived or Traded rounds)">KAST</th>
+              <th className="py-2.5 px-2 text-center" title="Opening / Entry Frags">FK</th>
+              <th className="py-2.5 px-2 text-center" title="Clutches Won">CL</th>
+              <th className="py-2.5 px-2 text-center" title="Multikills (2k/3k/4k/5k)">MK</th>
               <th className="py-2.5 px-3 text-right">Rating 2.0</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-800/40">
             {players.map((p, idx) => {
               const diff = (p.kills || 0) - (p.deaths || 0);
-              const rating = p.hltv_rating || p.rating || 0;
+              const rating = p.hltv_rating || p.hltvRating || p.rating || 0;
+              const entryKills = p.entry_kills ?? p.entryKills ?? 0;
+              const kastPct = p.kast_pct ?? p.kastPct ?? 0;
+              const clutches = p.clutches?.total ?? (p.clutch_1v1 || 0) + (p.clutch_1v2 || 0) + (p.clutch_1v3 || 0) + (p.clutch_1v4 || 0) + (p.clutch_1v5 || 0);
+              
+              const m2k = p.multikill_2k ?? p.multikills?.k2 ?? 0;
+              const m3k = p.multikill_3k ?? p.multikills?.k3 ?? 0;
+              const m4k = p.multikill_4k ?? p.multikills?.k4 ?? 0;
+              const m5k = p.multikill_5k ?? p.multikills?.k5 ?? 0;
+              const multikillCount = m2k + m3k + m4k + m5k;
+
               return (
                 <tr key={p.steam_id || p.steamId || p.name || idx} className="hover:bg-slate-800/30 transition-colors">
                   <td className="py-2.5 px-4 font-bold text-slate-200 flex items-center gap-2">
@@ -234,6 +248,12 @@ function PlayerScoreboardTable({ teamName, players = [], isWinner = false }) {
                   </td>
                   <td className="py-2.5 px-2 text-center text-slate-300">{p.adr ? Math.round(p.adr) : '-'}</td>
                   <td className="py-2.5 px-2 text-center text-slate-400">{p.hs_pct ?? p.hsPct ?? 0}%</td>
+                  <td className="py-2.5 px-2 text-center text-slate-300">{kastPct ? `${kastPct}%` : '-'}</td>
+                  <td className="py-2.5 px-2 text-center text-cyan-400 font-semibold">{entryKills > 0 ? entryKills : '-'}</td>
+                  <td className="py-2.5 px-2 text-center text-purple-400 font-semibold">{clutches > 0 ? clutches : '-'}</td>
+                  <td className="py-2.5 px-2 text-center text-amber-300 font-semibold" title={`2k:${m2k} 3k:${m3k} 4k:${m4k} 5k:${m5k}`}>
+                    {multikillCount > 0 ? multikillCount : '-'}
+                  </td>
                   <td className="py-2.5 px-3 text-right font-black text-amber-400">
                     {typeof rating === 'number' && rating > 0 ? rating.toFixed(2) : '-'}
                   </td>
@@ -247,29 +267,48 @@ function PlayerScoreboardTable({ teamName, players = [], isWinner = false }) {
   );
 }
 
-// ─── Map Result Row (for completed matches) ───────────────────────────────────
+function MapResultRow({ mapName, teamAScore, teamBScore, mapIndex, teamAName, teamBName, isLive }) {
+  const winner = teamAScore > teamBScore ? 'A' : teamBScore > teamAScore ? 'B' : null;
+  const winnerName = winner === 'A' ? teamAName : winner === 'B' ? teamBName : null;
 
-function MapResultRow({ mapName, teamAScore, teamBScore, mapIndex }) {
-  const winner = teamAScore > teamBScore ? 'A' : 'B';
   return (
     <div
-      className="flex items-center justify-between px-4 py-3 rounded-lg"
-      style={{ background: 'rgba(15,23,42,0.6)', border: '1px solid rgba(99,102,241,0.15)' }}
+      className={`flex items-center justify-between px-5 py-3 rounded.xl transition-all ${
+        isLive
+          ? 'bg-cyan-950/40 border border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+          : 'bg-[#0f172a]/70 border border-slate-800'
+      }`}
     >
       <div className="flex items-center gap-3">
-        <span className="text-[9px] font-mono text-slate-500 tracking-wider">MAP {mapIndex}</span>
-        <span className="text-sm font-bold text-slate-200 font-mono uppercase">
+        <span className="text-[10px] font-mono text-slate-500 tracking-wider font-bold">MAP {mapIndex}</span>
+        <span className="text-sm font-black text-white font-mono uppercase tracking-wide">
           {mapName.replace('de_', '')}
         </span>
+        {isLive ? (
+          <span className="text-[9px] font-black font-mono px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping" />
+            LIVE MAP
+          </span>
+        ) : winnerName ? (
+          <span className="text-[9.5px] font-black font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">
+            🏆 WON BY {winnerName.toUpperCase()}
+          </span>
+        ) : null}
       </div>
       <div className="flex items-center gap-4 font-mono">
-        <span className={`font-black text-base ${winner === 'A' ? 'text-amber-400' : 'text-slate-400'}`}>
-          {teamAScore}
-        </span>
-        <span className="text-slate-600 text-sm">—</span>
-        <span className={`font-black text-base ${winner === 'B' ? 'text-amber-400' : 'text-slate-400'}`}>
-          {teamBScore}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-slate-400 hidden sm:inline">{teamAName}</span>
+          <span className={`font-black text-lg ${winner === 'A' ? 'text-amber-400' : isLive ? 'text-cyan-300' : 'text-slate-300'}`}>
+            {teamAScore}
+          </span>
+        </div>
+        <span className="text-slate-600 text-sm font-bold">—</span>
+        <div className="flex items-center gap-2">
+          <span className={`font-black text-lg ${winner === 'B' ? 'text-amber-400' : isLive ? 'text-cyan-300' : 'text-slate-300'}`}>
+            {teamBScore}
+          </span>
+          <span className="text-xs text-slate-400 hidden sm:inline">{teamBName}</span>
+        </div>
       </div>
     </div>
   );
@@ -351,16 +390,27 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
               mapScoreT2: rawLot.score_team2 ?? found?.mapScoreT2 ?? 0,
               map_stats: rawLot.map_stats ? (typeof rawLot.map_stats === 'string' ? JSON.parse(rawLot.map_stats) : rawLot.map_stats) : [],
               map_list: rawLot.map_list ? (typeof rawLot.map_list === 'string' ? JSON.parse(rawLot.map_list) : rawLot.map_list) : [],
-              server: rawLot.server_country_name ? {
-                country: rawLot.server_country_name,
-                city: rawLot.server_city,
-                countryCode: rawLot.server_country_code,
-                serverPassword: rawLot.server_password_set || null,
+              demo_links: rawLot.demo_links || [],
+              demoLinks: (rawLot.demo_links || []).map(d => ({
+                mapIndex: d.map_index,
+                filename: d.filename,
+                downloadUrl: d.download_url,
+              })),
+              server: {
+                country: rawLot.server_country_name || null,
+                city: rawLot.server_city || null,
+                countryCode: rawLot.server_country_code || null,
+                serverPassword: rawLot.server_password_set || rawLot.server_password || null,
                 cstvIp: rawLot.cstv1_ip || null,
                 cstvPassword: rawLot.cstv1_password || null,
                 cstvPublic: rawLot.cstv1_public === 1,
                 cstvViewers: rawLot.cstv1_viewers ?? 0,
-              } : found?.server || null,
+                sdrAddress: rawLot.sdr_address || null,
+              },
+              stats_by_map: rawLot.stats_by_map || null,
+              statsByMap: rawLot.stats_by_map ? (
+                typeof rawLot.stats_by_map === 'string' ? JSON.parse(rawLot.stats_by_map) : rawLot.stats_by_map
+              ) : null,
               seriesScore: {
                 teamAWins: rawLot.map_wins_team1 ?? found?.mapWinsT1 ?? 0,
                 teamBWins: rawLot.map_wins_team2 ?? found?.mapWinsT2 ?? 0,
@@ -528,6 +578,17 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
           >
             {copiedLink ? '✓ COPIED!' : '📋 COPY LINK'}
           </button>
+          {match?.demoLinks && match.demoLinks.length > 0 && (
+            <a
+              href={match.demoLinks[0].downloadUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-purple-500/30 bg-purple-500/20 border border-purple-500/40 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
+              title={`Download GOTV Demo (${match.demoLinks[0].filename})`}
+            >
+              📥 DEMO REPLAY
+            </a>
+          )}
           <button
             onClick={() => setIsStreamOpen(true)}
             className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400"
@@ -794,9 +855,20 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
                 >
                   📅 <span>Google Calendar Sync</span>
                 </a>
-                <div className="bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
-                  🔒 <span>GOTV Demos Protected (Ops Access Only)</span>
-                </div>
+                {match?.demoLinks && match.demoLinks.length > 0 ? (
+                  <a
+                    href={match.demoLinks[0].downloadUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/50 text-xs font-bold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                  >
+                    📥 <span>Download GOTV Demo (.dem)</span>
+                  </a>
+                ) : (
+                  <div className="bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
+                    🔒 <span>GOTV Demos Protected / Processing</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -805,22 +877,42 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
         {/* TAB 2: MAP POOL & VETO */}
         {activeDetailTab === 'MAPS' && (
           <div className="space-y-6 font-mono">
-            {/* Map Results Breakdown (If Completed) */}
-            {phase === 'COMPLETED' && mapResults.length > 0 && (
+            {/* Map Results Breakdown (Shown if Completed OR Live) */}
+            {(phase === 'COMPLETED' || phase === 'LIVE') && (mapResults.length > 0 || match?.liveMap) && (
               <div className="space-y-3">
                 <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">
-                  MAP RESULTS BREAKDOWN
+                  {phase === 'LIVE' ? 'LIVE MAP BREAKDOWN' : 'MAP RESULTS BREAKDOWN'}
                 </h2>
                 <div className="space-y-2">
-                  {mapResults.map((map, idx) => (
+                  {/* Completed map results in the series */}
+                  {mapResults.map((map, idx) => {
+                    const isCurrentLiveMap = phase === 'LIVE' && idx === (match?.currentMapIndex ?? mapResults.length);
+                    return (
+                      <MapResultRow
+                        key={idx}
+                        mapName={map.map_name || map.name || `Map ${idx + 1}`}
+                        mapIndex={idx + 1}
+                        teamAScore={isCurrentLiveMap ? (match?.mapScoreT1 ?? map.score_team1 ?? 0) : (map.score_team1 ?? map.scoreA ?? 0)}
+                        teamBScore={isCurrentLiveMap ? (match?.mapScoreT2 ?? map.score_team2 ?? 0) : (map.score_team2 ?? map.scoreB ?? 0)}
+                        teamAName={teamAName}
+                        teamBName={teamBName}
+                        isLive={isCurrentLiveMap}
+                      />
+                    );
+                  })}
+                  
+                  {/* Live active map row if current live map index is beyond completed map_stats */}
+                  {phase === 'LIVE' && match?.liveMap && (match?.currentMapIndex ?? 0) >= mapResults.length && (
                     <MapResultRow
-                      key={idx}
-                      mapName={map.map_name || map.name || `Map ${idx + 1}`}
-                      mapIndex={idx + 1}
-                      teamAScore={map.score_team1 ?? map.scoreA ?? 0}
-                      teamBScore={map.score_team2 ?? map.scoreB ?? 0}
+                      mapName={match.liveMap}
+                      mapIndex={mapResults.length + 1}
+                      teamAScore={match.mapScoreT1 ?? 0}
+                      teamBScore={match.mapScoreT2 ?? 0}
+                      teamAName={teamAName}
+                      teamBName={teamBName}
+                      isLive={true}
                     />
-                  ))}
+                  )}
                 </div>
               </div>
             )}
@@ -836,13 +928,107 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-                {['Dust II', 'Mirage', 'Anubis', 'Ancient', 'Nuke', 'Inferno'].map((m) => (
-                  <div key={m} className="rounded-xl border border-slate-800/80 bg-slate-950 p-3 text-center">
-                    <span className="text-xs font-black text-white uppercase tracking-wider block">{m}</span>
-                    <span className="text-[8.5px] font-bold text-slate-500 mt-1 block">Active Duty</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 sm:grid-cols-7 gap-3">
+                {[
+                  { name: 'Dust II', code: 'de_dust2', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png' },
+                  { name: 'Mirage', code: 'de_mirage', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png' },
+                  { name: 'Anubis', code: 'de_anubis', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png' },
+                  { name: 'Ancient', code: 'de_ancient', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png' },
+                  { name: 'Nuke', code: 'de_nuke', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png' },
+                  { name: 'Inferno', code: 'de_inferno', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png' },
+                  { name: 'Vertigo', code: 'de_vertigo', img: 'https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_vertigo.png' },
+                ].map(({ name, code, img }) => {
+                  const cleanCode = code.replace('de_', '');
+                  
+                  // Check if played in mapResults
+                  const playedEntry = mapResults.find(m => (m.map_name || m.name || '').toLowerCase().includes(cleanCode));
+                  const mapList = (match?.map_list || []).map(m => String(m).toLowerCase());
+                  
+                  const rawActiveMap = (match?.liveMap || match?.map || '').toLowerCase();
+                  const isActiveLive = phase === 'LIVE' && rawActiveMap.includes(cleanCode);
+                  const isPlayed = Boolean(playedEntry);
+                  const isSelectedInList = mapList.some(m => m.includes(cleanCode));
+
+                  const isPicked = isPlayed || isSelectedInList;
+                  const isBanned = (mapResults.length > 0 || mapList.length > 0) && !isPicked && !isActiveLive;
+
+                  // Scores & Winners
+                  let scoreLabel = null;
+                  let winnerTag = null;
+                  if (isActiveLive) {
+                    scoreLabel = `${match?.mapScoreT1 ?? 0} – ${match?.mapScoreT2 ?? 0}`;
+                  } else if (playedEntry) {
+                    const s1 = playedEntry.score_team1 ?? playedEntry.scoreA ?? 0;
+                    const s2 = playedEntry.score_team2 ?? playedEntry.scoreB ?? 0;
+                    scoreLabel = `${s1} – ${s2}`;
+                    if (s1 > s2) winnerTag = teamAName;
+                    else if (s2 > s1) winnerTag = teamBName;
+                  }
+
+                  // Map pick/ban attribution
+                  let attributionLabel = null;
+                  if (match?.veto?.bans && match.veto.bans[cleanCode]) {
+                    attributionLabel = `BANNED BY ${match.veto.bans[cleanCode].toUpperCase()}`;
+                  } else if (match?.veto?.picks && match.veto.picks[cleanCode]) {
+                    attributionLabel = `PICKED BY ${match.veto.picks[cleanCode].toUpperCase()}`;
+                  }
+
+                  return (
+                    <div
+                      key={code}
+                      className={`relative rounded-xl overflow-hidden text-center transition-all duration-300 group border min-h-[90px] flex flex-col justify-between p-2.5 ${
+                        isActiveLive
+                          ? 'border-2 border-cyan-400 shadow-[0_0_16px_rgba(6,182,212,0.4)] animate-pulse'
+                          : isPicked
+                          ? 'border-emerald-500/70 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                          : isBanned
+                          ? 'border-rose-500/30 opacity-50 grayscale'
+                          : 'border-slate-800/80'
+                      }`}
+                    >
+                      {/* Map Background Image */}
+                      <div
+                        className="absolute inset-0 bg-cover bg-center pointer-events-none opacity-35 group-hover:scale-105 transition-transform duration-500"
+                        style={{ backgroundImage: `url(${img})` }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-slate-950/40 pointer-events-none" />
+
+                      {/* Top Label */}
+                      <div className="relative z-10">
+                        <span className={`text-[8px] font-black tracking-wider uppercase px-1.5 py-0.5 rounded inline-block ${
+                          isActiveLive
+                            ? 'bg-cyan-500/30 text-cyan-300 border border-cyan-400/50'
+                            : isPicked
+                            ? 'bg-emerald-500/30 text-emerald-300 border border-emerald-400/50'
+                            : isBanned
+                            ? 'bg-rose-500/20 text-rose-400 line-through'
+                            : 'bg-slate-900/80 text-slate-400'
+                        }`}>
+                          {isActiveLive ? '⚡ LIVE MAP' : isPicked ? (attributionLabel || '✓ PICKED') : isBanned ? (attributionLabel || '✕ BANNED') : 'Active Duty'}
+                        </span>
+                      </div>
+
+                      {/* Map Name & Live Score / Winner */}
+                      <div className="relative z-10 my-1">
+                        <span className={`text-xs font-black uppercase tracking-wider block ${
+                          isBanned ? 'text-slate-400 line-through' : 'text-white'
+                        }`}>
+                          {name}
+                        </span>
+                        {scoreLabel && (
+                          <div className={`text-xs font-black font-mono mt-0.5 ${isActiveLive ? 'text-cyan-300' : 'text-amber-400'}`}>
+                            {scoreLabel}
+                          </div>
+                        )}
+                        {winnerTag && !isActiveLive && (
+                          <div className="text-[7.5px] font-bold text-amber-300 uppercase tracking-tighter truncate max-w-full px-1">
+                            🏆 {winnerTag}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
               <div className="text-[10px] text-slate-500 text-center pt-2 border-t border-slate-850">
                 Official Map Pick/Ban sequence will be conducted live by team captains 30 mins prior to match start.
@@ -952,20 +1138,71 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
             {/* ─── Live / Post-Match Scoreboard ─── */}
             {hasPlayerStats ? (
               <div className="space-y-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                   <h2 className="text-xs font-black tracking-widest uppercase text-violet-400">
                     PLAYER PERFORMANCE SCOREBOARD
                   </h2>
-                  {lastUpdated && (
-                    <span className="text-[10px] text-slate-500">
-                      Auto-synced: {lastUpdated.toLocaleTimeString()}
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* Map Selector Pills */}
+                    <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
+                      <button
+                        onClick={() => setSelectedMapTab('SERIES')}
+                        className={`px-3 py-1 rounded transition-all ${
+                          selectedMapTab === 'SERIES'
+                            ? 'bg-violet-600 text-white shadow'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        ALL MAPS
+                      </button>
+                      {(match?.map_stats || mapResults || []).map((m, idx) => {
+                        const mapTitle = (m.map_name || m.name || `Map ${idx + 1}`).replace('de_', '').toUpperCase();
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => setSelectedMapTab(idx)}
+                            className={`px-3 py-1 rounded transition-all ${
+                              selectedMapTab === idx
+                                ? 'bg-violet-600 text-white shadow'
+                                : 'text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            M{idx + 1}: {mapTitle}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {lastUpdated && (
+                      <span className="text-[10px] text-slate-500 hidden md:inline">
+                        Auto-synced: {lastUpdated.toLocaleTimeString()}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="space-y-6">
-                  <PlayerScoreboardTable teamName={teamAName} players={team1Players} isWinner={isWinnerA} />
-                  <PlayerScoreboardTable teamName={teamBName} players={team2Players} isWinner={isWinnerB} />
-                </div>
+
+                {/* Scoreboard Content (Cumulative vs Selected Map) */}
+                {(() => {
+                  let activeTeam1Players = team1Players;
+                  let activeTeam2Players = team2Players;
+
+                  if (selectedMapTab !== 'SERIES' && match?.statsByMap) {
+                    const mapKey = String(selectedMapTab);
+                    const mapData = match.statsByMap[mapKey] || match.statsByMap[selectedMapTab];
+                    if (mapData) {
+                      const rawT1 = mapData.team1_players || mapData.teamA || [];
+                      const rawT2 = mapData.team2_players || mapData.teamB || [];
+                      if (rawT1.length > 0) activeTeam1Players = rawT1;
+                      if (rawT2.length > 0) activeTeam2Players = rawT2;
+                    }
+                  }
+
+                  return (
+                    <div className="space-y-6">
+                      <PlayerScoreboardTable teamName={teamAName} players={activeTeam1Players} isWinner={isWinnerA} />
+                      <PlayerScoreboardTable teamName={teamBName} players={activeTeam2Players} isWinner={isWinnerB} />
+                    </div>
+                  );
+                })()}
               </div>
             ) : phase !== 'PRE_MATCH' && (
               <div className="bg-[#0c0f1f] border border-slate-800/80 rounded-2xl p-10 text-center space-y-3">

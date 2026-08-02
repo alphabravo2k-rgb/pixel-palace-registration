@@ -167,10 +167,38 @@ export class LotGamingAdapter {
       headshots: p.headshots || 0,
       hsPct: p.hs_pct || 0,
       adr: p.adr || 0,
-      rating: p.hltv_rating || 0,
+      rating: p.hltv_rating || p.rating || 0,
+      hltvRating: p.hltv_rating || 0,
+      fluxImpact: p.flux_impact || 0,
       mvps: p.mvps || 0,
       score: p.score || 0,
-      fluxImpact: p.flux_impact || 0,
+      // Advanced Tactical Stats
+      entryKills: p.entry_kills || 0,
+      openingDeaths: p.opening_deaths || 0,
+      tradeKills: p.trade_kills || 0,
+      tradedDeaths: p.traded_deaths || 0,
+      multikills: {
+        k2: p.multikill_2k || 0,
+        k3: p.multikill_3k || 0,
+        k4: p.multikill_4k || 0,
+        k5: p.multikill_5k || 0,
+      },
+      clutches: {
+        v1: p.clutch_1v1 || 0,
+        v2: p.clutch_1v2 || 0,
+        v3: p.clutch_1v3 || 0,
+        v4: p.clutch_1v4 || 0,
+        v5: p.clutch_1v5 || 0,
+        total: (p.clutch_1v1 || 0) + (p.clutch_1v2 || 0) + (p.clutch_1v3 || 0) + (p.clutch_1v4 || 0) + (p.clutch_1v5 || 0),
+      },
+      objective: {
+        bombPlants: p.bomb_plants || 0,
+        bombDefuses: p.bomb_defuses || 0,
+        flashAssists: p.flash_assists || 0,
+      },
+      kastPct: p.kast_pct || 0,
+      kastRounds: p.kast_rounds || 0,
+      impactRating: p.impact_rating || 0,
       faceit: p.faceit ? {
         nickname: p.faceit.nickname,
         avatar: p.faceit.avatar,
@@ -229,6 +257,17 @@ export class LotGamingAdapter {
       startedAt: raw.started_at || null,
       finishedAt: raw.finished_at || null,
       bestOf: raw.best_of || 1,
+      // Knife round info
+      knifeRound: raw.has_knife_round ? {
+        winner: raw.knife_round_winner,
+        decision: raw.knife_round_decision,
+      } : null,
+      // Veto info
+      veto: raw.veto_enabled ? {
+        format: raw.veto_format,
+        sessionId: raw.veto_session_id,
+        mapPool: raw.map_pool,
+      } : null,
       // Pre-match roster (all players, including warmup — not filtered)
       team1_players: raw.team1_players || [],
       team2_players: raw.team2_players || [],
@@ -237,18 +276,18 @@ export class LotGamingAdapter {
         teamA: (raw.team1_players || []).filter(isActivePlayer).map(mapPlayer),
         teamB: (raw.team2_players || []).filter(isActivePlayer).map(mapPlayer),
       },
-      // Server & CSTV info
-      server: raw.server_country_name ? {
-        country: raw.server_country_name,
-        city: raw.server_city,
-        countryCode: raw.server_country_code,
-        serverPassword: raw.server_password_set || null,
+      // Server & CSTV info (include SDR & Password regardless of country field)
+      server: {
+        country: raw.server_country_name || null,
+        city: raw.server_city || null,
+        countryCode: raw.server_country_code || null,
+        serverPassword: raw.server_password_set || raw.server_password || null,
         cstvIp: raw.cstv1_ip || null,
         cstvPassword: raw.cstv1_password || null,
         cstvPublic: raw.cstv1_public === 1,
         cstvViewers: raw.cstv1_viewers ?? 0,
         sdrAddress: raw.sdr_address || null,
-      } : null,
+      },
       // Demo links
       demoLinks: (raw.demo_links || []).map(d => ({
         mapIndex: d.map_index,
@@ -256,6 +295,16 @@ export class LotGamingAdapter {
         downloadUrl: d.download_url,
       })),
       mapsStats: mapStatsArray,
+      // Map-by-map per-player breakdown stats
+      statsByMap: raw.stats_by_map ? Object.fromEntries(
+        Object.entries(raw.stats_by_map).map(([mapIdx, mapObj]) => [
+          mapIdx,
+          {
+            teamA: (mapObj.team1_players || []).filter(isActivePlayer).map(mapPlayer),
+            teamB: (mapObj.team2_players || []).filter(isActivePlayer).map(mapPlayer),
+          }
+        ])
+      ) : null,
     };
   }
 
