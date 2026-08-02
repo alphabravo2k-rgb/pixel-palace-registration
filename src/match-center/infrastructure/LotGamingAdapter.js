@@ -64,15 +64,13 @@ export class LotGamingAdapter {
   async fetchMatchData(externalMatchId) {
     const url = `${this.baseUrl}/matches/${externalMatchId}`;
     try {
-      const response = await fetch(url);
-      if (!response.ok) {
-        if (response.status === 404) return null;
-        throw new Error(`HTTP Error Status: ${response.status} from ${url}`);
+      const response = await fetch(url, { headers: { 'Accept': 'application/json' } }).catch(() => null);
+      if (!response || !response.ok) {
+        return null;
       }
-      const rawJson = await response.json();
+      const rawJson = await response.json().catch(() => null);
       return rawJson;
     } catch (err) {
-      Logger.debug(`LOT Adapter: Match #${externalMatchId} not yet created on server (${err.message})`);
       return null;
     }
   }
@@ -84,16 +82,86 @@ export class LotGamingAdapter {
    * @param {number|string} lotMatchId
    */
   static async fetchFromPixelPalace(lotMatchId) {
+    const storageKey = `pp_archived_match_${lotMatchId}`;
     const url = `https://pixelpalace.lotgaming.xyz/api/matches/${lotMatchId}`;
     try {
       const response = await fetch(url);
-      if (!response.ok) {
-        if (response.status === 404) return null;
-        throw new Error(`HTTP ${response.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        // If match is completed, permanently archive payload in local storage
+        if (data && (data.status === 'completed' || data.status === 'finished' || data.finished_at)) {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify({
+              archivedAt: new Date().toISOString(),
+              payload: data
+            }));
+            Logger.info(`[PixelPalace Archiver] Match #${lotMatchId} successfully archived locally.`);
+          } catch (e) {
+            Logger.warn(`[PixelPalace Archiver] Local storage limit reached: ${e.message}`);
+          }
+        }
+        return data;
       }
-      return await response.json();
+      if (response.status === 404) {
+        // Fallback to local stored archive if deleted from master API
+        const cached = localStorage.getItem(storageKey);
+        if (cached) {
+          Logger.info(`[PixelPalace Archiver] Master API returned 404. Loading locally archived match #${lotMatchId}.`);
+          return JSON.parse(cached).payload;
+        }
+        return null;
+      }
+      throw new Error(`HTTP ${response.status}`);
     } catch (err) {
-      Logger.debug(`[PixelPalace LOT] Match #${lotMatchId} fetch failed: ${err.message}`);
+      Logger.debug(`[PixelPalace LOT] Match #${lotMatchId} fetch error (${err.message}). Checking local archive...`);
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        Logger.info(`[PixelPalace Archiver] Serving match #${lotMatchId} from local permanent archive.`);
+        return JSON.parse(cached).payload;
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Fetches official season leaderboard & player impact ratings with local storage persistence fallback.
+   * Endpoint: https://pixelpalace.lotgaming.xyz/api/seasons/:seasonId/leaderboard
+   * @param {number|string} seasonId
+   */
+  static async fetchSeasonLeaderboard(seasonId = 1) {
+    const storageKey = `pp_archived_season_leaderboard_${seasonId}`;
+    const url = `https://pixelpalace.lotgaming.xyz/api/seasons/${seasonId}/leaderboard`;
+    try {
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.players && data.players.length > 0) {
+          try {
+            localStorage.setItem(storageKey, JSON.stringify({
+              archivedAt: new Date().toISOString(),
+              payload: data
+            }));
+            Logger.info(`[PixelPalace Archiver] Season #${seasonId} leaderboard archived locally.`);
+          } catch (e) {
+            Logger.warn(`[PixelPalace Archiver] Local storage error: ${e.message}`);
+          }
+        }
+        return data;
+      }
+      // Fallback on HTTP errors or 404
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        Logger.info(`[PixelPalace Archiver] Master API returned ${response.status}. Serving locally archived leaderboard.`);
+        return JSON.parse(cached).payload;
+      }
+      return null;
+    } catch (err) {
+      Logger.debug(`[PixelPalace Archiver] Leaderboard fetch failed (${err.message}). Checking local archive...`);
+      const cached = localStorage.getItem(storageKey);
+      if (cached) {
+        Logger.info(`[PixelPalace Archiver] Serving leaderboard from local archive.`);
+        return JSON.parse(cached).payload;
+      }
       return null;
     }
   }

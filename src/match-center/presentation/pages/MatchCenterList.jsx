@@ -171,7 +171,7 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
   const [customTeamBTag, setCustomTeamBTag] = useState('');
   const [teamBLogoUrl, setTeamBLogoUrl] = useState('');
   const [mapListOverride, setMapListOverride] = useState('');
-  const { syncLotMatch, loading, error, clearError } = useMatchCenter('736');
+  const { syncLotMatch, loading, error, clearError } = useMatchCenter();
 
   // ─── Score Flash State ──────────────────────────────────────────
   // Tracks which match IDs have a score that just changed (for flash animation)
@@ -232,6 +232,10 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
         winner: m.winner || null,
         winnerId: m.winnerId || null,
         scheduledDate: m.scheduledDate || null,
+        started_at: m.started_at || m.startedAt || null,
+        startedAt: m.startedAt || m.started_at || null,
+        finished_at: m.finished_at || m.finishedAt || null,
+        finishedAt: m.finishedAt || m.finished_at || null,
       }));
 
       // Detect score changes → trigger flash
@@ -534,20 +538,25 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
   // Group and filter by status and query for display
   const matchesByRound = {};
   stageMatches.forEach(m => {
-    if (!m.isSynced) {
-      const query = searchQuery.toLowerCase();
-      if (query && !m.id.toLowerCase().includes(query) && !m.teamA.name.toLowerCase().includes(query) && !m.teamB.name.toLowerCase().includes(query)) {
+    const query = searchQuery.toLowerCase().trim();
+    if (query) {
+      const matchIdStr = String(m.id || '').toLowerCase();
+      const t1 = String(m.teamA?.name || m.team1Obj?.name || '').toLowerCase();
+      const t2 = String(m.teamB?.name || m.team2Obj?.name || '').toLowerCase();
+      if (!matchIdStr.includes(query) && !t1.includes(query) && !t2.includes(query)) {
         return;
       }
-      if (statusFilter === 'Live' && m.status !== 'Live' && m.status !== 'Paused') return;
-      if (statusFilter === 'Scheduled' && m.status !== 'Scheduled') return;
-      if (statusFilter === 'Completed' && m.status !== 'Completed') return;
-    } else {
-      if (statusFilter === 'Live' && m.status !== 'Live' && m.status !== 'Paused') return;
-      if (statusFilter === 'Scheduled' && m.status !== 'Scheduled') return;
-      if (statusFilter === 'Completed' && m.status !== 'Completed') return;
     }
-    
+
+    const st = (m.status || m.lotMatchStatus || m.matchStage || '').toString().toUpperCase();
+    const isLive = st === 'LIVE' || st === 'IN_PROGRESS';
+    const isFinished = st === 'COMPLETED' || st === 'FINISHED';
+    const isSched = st === 'SCHEDULED' || st === 'PENDING' || st === 'BYE';
+
+    if (statusFilter === 'Live' && !isLive) return;
+    if (statusFilter === 'Scheduled' && !isSched) return;
+    if (statusFilter === 'Completed' && !isFinished) return;
+
     const r = m.round;
     if (!matchesByRound[r]) {
       matchesByRound[r] = [];
@@ -771,7 +780,7 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
           </div>
         )}
 
-        {/* Dynamic Bracket Schema Legend (Always visible on Playoff Tab) */}
+        {/* Dynamic Bracket Schema Legend (Interactive Round Filter Bar) */}
         {activeStageTab === 'Single Elimination' && (
           <div className="bg-slate-900/40 border border-slate-800/80 p-5 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-6">
             <div>
@@ -780,31 +789,30 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
                 PLAYOFFS BRACKET STRUCTURE
               </h3>
               <p className="text-[11px] text-slate-400">
-                Single Elimination layout calculated for a 32-team standard bracket.
+                Click any round stage box below to jump directly to its matches.
               </p>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 w-full md:w-auto font-mono text-[10px]">
-              <div className="bg-slate-950/60 border border-slate-800/60 px-3.5 py-2 rounded-lg text-center">
-                <span className="text-slate-550 block mb-0.5">ROUND OF 32</span>
-                <span className="text-white font-bold">16 MATCHES</span>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800/60 px-3.5 py-2 rounded-lg text-center">
-                <span className="text-slate-550 block mb-0.5">ROUND OF 16</span>
-                <span className="text-white font-bold">8 MATCHES</span>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800/60 px-3.5 py-2 rounded-lg text-center">
-                <span className="text-slate-550 block mb-0.5">QUARTERFINALS</span>
-                <span className="text-white font-bold">4 MATCHES</span>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800/60 px-3.5 py-2 rounded-lg text-center">
-                <span className="text-slate-550 block mb-0.5">SEMIFINALS</span>
-                <span className="text-white font-bold">2 MATCHES</span>
-              </div>
-              <div className="bg-slate-950/60 border border-slate-800/60 px-3.5 py-2 rounded-lg text-center">
-                <span className="text-slate-550 block mb-0.5">GRAND FINAL</span>
-                <span className="text-white font-bold">1 MATCH</span>
-              </div>
+              {[
+                { roundNum: 1, label: 'ROUND OF 32', count: '16 MATCHES' },
+                { roundNum: 2, label: 'ROUND OF 16', count: '8 MATCHES' },
+                { roundNum: 3, label: 'QUARTERFINALS', count: '4 MATCHES' },
+                { roundNum: 4, label: 'SEMIFINALS', count: '2 MATCHES' },
+                { roundNum: 5, label: 'GRAND FINAL', count: '1 MATCH' },
+              ].map(stg => (
+                <button
+                  key={stg.roundNum}
+                  onClick={() => {
+                    const el = document.getElementById(`round-header-${stg.roundNum}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  className="bg-slate-950/60 hover:bg-violet-600/20 border border-slate-800/60 hover:border-violet-500/50 px-3.5 py-2 rounded-lg text-center transition-all cursor-pointer group active:scale-95"
+                >
+                  <span className="text-slate-400 group-hover:text-neon-cyan block mb-0.5 font-bold transition-colors">{stg.label}</span>
+                  <span className="text-white font-bold text-[11px] group-hover:text-amber-400 transition-colors">{stg.count}</span>
+                </button>
+              ))}
             </div>
           </div>
         )}
@@ -952,7 +960,7 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
             if (roundMatches.length === 0) return null;
 
             return (
-              <div key={roundNum} className="space-y-4">
+              <div key={roundNum} id={`round-header-${roundNum}`} className="space-y-4 scroll-mt-24">
                 {/* Round Header */}
                 <div className="flex items-center gap-3">
                   <h2 className="text-xs font-black tracking-widest text-indigo-400 uppercase font-mono bg-indigo-950/40 border border-indigo-900/30 px-3 py-1.5 rounded">
@@ -983,79 +991,84 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
                       const isPending = !isLive && !isFinished && !isVeto && !isWarmup && !isBye && !hasConfirmedTeams;
                       const isFlashing = flashingMatches.has(String(m.id));
 
-                      const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate);
-                      const visitorTime = formatVisitorLocalTime(schedInfo.iso);
-                      const liveCd = getLiveCountdown(schedInfo.iso);
-                      const calUrl = getGoogleCalendarUrl(m);
+                      const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate, m);
+                      const scoreA = m.mapScoreT1 ?? 0;
+                      const scoreB = m.mapScoreT2 ?? 0;
+                      const winsA = m.seriesScore?.teamAWins ?? m.mapWinsT1 ?? 0;
+                      const winsB = m.seriesScore?.teamBWins ?? m.mapWinsT2 ?? 0;
+                      const isWinnerA = isFinished && (m.winner === 'team1' || scoreA > scoreB || winsA > winsB);
+                      const isWinnerB = isFinished && (m.winner === 'team2' || scoreB > scoreA || winsB > winsA);
 
                       return (
                         <div
                           key={m.id}
                           onClick={() => onSelectMatch ? onSelectMatch(m.id) : navigate(matchCenter(m.id, false))}
-                          className="flex items-center justify-between px-4 py-2.5 rounded-xl border hover:border-neon-cyan/50 transition-all cursor-pointer group text-xs font-mono"
+                          className="flex items-center justify-between px-4 py-3 rounded-xl border hover:border-neon-cyan/50 transition-all cursor-pointer group text-xs font-mono shadow-md"
                           style={{
-                            background: isFlashing ? 'rgba(251,191,36,0.08)' : isLive ? 'rgba(16,185,129,0.06)' : isVeto ? 'rgba(217,70,239,0.06)' : isWarmup ? 'rgba(6,182,212,0.06)' : 'rgba(13,17,40,0.9)',
-                            borderColor: isFlashing ? 'rgba(251,191,36,0.6)' : isLive ? 'rgba(16,185,129,0.6)' : isVeto ? 'rgba(217,70,239,0.5)' : isWarmup ? 'rgba(6,182,212,0.5)' : isScheduled ? 'rgba(129,140,248,0.3)' : 'rgba(99,102,241,0.2)',
-                            boxShadow: isLive ? '0 0 16px rgba(16,185,129,0.2)' : isVeto ? '0 0 14px rgba(217,70,239,0.18)' : isWarmup ? '0 0 14px rgba(6,182,212,0.18)' : 'none',
-                            transition: 'all 0.3s',
+                            background: isFlashing ? 'rgba(251,191,36,0.1)' : isLive ? 'linear-gradient(90deg, rgba(16,185,129,0.12) 0%, rgba(13,17,40,0.95) 100%)' : isFinished ? 'rgba(11,15,36,0.85)' : 'rgba(13,17,40,0.9)',
+                            borderColor: isFlashing ? 'rgba(251,191,36,0.6)' : isLive ? 'rgba(16,185,129,0.6)' : isFinished ? 'rgba(255,255,255,0.08)' : 'rgba(99,102,241,0.25)',
+                            boxShadow: isLive ? '0 0 16px rgba(16,185,129,0.2)' : 'none',
                           }}
                         >
-                          {/* 1. Left Metadata: ID + Status + Map */}
-                          <div className="flex items-center gap-2 w-48 shrink-0">
+                          {/* 1. Left Metadata: ID + Format + Status + Map */}
+                          <div className="flex items-center gap-2 w-52 shrink-0">
                             <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400 shrink-0">#{m.id}</span>
+                            <span className="text-[9px] font-mono font-bold text-zinc-400 bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-800 shrink-0">{m.format || 'BO1'}</span>
                             {isLive && <span className="text-[9px] font-black text-emerald-400 flex items-center gap-1 shrink-0"><span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-ping"/>LIVE</span>}
                             {isVeto && <span className="text-[9px] font-black text-fuchsia-400 flex items-center gap-1 shrink-0"><span className="w-1.5 h-1.5 bg-fuchsia-400 rounded-full animate-ping"/>VETO</span>}
-                            {isWarmup && <span className="text-[9px] font-black text-cyan-400 flex items-center gap-1 shrink-0"><span className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-ping"/>WARMUP</span>}
+                            {isFinished && <span className="text-[9px] font-black text-slate-500 shrink-0">FINAL</span>}
                             {isScheduled && <span className="text-[9px] font-black text-indigo-300 shrink-0">SCHEDULED</span>}
                             {isBye && <span className="text-[9px] font-black text-emerald-400 shrink-0">✓ BYE</span>}
-                            {isPending && <span className="text-[9px] font-black text-slate-500 shrink-0">⌛ TBD</span>}
                             {m.liveMap && (
-                              <span className="text-[9px] font-bold text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-1.5 py-0.5 rounded uppercase truncate">
+                              <span className="text-[9px] font-bold text-neon-cyan bg-neon-cyan/10 border border-neon-cyan/30 px-1.5 py-0.5 rounded uppercase truncate">
                                 {m.liveMap.replace('de_', '')}
                               </span>
                             )}
                           </div>
 
-                          {/* 2. Center: Dead-Center Locked Matchup Column */}
+                          {/* 2. Center: Professional HLTV Matchup Column */}
                           <div className="flex items-center justify-center flex-1 min-w-0 px-2">
-                            {/* Team A (Right-aligned) */}
-                            <div className="w-44 text-right flex items-center justify-end gap-2 truncate">
-                              <span className="font-bold text-white uppercase truncate text-xs group-hover:text-neon-cyan transition-colors">
+                            {/* Team A */}
+                            <div className="w-48 text-right flex items-center justify-end gap-2 truncate">
+                              <span className={`font-bold uppercase truncate text-xs transition-colors ${
+                                isWinnerA ? 'text-amber-400 font-black' : isFinished ? 'text-zinc-400' : 'text-white group-hover:text-neon-cyan'
+                              }`}>
                                 {m.teamA?.name || 'TBD'}
                               </span>
                               {m.teamA?.logo ? (
-                                <img src={m.teamA.logo} className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/10" alt="" />
+                                <img src={m.teamA.logo} className="w-5 h-5 rounded object-contain shrink-0 border border-white/10" alt="" />
                               ) : null}
                             </div>
 
                             {/* Center VS / Score Badge */}
-                            <div className="w-14 flex items-center justify-center shrink-0 mx-2">
+                            <div className="w-16 flex items-center justify-center shrink-0 mx-3">
                               <span
-                                className="font-black text-[10px] px-2.5 py-0.5 rounded border text-center uppercase tracking-widest"
-                                style={{
-                                  background: isFlashing ? 'rgba(251,191,36,0.15)' : 'rgba(15,23,42,0.9)',
-                                  borderColor: isFlashing ? 'rgba(251,191,36,0.4)' : 'rgba(99,102,241,0.3)',
-                                  color: isFlashing ? '#fbbf24' : '#c4b5fd',
-                                }}
+                                className={`font-mono font-black text-[11px] px-3 py-1 rounded-lg border text-center uppercase tracking-widest ${
+                                  isLive ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 animate-pulse' :
+                                  isFinished ? 'bg-zinc-900 border-white/10 text-white' :
+                                  'bg-zinc-900/90 border-white/10 text-zinc-400'
+                                }`}
                               >
-                                {isBye ? 'BYE' : (isLive || isFinished) ? `${m.mapScoreT1 ?? 0}:${m.mapScoreT2 ?? 0}` : 'VS'}
+                                {isBye ? 'BYE' : (isLive || isFinished) ? `${scoreA} : ${scoreB}` : 'VS'}
                               </span>
                             </div>
 
-                            {/* Team B (Left-aligned) */}
-                            <div className="w-44 text-left flex items-center justify-start gap-2 truncate">
+                            {/* Team B */}
+                            <div className="w-48 text-left flex items-center justify-start gap-2 truncate">
                               {m.teamB?.logo ? (
-                                <img src={m.teamB.logo} className="w-4 h-4 rounded-full object-cover shrink-0 border border-white/10" alt="" />
+                                <img src={m.teamB.logo} className="w-5 h-5 rounded object-contain shrink-0 border border-white/10" alt="" />
                               ) : null}
-                              <span className="font-bold text-white uppercase truncate text-xs group-hover:text-neon-cyan transition-colors">
+                              <span className={`font-bold uppercase truncate text-xs transition-colors ${
+                                isWinnerB ? 'text-amber-400 font-black' : isFinished ? 'text-zinc-400' : 'text-white group-hover:text-neon-cyan'
+                              }`}>
                                 {isBye ? '—' : (m.teamB?.name || 'TBD')}
                               </span>
                             </div>
                           </div>
 
-                          {/* 3. Right Metadata: Local Time + Countdown */}
+                          {/* 3. Right Metadata: Broadcast / Local Time */}
                           <div className="flex items-center justify-end gap-3 w-52 shrink-0 text-[10px] text-zinc-400 font-mono">
-                            <span className="text-emerald-400 font-bold hidden sm:inline">🌐 {visitorTime.localTime}</span>
+                            <span className="text-zinc-400 font-bold hidden sm:inline">🌐 {visitorTime.localTime}</span>
                             {!isLive && !isFinished && liveCd && (
                               <span className="text-neon-cyan font-bold hidden md:inline">IN: {liveCd.formatted}</span>
                             )}
@@ -1090,7 +1103,7 @@ export function MatchCenterList({ isAdmin = false, onSelectMatch }) {
                     const isWinnerA = isFinished && (m.winner === 'team1' || (winsA > winsB));
                     const isWinnerB = isFinished && (m.winner === 'team2' || (winsB > winsA));
 
-                    const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate);
+                    const schedInfo = getMatchSchedule(m.id, m.scheduled_date || m.scheduledDate, m);
                     const visitorTime = formatVisitorLocalTime(schedInfo.iso);
                     const liveCd = getLiveCountdown(schedInfo.iso);
 

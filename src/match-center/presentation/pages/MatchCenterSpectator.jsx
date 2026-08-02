@@ -331,8 +331,35 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
   const [error, setError] = useState(null);
 
   // BO3 Map Selector Tab: 'SERIES' | 0 | 1 | 2
-  const [selectedMapTab, setSelectedMapTab] = useState('SERIES');
-  const [activeDetailTab, setActiveDetailTab] = useState('OVERVIEW');
+  const [selectedMapTab, setSelectedMapTab] = useState(() => {
+    const hash = window.location.hash.toLowerCase();
+    const mapMatch = hash.match(/\/m(\d+)$/);
+    if (mapMatch) return parseInt(mapMatch[1], 10) - 1;
+    return 'SERIES';
+  });
+
+  const [activeDetailTab, setActiveDetailTab] = useState(() => {
+    const hash = window.location.hash.toLowerCase();
+    if (hash.includes('/maps')) return 'MAPS';
+    if (hash.includes('/scoreboard') || hash.includes('/analytics')) return 'SCOREBOARD';
+    return 'OVERVIEW';
+  });
+
+  const handleTabChange = (tabName, mapTab = selectedMapTab) => {
+    setActiveDetailTab(tabName);
+    const baseHash = matchId ? `match-${matchId}` : 'match-center';
+    let hashPath = `${baseHash}/${tabName.toLowerCase()}`;
+    if (tabName === 'SCOREBOARD' && mapTab !== 'SERIES' && typeof mapTab === 'number') {
+      hashPath += `/m${mapTab + 1}`;
+    }
+    window.location.hash = hashPath;
+  };
+
+  const handleMapTabSelect = (mapIndex) => {
+    setSelectedMapTab(mapIndex);
+    handleTabChange('SCOREBOARD', mapIndex);
+  };
+
   const [isStreamOpen, setIsStreamOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -437,16 +464,41 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
     }
   }, [matchId]);
 
-  // Initial load + 30-second interval polling
+  // Dynamic poll interval: 1000ms (1 sec) when match is LIVE/IN-PROGRESS, 10s otherwise
   useEffect(() => {
     if (!matchId) return;
     fetchMatchData(false);
 
+    const isLive = match?.status === 'LIVE' || match?.status === 'IN_PROGRESS' || match?.match_status === 'live';
+    const intervalMs = isLive ? 1000 : 10000;
+
     const timer = setInterval(() => {
       fetchMatchData(true);
-    }, POLL_INTERVAL_MS);
+    }, intervalMs);
 
-    return () => clearInterval(timer);
+    const handleSubHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('/maps')) {
+        setActiveDetailTab('MAPS');
+      } else if (hash.includes('/scoreboard')) {
+        setActiveDetailTab('SCOREBOARD');
+        const mapMatch = hash.match(/\/m(\d+)$/);
+        if (mapMatch) {
+          setSelectedMapTab(parseInt(mapMatch[1], 10) - 1);
+        } else {
+          setSelectedMapTab('SERIES');
+        }
+      } else if (hash.includes('/overview') || hash.match(/^#match-\d+$/)) {
+        setActiveDetailTab('OVERVIEW');
+      }
+    };
+
+    window.addEventListener('hashchange', handleSubHashChange);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('hashchange', handleSubHashChange);
+    };
   }, [matchId, fetchMatchData]);
 
   const phase = useMemo(() => getMatchPhase(match?.status), [match?.status]);
@@ -471,8 +523,8 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
   }, []);
 
   const scheduleInfo = useMemo(() => {
-    return getMatchSchedule(match?.id || matchId, match?.scheduled_date || match?.scheduledDate);
-  }, [match?.id, matchId, match?.scheduled_date, match?.scheduledDate]);
+    return getMatchSchedule(match?.id || matchId, match?.scheduled_date || match?.scheduledDate, match);
+  }, [match?.id, matchId, match?.scheduled_date, match?.scheduledDate, match?.started_at, match?.startedAt, match?.finished_at, match?.finishedAt]);
 
   const visitorLocalTime = useMemo(() => {
     return formatVisitorLocalTime(scheduleInfo.iso);
@@ -752,7 +804,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
             {phase === 'COMPLETED' && (
               <div className="inline-block text-xs font-mono tracking-widest uppercase px-4 py-1.5 rounded-full"
                 style={{ background: 'rgba(100,116,139,0.1)', border: '1px solid rgba(100,116,139,0.25)', color: '#94a3b8' }}>
-                Match completed · {isWinnerA ? teamAName : isWinnerB ? teamBName : '—'} advances
+                Match completed on {scheduledDate} · {isWinnerA ? teamAName : isWinnerB ? teamBName : '—'} advances
               </div>
             )}
           </div>
@@ -765,7 +817,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
         {/* ── Broadcast Navigation Tabs ── */}
         <div className="flex border-b border-slate-800/80 font-mono text-xs uppercase font-bold gap-2">
           <button
-            onClick={() => setActiveDetailTab('OVERVIEW')}
+            onClick={() => handleTabChange('OVERVIEW')}
             className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
               activeDetailTab === 'OVERVIEW'
                 ? 'border-violet-500 text-white bg-slate-900/60'
@@ -775,7 +827,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
             ⚔️ Match Overview
           </button>
           <button
-            onClick={() => setActiveDetailTab('MAPS')}
+            onClick={() => handleTabChange('MAPS')}
             className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
               activeDetailTab === 'MAPS'
                 ? 'border-violet-500 text-white bg-slate-900/60'
@@ -785,7 +837,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
             🗺️ Map Pool & Veto
           </button>
           <button
-            onClick={() => setActiveDetailTab('SCOREBOARD')}
+            onClick={() => handleTabChange('SCOREBOARD')}
             className={`px-4 py-2.5 border-b-2 transition-all cursor-pointer ${
               activeDetailTab === 'SCOREBOARD'
                 ? 'border-violet-500 text-white bg-slate-900/60'
@@ -1146,7 +1198,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
                     {/* Map Selector Pills */}
                     <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px] font-bold">
                       <button
-                        onClick={() => setSelectedMapTab('SERIES')}
+                        onClick={() => handleMapTabSelect('SERIES')}
                         className={`px-3 py-1 rounded transition-all ${
                           selectedMapTab === 'SERIES'
                             ? 'bg-violet-600 text-white shadow'
@@ -1160,7 +1212,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
                         return (
                           <button
                             key={idx}
-                            onClick={() => setSelectedMapTab(idx)}
+                            onClick={() => handleMapTabSelect(idx)}
                             className={`px-3 py-1 rounded transition-all ${
                               selectedMapTab === idx
                                 ? 'bg-violet-600 text-white shadow'

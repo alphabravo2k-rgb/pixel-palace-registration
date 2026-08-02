@@ -171,14 +171,17 @@ export function useMatchCenter(matchId) {
 
   // Initial load, polling, and auto-sync if missing
   useEffect(() => {
+    if (!normalizedId) return;
+
     const autoSyncAndRefresh = async () => {
       await refreshProjections();
       
       const activeSummary = platformProjectionRegistry.getSummary(normalizedId);
       if (!activeSummary && normalizedId.startsWith('MC-2026-')) {
         const externalId = parseInt(normalizedId.replace('MC-2026-', ''), 10);
-        if (externalId > 0) {
-          Logger.info(`Hook: Match ${normalizedId} not found locally. Auto-syncing external ID #${externalId}...`);
+        // Only attempt auto-sync if externalId maps to known active tournament slot
+        if (externalId > 0 && externalId <= 31) {
+          Logger.debug(`Hook: Auto-syncing active tournament match ID #${externalId}...`);
           try {
             const apiMatch = await tournamentService.fetchMatch(externalId);
             if (apiMatch) {
@@ -208,7 +211,7 @@ export function useMatchCenter(matchId) {
               await syncLotMatch(externalId.toString());
             }
           } catch (err) {
-            Logger.warn(`Hook: Auto-sync failed for ${normalizedId}: ${err.message}`);
+            Logger.debug(`Hook: Auto-sync unmapped match ${normalizedId}: ${err.message}`);
           }
         }
       }
@@ -332,8 +335,8 @@ export function useMatchCenter(matchId) {
       await refreshProjections();
       Logger.info(`Hook: Synced match ${normalizedId} ← ${usedHostname}/#${externalId} (${canonical.status})`);
     } catch (err) {
-      Logger.error(`Hook: LOT Sync failed — ${err.message}`);
-      setError(`Sync failed: ${err.message}`);
+      Logger.debug(`Hook: LOT Sync unmapped — Match #${externalId} not found on external servers (${err.message}).`);
+      setError(`Match #${externalId} not currently live on server.`);
       throw err;
     } finally {
       setLoading(false);

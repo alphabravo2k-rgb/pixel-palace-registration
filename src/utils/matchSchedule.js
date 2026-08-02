@@ -51,16 +51,28 @@ export const OFFICIAL_MATCH_SCHEDULE = {
  * Retrieves the schedule details for a given match ID.
  * Prefers API scheduled_date if set, otherwise falls back to official lookup table.
  */
-export function getMatchSchedule(matchId, apiScheduledDate = null) {
+export function getMatchSchedule(matchId, apiScheduledDate = null, apiMatch = null) {
   const numericId = parseInt(matchId, 10);
   const scheduled = OFFICIAL_MATCH_SCHEDULE[numericId] || null;
 
-  if (apiScheduledDate && apiScheduledDate.includes('T')) {
+  // 1. Prefer API actual played/started time if available
+  const actualTime = apiMatch?.started_at || apiMatch?.startedAt || apiMatch?.finished_at || apiMatch?.finishedAt || apiScheduledDate;
+
+  if (actualTime) {
+    let isoFormatted = String(actualTime).trim();
+    // Normalize MySQL format 'YYYY-MM-DD HH:mm:ss' to UTC ISO string ('Z')
+    if (isoFormatted.includes(' ') && !isoFormatted.includes('T')) {
+      isoFormatted = isoFormatted.replace(' ', 'T') + 'Z';
+    } else if (!isoFormatted.endsWith('Z') && !isoFormatted.includes('+') && !isoFormatted.includes('-')) {
+      isoFormatted = isoFormatted + 'Z';
+    }
+
     return {
-      iso: apiScheduledDate,
+      iso: isoFormatted,
       pkt: null, uae: null, ksa: null, ist: null,
-      type: scheduled?.type || 'BO1',
-      round: scheduled?.round || 'Match'
+      type: apiMatch?.format || (apiMatch?.best_of ? `BO${apiMatch.best_of}` : null) || scheduled?.type || 'BO1',
+      round: scheduled?.round || 'Match',
+      isActualTime: Boolean(apiMatch?.started_at || apiMatch?.finished_at)
     };
   }
 
@@ -68,7 +80,8 @@ export function getMatchSchedule(matchId, apiScheduledDate = null) {
     iso: "2026-07-31T20:00:00+05:00",
     pkt: "8:00 PM", uae: "7:00 PM", ksa: "6:00 PM", ist: "8:30 PM",
     type: "BO1",
-    round: "Qualifier"
+    round: "Qualifier",
+    isActualTime: false
   };
 }
 

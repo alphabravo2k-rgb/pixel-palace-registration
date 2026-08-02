@@ -4,6 +4,7 @@ import {
   Tv, Server, ChevronRight, Zap, RefreshCw, Trophy, ExternalLink, Flame, Calendar 
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { getTeamTag, getTeamLogoUrl } from '../../utils/teamResolver';
 
 export const OpsCenterTab = ({ 
   tournament, 
@@ -25,9 +26,20 @@ export const OpsCenterTab = ({
     if (!bracketData?.matches) return;
     const matches = bracketData.matches || [];
     
-    const live = matches.filter(m => m.lotMatchStatus === 'live' || m.lotMatchStatus === 'warmup' || m.match_status === 'live');
-    const upcoming = matches.filter(m => (!m.lotMatchStatus || m.lotMatchStatus === 'scheduled') && m.match_status !== 'completed' && !m.is_bye && m.has_lot_data);
-    const completed = matches.filter(m => m.lotMatchStatus === 'completed' || m.match_status === 'completed');
+    const live = matches.filter(m => {
+      const st = (m.status || m.lotMatchStatus || m.match_status || '').toString().toUpperCase();
+      return st === 'LIVE' || st === 'WARMUP' || st === 'KNIFE' || st === 'PAUSED';
+    });
+    
+    const upcoming = matches.filter(m => {
+      const st = (m.status || m.lotMatchStatus || m.match_status || '').toString().toUpperCase();
+      return (st === 'SCHEDULED' || st === 'CHECKIN' || st === 'PENDING') && !m.isBye && !m.is_bye;
+    });
+
+    const completed = matches.filter(m => {
+      const st = (m.status || m.lotMatchStatus || m.match_status || '').toString().toUpperCase();
+      return st === 'COMPLETED' || st === 'FINISHED' || m.winner_id != null || m.winnerId != null;
+    });
 
     setLiveMatches(live);
     setUpcomingMatches(upcoming.slice(0, 5));
@@ -35,9 +47,19 @@ export const OpsCenterTab = ({
     setLastSyncTime(new Date());
   }, [bracketData]);
 
-  const totalTeams = teams.length || (slots?.totalConfirmed || bracketData?.team_count || 0);
-  const verifiedTeams = teams.filter(t => t.status === 'VERIFIED').length;
-  const totalMatchesCount = bracketData?.matches?.filter(m => !m.is_bye)?.length || 0;
+  const teamsList = Array.isArray(teams) ? teams : (teams ? Object.values(teams) : []);
+  const totalTeams = teamsList.length || (slots?.totalConfirmed || bracketData?.team_count || 0);
+  const verifiedTeams = teamsList.filter(t => t.status === 'VERIFIED').length;
+  
+  const matchesList = Array.isArray(bracketData?.matches) ? bracketData.matches : [];
+  const playableMatches = matchesList.filter(m => !m.is_bye && !m.isBye);
+  const totalMatchesCount = playableMatches.length || 31;
+  const totalCompletedMatches = playableMatches.filter(m => {
+    const st = (m.status || m.lotMatchStatus || m.match_status || '').toString().toUpperCase();
+    return st === 'COMPLETED' || st === 'FINISHED' || m.winner_id != null || m.winnerId != null || m.winner != null;
+  }).length;
+
+  const progressPct = Math.min(100, Math.round((totalCompletedMatches / totalMatchesCount) * 100));
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in duration-500 font-mono">
@@ -64,14 +86,22 @@ export const OpsCenterTab = ({
               {lastSyncTime.toLocaleTimeString()}
             </span>
           </div>
-          <Link
-            to="/match-center"
+          <a
+            href="#leaderboard"
+            onClick={playClick}
+            className="bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-400 font-bold text-xs px-3.5 py-2.5 rounded flex items-center gap-2 transition-all uppercase"
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            <span>LEADERBOARD</span>
+          </a>
+          <a
+            href="#match-center"
             onClick={playClick}
             className="bg-neon-pink hover:bg-neon-pink/80 text-white font-bold text-xs px-4 py-2.5 rounded flex items-center gap-2 shadow-[0_0_15px_rgba(240,0,255,0.4)] transition-all uppercase"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>MATCH CENTER</span>
-          </Link>
+          </a>
         </div>
       </div>
 
@@ -84,9 +114,12 @@ export const OpsCenterTab = ({
         </div>
 
         <div className="bg-black/50 border border-white/10 p-4 rounded-xl text-center">
-          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block mb-1">TOTAL MATCHES</span>
-          <span className="text-2xl font-bold text-neon-cyan font-heading">{totalMatchesCount > 0 ? `${totalMatchesCount} MATCHES` : 'BRACKET READY'}</span>
-          <span className="text-[9px] text-zinc-400 block font-bold mt-1">SINGLE ELIMINATION</span>
+          <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest block mb-1">TOURNAMENT PROGRESS</span>
+          <span className="text-2xl font-bold text-neon-cyan font-heading">{progressPct}%</span>
+          <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mt-1.5">
+            <div className="bg-neon-cyan h-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          </div>
+          <span className="text-[9px] text-zinc-400 block font-bold mt-1 uppercase">{totalCompletedMatches} / {totalMatchesCount} MATCHES FINISHED</span>
         </div>
 
         <div className="bg-black/50 border border-neon-pink/30 p-4 rounded-xl text-center bg-neon-pink/5">
@@ -119,88 +152,112 @@ export const OpsCenterTab = ({
           </div>
 
           {liveMatches.length > 0 ? (
-            liveMatches.map((m, idx) => (
-              <div key={m.id || idx} className="bg-black/60 border border-neon-pink/40 p-5 rounded-2xl relative overflow-hidden shadow-[0_0_30px_rgba(240,0,255,0.15)]">
-                <div className="absolute top-0 right-0 bg-neon-pink text-white text-[9px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" /> LIVE MAP // {m.current_map || m.map || 'CS2 SERVER'}
-                </div>
+            liveMatches.map((m, idx) => {
+              const t1Name = m.team1Obj?.name || m.team1?.name || m.team1 || 'TBD';
+              const t1Tag = m.team1Obj?.tag || m.team1?.tag || getTeamTag(t1Name);
+              const t1Logo = m.team1Obj?.logo || m.team1Obj?.logo_url || m.team1?.logo || getTeamLogoUrl(t1Name);
 
-                <div className="text-[10px] text-zinc-400 uppercase font-bold mb-4">{m.matchStage || `Round ${m.round_id || 1}`}</div>
+              const t2Name = m.team2Obj?.name || m.team2?.name || m.team2 || 'TBD';
+              const t2Tag = m.team2Obj?.tag || m.team2?.tag || getTeamTag(t2Name);
+              const t2Logo = m.team2Obj?.logo || m.team2Obj?.logo_url || m.team2?.logo || getTeamLogoUrl(t2Name);
 
-                <div className="flex items-center justify-between gap-4">
-                  {/* Team 1 */}
-                  <button
-                    onClick={() => onSelectTeam && onSelectTeam({ name: m.team1?.name || "TBD", tag: m.team1?.tag || "" })}
-                    className="flex flex-col items-center gap-2 group flex-1 text-center"
-                  >
-                    <div className="w-14 h-14 bg-zinc-900 border border-white/20 rounded-xl flex items-center justify-center p-2 group-hover:border-neon-cyan transition-colors">
-                      {m.team1?.logo ? (
-                        <img src={m.team1.logo} alt="Team 1" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-neon-cyan font-bold text-sm font-heading">{m.team1?.tag || m.team1?.name?.substring(0, 3) || 'T1'}</span>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-white group-hover:text-neon-cyan transition-colors uppercase truncate max-w-[140px]">
-                      {m.team1?.name || 'TBD'}
-                    </span>
-                  </button>
+              const score1 = m.mapScoreT1 ?? m.score1 ?? m.team1?.score ?? 0;
+              const score2 = m.mapScoreT2 ?? m.score2 ?? m.team2?.score ?? 0;
+              const liveMapName = m.liveMap || m.current_map || m.map || 'CS2 SERVER';
 
-                  {/* Live Score */}
-                  <div className="flex flex-col items-center justify-center px-4">
-                    <div className="text-3xl sm:text-4xl font-heading font-black text-white tracking-widest bg-zinc-900/90 border border-white/10 px-4 py-2 rounded-xl text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-white to-neon-pink">
-                      {m.score1 ?? m.team1?.score ?? 0} : {m.score2 ?? m.team2?.score ?? 0}
-                    </div>
-                    <span className="text-[10px] text-zinc-400 font-bold uppercase mt-2">{m.lotMatchStatus ? m.lotMatchStatus.toUpperCase() : 'LIVE MATCH'}</span>
+              return (
+                <div key={m.id || idx} className="bg-black/60 border border-neon-pink/40 p-5 rounded-2xl relative overflow-hidden shadow-[0_0_30px_rgba(240,0,255,0.15)]">
+                  <div className="absolute top-0 right-0 bg-neon-pink text-white text-[9px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-widest flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-ping" /> LIVE MAP // {liveMapName.replace('de_', '').toUpperCase()}
                   </div>
 
-                  {/* Team 2 */}
-                  <button
-                    onClick={() => onSelectTeam && onSelectTeam({ name: m.team2?.name || "TBD", tag: m.team2?.tag || "" })}
-                    className="flex flex-col items-center gap-2 group flex-1 text-center"
-                  >
-                    <div className="w-14 h-14 bg-zinc-900 border border-white/20 rounded-xl flex items-center justify-center p-2 group-hover:border-neon-cyan transition-colors">
-                      {m.team2?.logo ? (
-                        <img src={m.team2.logo} alt="Team 2" className="w-full h-full object-contain" />
-                      ) : (
-                        <span className="text-neon-pink font-bold text-sm font-heading">{m.team2?.tag || m.team2?.name?.substring(0, 3) || 'T2'}</span>
-                      )}
-                    </div>
-                    <span className="text-xs font-bold text-white group-hover:text-neon-cyan transition-colors uppercase truncate max-w-[140px]">
-                      {m.team2?.name || 'TBD'}
-                    </span>
-                  </button>
-                </div>
+                  <div className="text-[10px] text-zinc-400 uppercase font-bold mb-4">ROUND {m.round_number || m.roundNumber || m.round_id || 1} · MATCH #{m.id}</div>
 
-                {/* Server & Action Footer */}
-                <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2 text-emerald-400 font-bold">
-                    <Server className="w-3.5 h-3.5" />
-                    <span className="text-[11px]">Protected Tournament Server</span>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {onGenerateDiscordSheet && (
-                      <button
-                        onClick={() => onGenerateDiscordSheet(m)}
-                        className="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-bold text-[11px] px-3 py-1.5 rounded flex items-center gap-1.5 transition"
-                      >
-                        <Tv className="w-3.5 h-3.5" />
-                        <span>DISCORD SHEET</span>
-                      </button>
-                    )}
-
-                    <Link
-                      to="/match-center"
-                      onClick={playClick}
-                      className="bg-white/10 hover:bg-white/20 text-white font-bold text-[11px] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition"
+                  <div className="flex items-center justify-between gap-4">
+                    {/* Team 1 */}
+                    <button
+                      onClick={() => {
+                        if (onSelectTeam) {
+                          const fullTeam = (teams || []).find(t => (t.name || '').toUpperCase() === t1Name.toUpperCase() || (t.tag || '').toUpperCase() === t1Tag.toUpperCase()) || m.team1Obj || { name: t1Name, tag: t1Tag, logo: t1Logo };
+                          onSelectTeam(fullTeam);
+                        }
+                      }}
+                      className="flex flex-col items-center gap-2 group flex-1 text-center"
                     >
-                      <span>SPECTATE IN MATCH CENTER</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
+                      <div className="w-14 h-14 bg-zinc-900 border border-white/20 rounded-xl flex items-center justify-center p-2 group-hover:border-neon-cyan transition-colors">
+                        {t1Logo ? (
+                          <img src={t1Logo} alt={t1Name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-neon-cyan font-bold text-sm font-heading">{t1Tag || 'T1'}</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-white group-hover:text-neon-cyan transition-colors uppercase truncate max-w-[140px]">
+                        {t1Name}
+                      </span>
+                    </button>
+
+                    {/* Live Score */}
+                    <div className="flex flex-col items-center justify-center px-4">
+                      <div className="text-3xl sm:text-4xl font-heading font-black text-white tracking-widest bg-zinc-900/90 border border-white/10 px-4 py-2 rounded-xl text-transparent bg-clip-text bg-gradient-to-r from-neon-cyan via-white to-neon-pink">
+                        {score1} : {score2}
+                      </div>
+                      <span className="text-[10px] text-zinc-400 font-bold uppercase mt-2">{m.lotMatchStatus ? m.lotMatchStatus.toUpperCase() : 'LIVE MATCH'}</span>
+                    </div>
+
+                    {/* Team 2 */}
+                    <button
+                      onClick={() => {
+                        if (onSelectTeam) {
+                          const fullTeam = (teams || []).find(t => (t.name || '').toUpperCase() === t2Name.toUpperCase() || (t.tag || '').toUpperCase() === t2Tag.toUpperCase()) || m.team2Obj || { name: t2Name, tag: t2Tag, logo: t2Logo };
+                          onSelectTeam(fullTeam);
+                        }
+                      }}
+                      className="flex flex-col items-center gap-2 group flex-1 text-center"
+                    >
+                      <div className="w-14 h-14 bg-zinc-900 border border-white/20 rounded-xl flex items-center justify-center p-2 group-hover:border-neon-cyan transition-colors">
+                        {t2Logo ? (
+                          <img src={t2Logo} alt={t2Name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="text-neon-pink font-bold text-sm font-heading">{t2Tag || 'T2'}</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-bold text-white group-hover:text-neon-cyan transition-colors uppercase truncate max-w-[140px]">
+                        {t2Name}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Server & Action Footer */}
+                  <div className="mt-5 pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div className="flex items-center gap-2 text-emerald-400 font-bold">
+                      <Server className="w-3.5 h-3.5" />
+                      <span className="text-[11px]">Protected Tournament Server</span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {onGenerateDiscordSheet && (
+                        <button
+                          onClick={() => onGenerateDiscordSheet(m)}
+                          className="bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/40 text-indigo-300 font-bold text-[11px] px-3 py-1.5 rounded flex items-center gap-1.5 transition"
+                        >
+                          <Tv className="w-3.5 h-3.5" />
+                          <span>DISCORD SHEET</span>
+                        </button>
+                      )}
+
+                      <a
+                        href={`#match-${m.id}`}
+                        onClick={playClick}
+                        className="bg-neon-pink/20 hover:bg-neon-pink/30 border border-neon-pink/50 text-neon-pink font-bold text-[11px] px-3.5 py-1.5 rounded flex items-center gap-1.5 transition shadow-[0_0_10px_rgba(240,0,255,0.3)]"
+                      >
+                        <span>SPECTATE MATCH #{m.id}</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="bg-black/40 border border-white/10 p-8 rounded-2xl text-center space-y-3">
               <Calendar className="w-8 h-8 text-zinc-600 mx-auto" />
@@ -209,14 +266,51 @@ export const OpsCenterTab = ({
                 All scheduled bracket matches are monitored in real time. As soon as match servers launch, live scores will stream here automatically.
               </p>
               <div className="pt-2">
-                <Link
-                  to="/match-center"
+                <a
+                  href="#match-center"
                   onClick={playClick}
                   className="inline-flex items-center gap-2 bg-neon-cyan/15 hover:bg-neon-cyan/25 border border-neon-cyan/40 text-neon-cyan text-xs font-bold px-4 py-2 rounded transition"
                 >
                   <Activity className="w-3.5 h-3.5" />
                   <span>VIEW MATCH CENTER</span>
-                </Link>
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Recently Completed Matches List */}
+          {completedMatches.length > 0 && (
+            <div className="bg-black/50 border border-white/10 p-5 rounded-2xl space-y-3 mt-6">
+              <h4 className="text-xs font-bold text-white uppercase font-heading tracking-wider flex items-center justify-between">
+                <span>Recently Finished Matches ({completedMatches.length})</span>
+                <span className="text-[9px] text-zinc-500 font-mono">VERIFIED API RESULTS</span>
+              </h4>
+              <div className="space-y-2">
+                {completedMatches.map((m, idx) => {
+                  const t1Name = m.team1Obj?.name || m.team1?.name || m.team1 || 'TBD';
+                  const t2Name = m.team2Obj?.name || m.team2?.name || m.team2 || 'TBD';
+                  const score1 = m.mapScoreT1 ?? m.score1 ?? m.team1?.score ?? 0;
+                  const score2 = m.mapScoreT2 ?? m.score2 ?? m.team2?.score ?? 0;
+                  const winnerName = m.winner === 'team1' || score1 > score2 ? t1Name : m.winner === 'team2' || score2 > score1 ? t2Name : null;
+
+                  return (
+                    <a
+                      key={m.id || idx}
+                      href={`#match-${m.id}`}
+                      className="bg-black/40 hover:bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between text-xs transition cursor-pointer group"
+                    >
+                      <span className="text-zinc-400 font-bold uppercase group-hover:text-amber-400 transition-colors">Match #{m.id}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${winnerName === t1Name ? 'text-amber-400 font-extrabold' : 'text-zinc-300'}`}>{t1Name}</span>
+                        <span className="bg-zinc-900 border border-white/10 px-2 py-0.5 rounded text-[11px] font-bold text-white">
+                          {score1} - {score2}
+                        </span>
+                        <span className={`font-bold ${winnerName === t2Name ? 'text-amber-400 font-extrabold' : 'text-zinc-300'}`}>{t2Name}</span>
+                      </div>
+                      <span className="text-emerald-400 text-[10px] font-bold bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">FINISHED</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -228,13 +322,21 @@ export const OpsCenterTab = ({
                 Upcoming Bracket Matches ({upcomingMatches.length})
               </h4>
               <div className="space-y-2">
-                {upcomingMatches.map((m, idx) => (
-                  <div key={m.id || idx} className="bg-black/40 border border-white/5 p-3 rounded-xl flex items-center justify-between text-xs">
-                    <span className="text-zinc-400 font-bold uppercase">{m.matchStage || `Match #${m.id}`}</span>
-                    <span className="text-white font-bold">{m.team1?.name || 'TBD'} vs {m.team2?.name || 'TBD'}</span>
-                    <span className="text-indigo-400 text-[10px] font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">SCHEDULED</span>
-                  </div>
-                ))}
+                {upcomingMatches.map((m, idx) => {
+                  const t1Name = m.team1Obj?.name || m.team1?.name || m.team1 || 'TBD';
+                  const t2Name = m.team2Obj?.name || m.team2?.name || m.team2 || 'TBD';
+                  return (
+                    <a
+                      key={m.id || idx}
+                      href={`#match-${m.id}`}
+                      className="bg-black/40 hover:bg-white/5 border border-white/5 p-3 rounded-xl flex items-center justify-between text-xs transition cursor-pointer group"
+                    >
+                      <span className="text-zinc-400 font-bold uppercase group-hover:text-neon-cyan transition-colors">Match #{m.id}</span>
+                      <span className="text-white font-bold">{t1Name} vs {t2Name}</span>
+                      <span className="text-indigo-400 text-[10px] font-bold bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/30">SCHEDULED</span>
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}

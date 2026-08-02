@@ -16,6 +16,7 @@ import { TrackerTab } from '../components/registration/TrackerTab';
 import { TrackTab } from '../components/registration/TrackTab';
 import { RulebookTab } from '../components/registration/RulebookTab';
 import { OpsCenterTab } from '../components/registration/OpsCenterTab';
+import { LeaderboardTab } from '../components/registration/LeaderboardTab';
 import { getTournamentBySlug } from '../config/tournaments';
 import { useAudio } from '../hooks/useAudio';
 import { fetchTournamentBracket, fetchTournamentSlots, fetchTournamentTeams } from '../services/sheets';
@@ -32,8 +33,19 @@ export const Register = () => {
   const [prevVersion, setPrevVersion] = useState(null);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedDiscordMatch, setSelectedDiscordMatch] = useState(null);
-  const [selectedMatchId, setSelectedMatchId] = useState(null);
+  const [selectedMatchId, setSelectedMatchId] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    const matchMatch = hash.match(/^match[-/](\d+)/i);
+    return matchMatch ? matchMatch[1] : null;
+  });
+
   const [activeTab, setActiveTab] = useState(() => {
+    const hash = window.location.hash.replace('#', '');
+    if (hash.match(/^match[-/]\d+/i)) return 'match-center';
+    const mainTab = hash.split('/')[0];
+    if (['ops', 'leaderboard', 'register', 'tracker', 'teams', 'rules', 'brackets', 'match-center', 'results', 'track'].includes(mainTab)) {
+      return mainTab === 'tracker' ? 'teams' : mainTab;
+    }
     if (tournament?.status === 'ARCHIVED' && tournament?.tournamentComplete) return 'results';
     if (tournament?.status === 'ARCHIVED' && tournament?.bracketsEnabled) return 'brackets';
     if (tournament?.status === 'ARCHIVED') return 'teams';
@@ -41,8 +53,19 @@ export const Register = () => {
   });
 
   useEffect(() => {
-    Terminal.log('UI', 'Register Layout Rendered', { activeTab });
-  }, [activeTab]);
+    // Only update hash if current hash doesn't already start with active tab or match ID to prevent blowing away sub-paths like /maps or /scoreboard
+    const currentHash = window.location.hash.replace('#', '');
+    if (selectedMatchId) {
+      if (!currentHash.startsWith(`match-${selectedMatchId}`)) {
+        window.location.hash = `match-${selectedMatchId}`;
+      }
+    } else if (activeTab) {
+      if (!currentHash.startsWith(activeTab)) {
+        window.location.hash = activeTab;
+      }
+    }
+    Terminal.log('UI', 'Register Layout Rendered', { activeTab, selectedMatchId });
+  }, [activeTab, selectedMatchId]);
 
   const [slots, setSlots] = useState(null);
   const [teams, setTeams] = useState(null);
@@ -75,8 +98,26 @@ export const Register = () => {
     const handleSwitchTab = (e) => {
       setActiveTab(e.detail);
     };
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace('#', '');
+      const matchMatch = hash.match(/^match[-/](\d+)/i);
+      if (matchMatch) {
+        setActiveTab('match-center');
+        setSelectedMatchId(matchMatch[1]);
+      } else {
+        const mainTab = hash.split('/')[0];
+        if (['ops', 'leaderboard', 'register', 'tracker', 'teams', 'rules', 'brackets', 'match-center', 'results', 'track'].includes(mainTab)) {
+          setActiveTab(mainTab === 'tracker' ? 'teams' : mainTab);
+          setSelectedMatchId(null);
+        }
+      }
+    };
     window.addEventListener('pp-switch-tab', handleSwitchTab);
-    return () => window.removeEventListener('pp-switch-tab', handleSwitchTab);
+    window.addEventListener('hashchange', handleHashChange);
+    return () => {
+      window.removeEventListener('pp-switch-tab', handleSwitchTab);
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const handleMapImgError = useCallback((mapName) => {
@@ -149,14 +190,16 @@ export const Register = () => {
         if (!active) return;
         Terminal.error('SYNC', 'Failed to retrieve live data from uplink.', err);
         setSlots('error');
-        setTeams('error');
-        setBracketData('error');
+        setTeams([]);
+        setBracketData(null);
         failCount++;
       }
     };
 
     loadData();
-    const interval = setInterval(loadData, 60000); // Check every 60 seconds
+    const hasLiveMatch = bracketData?.matches?.some(m => m.status === 'LIVE' || m.status === 'in_progress');
+    const intervalMs = hasLiveMatch ? 1000 : 10000;
+    const interval = setInterval(loadData, intervalMs); // 1-sec sync when match is live, 10s otherwise
 
     return () => {
       active = false;
@@ -572,6 +615,19 @@ export const Register = () => {
                   <span>OPS CENTER</span>
                   <span className="bg-neon-pink text-white text-[8px] px-1.5 py-0.5 rounded font-mono font-bold animate-pulse">LIVE</span>
                 </button>
+
+                <button
+                  onMouseEnter={playHover}
+                  onClick={() => { playClick(); setActiveTab('leaderboard'); }}
+                  className={`px-3 py-2 rounded transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    activeTab === 'leaderboard' 
+                      ? 'bg-amber-500/20 border border-amber-500/50 text-amber-400 font-bold shadow-[0_0_12px_rgba(245,158,11,0.3)]' 
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span>Leaderboard</span>
+                  <span className="bg-amber-500/20 text-amber-400 border border-amber-500/40 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold">HLTV 2.0</span>
+                </button>
                 {!isArchived && (
                   <button
                     disabled={!isRegistrationAccepting && !activeTeam}
@@ -651,7 +707,7 @@ export const Register = () => {
                   }`}
                 >
                   <span>Match Center</span>
-                  <span className="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold">STATS</span>
+                  <span className="bg-indigo-500/20 border border-indigo-500/40 text-indigo-400 text-[8px] px-1.5 py-0.5 rounded font-mono font-bold font-mono">STATS</span>
                 </button>
               </div>
             </div>
@@ -669,6 +725,10 @@ export const Register = () => {
                 onSelectTeam={setSelectedTeam}
                 onGenerateDiscordSheet={setSelectedDiscordMatch}
               />
+            )}
+
+            {activeTab === 'leaderboard' && (
+              <LeaderboardTab />
             )}
 
             {activeTab === 'register' && (
@@ -725,7 +785,10 @@ export const Register = () => {
 
             {activeTab === 'match-center' && (
               <div className="max-w-7xl mx-auto bg-[#080b18]/95 border border-white/10 p-6 rounded-2xl max-h-[85vh] overflow-y-auto custom-scrollbar shadow-[0_0_60px_rgba(0,0,0,0.9)] backdrop-blur-md animate-in fade-in duration-300">
-                <MatchCenterList onSelectMatch={(id) => setSelectedMatchId(id)} />
+                <MatchCenterList onSelectMatch={(id) => {
+                  setSelectedMatchId(id);
+                  window.location.hash = `match-${id}`;
+                }} />
               </div>
             )}
 

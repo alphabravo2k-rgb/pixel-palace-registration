@@ -57,8 +57,20 @@ export const TeamProfileModal = ({ team, onClose, onSelectPlayer }) => {
   const statusKey = team.status || 'VERIFIED';
   const statusCfg = STATUS_CONFIG[statusKey] || STATUS_CONFIG['VERIFIED'];
   const StatusIcon = statusCfg.icon || CheckCircle2;
+  
+  // Resolve roster array from registered roster, API players array, or squad players
+  const rawRoster = team.roster || team.players || team.team1_players || team.team2_players || [];
+  const activeRoster = rawRoster.map((p, idx) => ({
+    ign: p.ign || p.name || p.username || (typeof p === 'string' ? p : `Player ${idx + 1}`),
+    role: p.role || (idx === 0 ? 'Captain' : 'Player'),
+    faceitLevel: p.faceitLevel || p.level || p.skill_level || 10,
+    faceitElo: p.faceitElo || p.elo || p.faceit_elo || 2042,
+    steamId: p.steamId || p.steam_id || 'STEAM_0:1:76561198',
+  }));
 
-  const captainPlayer = team.roster?.find(p => (p.role || '').toLowerCase() === 'captain') || team.roster?.[0];
+  const captainPlayer = activeRoster.find(p => (p.role || '').toLowerCase().includes('captain')) || activeRoster[0];
+
+  const getTeamTag = (name) => name?.slice(0, 3).toUpperCase();
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200 font-mono">
@@ -72,10 +84,10 @@ export const TeamProfileModal = ({ team, onClose, onSelectPlayer }) => {
         <div className="flex items-center justify-between px-6 py-4 bg-[#0b0e22] border-b border-slate-800/80 shrink-0">
           <div className="flex items-center gap-3">
             <span className="text-xs font-mono font-bold bg-neon-cyan/15 border border-neon-cyan/30 text-neon-cyan px-2.5 py-1 rounded">
-              [{team.tag || 'TEAM'}]
+              [{team.tag || getTeamTag(team.name) || 'TEAM'}]
             </span>
             <h2 className="text-lg font-black text-white font-heading uppercase tracking-wider truncate">
-              {team.name}
+              {team.name || 'REGISTERED SQUAD'}
             </h2>
             <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${statusCfg.color}`}>
               <StatusIcon size={10} />
@@ -120,7 +132,7 @@ export const TeamProfileModal = ({ team, onClose, onSelectPlayer }) => {
                 </div>
                 <div>
                   <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Active Roster</span>
-                  <span className="text-base font-bold text-emerald-400">{team.roster?.length || 5} Players</span>
+                  <span className="text-base font-bold text-emerald-400">{activeRoster.length} Players</span>
                 </div>
                 <div>
                   <span className="text-[9px] text-slate-500 uppercase tracking-widest block font-bold">Region</span>
@@ -145,18 +157,18 @@ export const TeamProfileModal = ({ team, onClose, onSelectPlayer }) => {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h3 className="text-xs font-bold text-neon-cyan uppercase tracking-widest flex items-center gap-2 font-heading">
-                <Crosshair className="w-4 h-4 text-neon-cyan" /> REGISTERED SQUAD ROSTER ({team.roster?.length || 5})
+                <Crosshair className="w-4 h-4 text-neon-cyan" /> REGISTERED SQUAD ROSTER ({activeRoster.length})
               </h3>
               <span className="text-[10px] text-zinc-500">CLICK ANY PLAYER TO VIEW PROFILE</span>
             </div>
 
-            {!team.roster || team.roster.length === 0 ? (
+            {activeRoster.length === 0 ? (
               <div className="text-center py-8 text-slate-500 text-xs uppercase tracking-widest bg-slate-950 border border-dashed border-slate-800 rounded-xl">
                 Roster details pending verification.
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {team.roster.map((p, i) => (
+                {activeRoster.map((p, i) => (
                   <div
                     key={i}
                     onClick={() => onSelectPlayer && onSelectPlayer(p, team)}

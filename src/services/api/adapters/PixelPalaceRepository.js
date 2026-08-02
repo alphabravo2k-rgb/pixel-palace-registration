@@ -110,6 +110,8 @@ export class PixelPalaceRepository {
       }
     }
 
+    const localArchiveKey = `pp_archived_bracket_${this.bracketId}`;
+
     try {
       const res = await fetch(`${targetUrl}?t=${now}`);
       if (!res.ok) {
@@ -120,13 +122,27 @@ export class PixelPalaceRepository {
       // Normalize bracket payload
       const normalizedData = this._normalizeBracketPayload(rawData);
 
+      // Save persistent local snapshot of bracket data
+      try {
+        localStorage.setItem(localArchiveKey, JSON.stringify({
+          updatedAt: new Date().toISOString(),
+          data: normalizedData
+        }));
+      } catch (e) {
+        console.warn("[PixelPalaceRepository] Local storage archive warning:", e.message);
+      }
+
       // Cache normalized result
       this._cache.set(cacheKey, { timestamp: now, data: normalizedData });
 
       return normalizedData;
     } catch (err) {
-      console.error("[PixelPalaceRepository] Error fetching bracket data:", err);
-      // Return cached fallback if available during network degradation
+      console.error("[PixelPalaceRepository] Network or master API unavailable. Checking local persistent archive...", err);
+      const archived = localStorage.getItem(localArchiveKey);
+      if (archived) {
+        console.log("[PixelPalaceRepository] Successfully retrieved bracket payload from local persistent archive.");
+        return JSON.parse(archived).data;
+      }
       if (this._cache.has(cacheKey)) {
         return this._cache.get(cacheKey).data;
       }
@@ -217,7 +233,9 @@ export class PixelPalaceRepository {
         winner,
         score: m.score || (m.winner_id ? (m.winner_id === m.team1_id ? '1-0' : '0-1') : '0-0'),
         scheduleInfo,
-        scheduledDate: scheduleInfo.iso,
+        // Timestamps
+        started_at: m.started_at || m.startedAt || m.match_started_at || null,
+        finished_at: m.finished_at || m.finishedAt || m.match_finished_at || null,
         // Live match intelligence from inline LOT data
         hasLotData,
         liveMap,
