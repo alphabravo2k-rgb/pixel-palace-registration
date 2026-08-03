@@ -89,13 +89,52 @@ export const RulebookTab = ({ tournament }) => {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl space-y-2">
-              <span className="text-yellow-400 font-bold uppercase font-mono text-[11px] block">🔒 GOTV & Local POV Demos</span>
-              <p className="text-zinc-400 text-[11px]">Server CSTV auto-records 128-tick GOTV demos. Players are also recommended to record local POV demos via <code className="text-zinc-200 bg-zinc-900 px-1.5 py-0.5 rounded">record demo_name</code> in console.</p>
+              <span className="text-yellow-400 font-bold uppercase font-mono text-[11px] block">🔒 CSTV / GOTV Server Demos</span>
+              <p className="text-zinc-400 text-[11px]">Server CSTV auto-records official 128-tick GOTV demos for every match, accessible directly on the Match Center post-match. Local POV console recording (<code className="text-zinc-200 bg-zinc-900 px-1.5 py-0.5 rounded">record</code>) is restricted in CS2 without <code className="text-zinc-200 bg-zinc-900 px-1.5 py-0.5 rounded">sv_cheats 1</code>, making server-side CSTV demos the official authoritative source for all anti-cheat evaluations.</p>
             </div>
 
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl space-y-2">
               <span className="text-red-400 font-bold uppercase font-mono text-[11px] block">🚫 Unfair Advantage & Exploit Bans</span>
               <p className="text-zinc-400 text-[11px]">Use of illegal pixel walks, script binds (excluding jumpthrow), external overlays, or smurfing will result in immediate team disqualification and 12-month platform ban.</p>
+            </div>
+          </div>
+
+          {/* CS2 Demo Playback & Voice Chat Guide */}
+          <div className="bg-purple-950/20 border border-purple-500/30 p-4 rounded-xl space-y-3 font-mono text-xs">
+            <div className="flex items-center gap-2 text-purple-300 font-bold uppercase text-[11px]">
+              <span>📖 CS2 DEMO PLAYBACK, VOICE CHAT & DISPUTE GUIDE</span>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-[11px]">
+              <div className="bg-black/60 p-3 rounded-lg border border-purple-500/20 space-y-1">
+                <span className="text-purple-400 font-bold block">1. EXTRACT DEMO FILE</span>
+                <p className="text-zinc-400 text-[10px]">Download & extract the compressed <code className="text-purple-200 font-bold">.dem</code> file to your CS2 installation directory:</p>
+                <div className="bg-zinc-900 text-zinc-300 p-1.5 rounded text-[9px] break-all border border-white/5 font-mono">
+                  ...\common\Counter-Strike Global Offensive\game\csgo\
+                </div>
+              </div>
+
+              <div className="bg-black/60 p-3 rounded-lg border border-purple-500/20 space-y-1">
+                <span className="text-purple-400 font-bold block">2. LAUNCH & PLAY</span>
+                <p className="text-zinc-400 text-[10px]">Open CS2 developer console (<code className="text-purple-200">~</code> key) and run:</p>
+                <div className="bg-zinc-900 text-purple-300 p-1.5 rounded text-[10px] font-mono font-bold border border-white/5">
+                  playdemo match_demo
+                </div>
+              </div>
+
+              <div className="bg-black/60 p-3 rounded-lg border border-purple-500/20 space-y-1">
+                <span className="text-purple-400 font-bold block">3. ENABLE VOICE & CHAT</span>
+                <p className="text-zinc-400 text-[10px]">Run these console commands to hear player voice comms & text chat:</p>
+                <div className="bg-zinc-900 text-emerald-400 p-1.5 rounded text-[9px] font-mono leading-tight border border-white/5">
+                  tv_listen_voice_indices_h -1<br/>
+                  tv_listen_voice_indices -1<br/>
+                  tv_relaytextchat 2
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-zinc-400 bg-black/40 p-2.5 rounded-lg border border-white/5 flex items-center justify-between gap-2">
+              <span>📹 <strong>Anti-Cheat Disputes:</strong> Capture clips using OBS or ShadowPlay, upload to YouTube / Streamable, and share video links with admins.</span>
             </div>
           </div>
         </div>
