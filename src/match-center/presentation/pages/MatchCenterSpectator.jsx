@@ -363,6 +363,7 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
   const [isStreamOpen, setIsStreamOpen] = useState(false);
   const [isCheckInOpen, setIsCheckInOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isDemoHelpOpen, setIsDemoHelpOpen] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // ── Data fetcher (used for initial load + polling) ─────────────────────────
@@ -631,15 +632,12 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
             {copiedLink ? '✓ COPIED!' : '📋 COPY LINK'}
           </button>
           {match?.demoLinks && match.demoLinks.length > 0 && (
-            <a
-              href={match.demoLinks[0].downloadUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[11px] font-mono font-bold px-3 py-1.5 rounded transition-all flex items-center gap-1.5 cursor-pointer hover:bg-purple-500/30 bg-purple-500/20 border border-purple-500/40 text-purple-300 shadow-[0_0_10px_rgba(168,85,247,0.2)]"
-              title={`Download GOTV Demo (${match.demoLinks[0].filename})`}
+            <button
+              onClick={() => setIsDemoHelpOpen(true)}
+              className="text-[11px] font-mono font-bold px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-300 shadow-[0_0_12px_rgba(168,85,247,0.2)]"
             >
-              📥 DEMO REPLAY
-            </a>
+              📥 {match.demoLinks.length > 1 ? `DEMOS (${match.demoLinks.length}) & GUIDE` : 'MATCH DEMO & GUIDE'}
+            </button>
           )}
           <button
             onClick={() => setIsStreamOpen(true)}
@@ -908,14 +906,12 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
                   📅 <span>Google Calendar Sync</span>
                 </a>
                 {match?.demoLinks && match.demoLinks.length > 0 ? (
-                  <a
-                    href={match.demoLinks[0].downloadUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/50 text-xs font-bold px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
+                  <button
+                    onClick={() => setIsDemoHelpOpen(true)}
+                    className="bg-purple-600/30 hover:bg-purple-600/50 text-purple-200 border border-purple-500/50 text-xs font-bold px-4 py-1.5 rounded-lg transition flex items-center gap-2 shadow-[0_0_12px_rgba(168,85,247,0.3)]"
                   >
-                    📥 <span>Download GOTV Demo (.dem)</span>
-                  </a>
+                    📥 <span>{match.demoLinks.length > 1 ? `DOWNLOAD MAP DEMOS (${match.demoLinks.length}) & GUIDE` : `DOWNLOAD GOTV DEMO & GUIDE`}</span>
+                  </button>
                 ) : (
                   <div className="bg-slate-900 text-slate-400 border border-slate-800 text-[10px] font-bold px-3 py-1.5 rounded-lg flex items-center gap-1">
                     🔒 <span>GOTV Demos Protected / Processing</span>
@@ -1292,6 +1288,119 @@ export function MatchCenterSpectator({ matchIdProp, onClose }) {
           match={match}
           onClose={() => setIsShareModalOpen(false)}
         />
+      )}
+
+      {/* ── CS2 Demo Playback & Voice Chat Guide Modal ── */}
+      {isDemoHelpOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200 font-mono">
+          <div className="bg-[#0b0f19] border border-purple-500/40 rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-[0_0_40px_rgba(168,85,247,0.25)] relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xl">📥</span>
+                <div>
+                  <h3 className="text-sm font-bold text-white uppercase tracking-wider">Official Match Demos & Playback Guide</h3>
+                  <span className="text-[10px] text-purple-400 font-mono">128-Tick CSTV Server Recording · FACEIT Standard Protocol</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsDemoHelpOpen(false)}
+                className="text-zinc-400 hover:text-white text-lg font-bold px-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Map Demo Downloads Cards */}
+            {match?.demoLinks && match.demoLinks.length > 0 && (
+              <div className="bg-purple-950/30 border border-purple-500/40 p-4 rounded-xl space-y-3">
+                <span className="text-purple-300 font-bold text-xs uppercase tracking-wider block">
+                  🎮 MAP DEMO DOWNLOADS ({match.demoLinks.length} MAP{match.demoLinks.length > 1 ? 'S' : ''})
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {match.demoLinks.map((demo, idx) => {
+                    const rawMap = match?.mapsStats?.[idx]?.mapName || match?.mapsStats?.[idx]?.map || match?.mapList?.[idx];
+                    const cleanMapName = rawMap && !rawMap.toLowerCase().includes('map') ? rawMap : null;
+                    const displayTitle = cleanMapName ? `Map ${idx + 1}: ${cleanMapName}` : `Map ${idx + 1}`;
+
+                    return (
+                      <a
+                        key={demo.filename || idx}
+                        href={demo.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="bg-black/60 hover:bg-purple-600/30 border border-purple-500/30 hover:border-purple-400 p-3 rounded-lg flex flex-col items-center justify-center text-center group transition shadow-sm"
+                      >
+                        <span className="text-white font-bold text-xs font-heading group-hover:text-purple-300 transition">
+                          {displayTitle}
+                        </span>
+                        <span className="text-[9px] text-purple-400 font-mono mt-1 flex items-center gap-1">
+                          📥 Download .dem
+                        </span>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Playback & Console Guide */}
+            <div className="space-y-3 text-xs">
+              <div className="bg-black/50 border border-white/10 p-3 rounded-xl space-y-1">
+                <span className="text-purple-400 font-bold text-[11px] block">1. Extract Demo File</span>
+                <p className="text-zinc-400 text-[10px]">
+                  Download the compressed <code className="text-purple-300 font-bold">.dem</code> file using the buttons above. Extract using WinRAR or 7-Zip to your CS2 directory:
+                </p>
+                <div className="bg-zinc-950 p-2 rounded text-[9px] text-zinc-300 break-all border border-white/5 font-mono">
+                  ...\Steam\steamapps\common\Counter-Strike Global Offensive\game\csgo\
+                </div>
+              </div>
+
+              <div className="bg-black/50 border border-white/10 p-3 rounded-xl space-y-1">
+                <span className="text-purple-400 font-bold text-[11px] block">2. Launch CS2 & Execute Play Command</span>
+                <p className="text-zinc-400 text-[10px]">
+                  Rename file to something easy (e.g. <code className="text-purple-300">match1.dem</code>). Open console in CS2 (<code className="text-purple-300">~</code> key) and type:
+                </p>
+                <div className="bg-zinc-950 p-2 rounded text-[11px] text-purple-300 font-bold border border-white/5 font-mono">
+                  playdemo match1
+                </div>
+              </div>
+
+              <div className="bg-black/50 border border-white/10 p-3 rounded-xl space-y-1.5">
+                <span className="text-emerald-400 font-bold text-[11px] block">3. Enable Voice Chat Comms & Text Logs</span>
+                <p className="text-zinc-400 text-[10px]">
+                  Copy and paste these console commands in CS2 to hear full team voice audio and chat:
+                </p>
+                <div className="bg-zinc-950 p-2.5 rounded text-[10px] text-emerald-400 font-mono space-y-1 border border-white/5">
+                  <div className="flex items-center justify-between">
+                    <span>tv_listen_voice_indices_h -1</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>tv_listen_voice_indices -1</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>tv_relaytextchat 2</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-black/50 border border-white/10 p-3 rounded-xl space-y-1">
+                <span className="text-amber-400 font-bold text-[11px] block">📹 Anti-Cheat Dispute Evidence</span>
+                <p className="text-zinc-400 text-[10px]">
+                  Capture video clips via OBS Studio / ShadowPlay or screenshots (F12). Upload to YouTube, Twitch, or Streamable and submit link in your ticket.
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2 text-right">
+              <button
+                onClick={() => setIsDemoHelpOpen(false)}
+                className="bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/50 text-purple-200 font-bold text-xs px-5 py-2 rounded-xl transition"
+              >
+                GOT IT, CLOSE
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

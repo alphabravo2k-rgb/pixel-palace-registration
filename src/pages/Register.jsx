@@ -600,6 +600,66 @@ export const Register = () => {
               </a>
             </div>
 
+            {/* ── Live Match Ticker Marquee ── */}
+            {bracketData?.matches && bracketData.matches.length > 0 && (() => {
+              const tickerMatches = bracketData.matches.filter(m =>
+                m.status === 'LIVE' || m.status === 'IN_PROGRESS' || m.status === 'COMPLETED'
+              );
+              if (tickerMatches.length === 0) return null;
+              const items = [...tickerMatches, ...tickerMatches]; // Duplicate for seamless loop
+              return (
+                <div className="w-full max-w-5xl mt-5 overflow-hidden bg-black/60 border border-white/10 rounded-xl py-2 font-mono text-[11px] relative">
+                  <div
+                    className="flex gap-8 whitespace-nowrap animate-ticker"
+                    style={{
+                      display: 'flex',
+                      gap: '3rem',
+                      whiteSpace: 'nowrap',
+                      animation: 'ticker-scroll 28s linear infinite',
+                    }}
+                  >
+                    {items.map((m, i) => {
+                      const isLive = m.status === 'LIVE' || m.status === 'IN_PROGRESS';
+                      const isDone = m.status === 'COMPLETED';
+                      const t1 = m.team1_name || m.team1 || 'TBD';
+                      const t2 = m.team2_name || m.team2 || 'TBD';
+                      const s1 = m.map_wins_team1 ?? m.scoreA ?? null;
+                      const s2 = m.map_wins_team2 ?? m.scoreB ?? null;
+                      return (
+                        <span key={`${m.id}-${i}`} className="inline-flex items-center gap-2 px-2 shrink-0">
+                          {isLive && (
+                            <span className="inline-flex items-center gap-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase animate-pulse">
+                              <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" /> LIVE
+                            </span>
+                          )}
+                          {isDone && (
+                            <span className="inline-flex items-center gap-1 bg-slate-800 border border-slate-700 text-slate-400 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase">
+                              FT
+                            </span>
+                          )}
+                          <span className="text-white font-bold uppercase tracking-wide">{t1}</span>
+                          {s1 !== null && s2 !== null ? (
+                            <span className="text-amber-400 font-black tracking-widest">{s1} – {s2}</span>
+                          ) : (
+                            <span className="text-zinc-500">vs</span>
+                          )}
+                          <span className="text-white font-bold uppercase tracking-wide">{t2}</span>
+                          <span className="text-zinc-600">|</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  {/* CSS Keyframe injected inline */}
+                  <style>{`
+                    @keyframes ticker-scroll {
+                      0%   { transform: translateX(0); }
+                      100% { transform: translateX(-50%); }
+                    }
+                  `}</style>
+                </div>
+              );
+            })()}
+
             {/* Single-Row Horizontal Tab Navigation */}
             <div className="w-full max-w-5xl mt-8 sticky top-4 z-40 bg-[#050507]/95 backdrop-blur-md px-2 py-1.5 rounded-xl border border-white/10 shadow-[0_8px_25px_rgba(0,0,0,0.8)]">
               <div className="flex items-center justify-around font-heading text-xs sm:text-sm uppercase tracking-wider overflow-x-auto no-scrollbar gap-1">
