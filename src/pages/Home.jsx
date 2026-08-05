@@ -35,12 +35,22 @@ export const Home = () => {
 
   const categories = ["ALL", "CS2 5V5", "CS2 1V1", "WINGMAN", "FC26", "ROCKET LEAGUE"];
 
+  // Maps Quick Mode pill labels → actual gameMode values in tournaments.js
+  const CATEGORY_GAME_MODE_MAP = {
+    "CS2 5V5":      ["CS2 Competitive"],
+    "CS2 1V1":      ["CS2 1v1"],
+    "WINGMAN":      ["CS2 Wingman", "Flying Scoutzman"],
+    "FC26":         ["FC26"],
+    "ROCKET LEAGUE":["Rocket League"],
+    "8 BALL POOL":  ["8 Ball Pool"],
+  };
+
   // Extract live, upcoming, and archived tournaments from tournaments config
   const liveTournaments = useMemo(() => tournaments.filter(t => t.status === "LIVE"), []);
   const upcomingTournaments = useMemo(() => tournaments.filter(t => t.status === "UPCOMING"), []);
   const archivedTournaments = useMemo(() => tournaments.filter(t => t.status === "ARCHIVED"), []);
 
-  const primaryLive = liveTournaments[0] || tournaments[0];
+  const primaryLive = liveTournaments[0] ?? null;
 
   // Auto-updating real-time live countdown timer (1-second precision)
   const [countdownText, setCountdownText] = useState("");
@@ -115,9 +125,9 @@ export const Home = () => {
     }
 
     if (selectedCategory !== "ALL") {
-      list = list.filter(t => 
-        t.gameMode?.toUpperCase().includes(selectedCategory.replace("CS2 ", "")) || 
-        t.name.toUpperCase().includes(selectedCategory)
+      const matchModes = CATEGORY_GAME_MODE_MAP[selectedCategory] || [];
+      list = list.filter(t =>
+        matchModes.some(mode => t.gameMode?.toLowerCase() === mode.toLowerCase())
       );
     }
 
@@ -315,7 +325,7 @@ export const Home = () => {
       </div>
 
       {/* 🔴 WIDE SPOTLIGHT BANNER ON THE LIVE TAB */}
-      {activeTab === 'LIVE' && primaryLive ? (
+      {activeTab === 'LIVE' && primaryLive && primaryLive.status === 'LIVE' ? (
         <div className="w-full glass-panel p-6 rounded-2xl border border-neon-pink/50 bg-gradient-to-r from-[#140824] via-black to-[#051826] shadow-[0_0_40px_rgba(255,0,127,0.25)] relative overflow-hidden">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
             

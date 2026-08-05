@@ -84,7 +84,7 @@ export function LeaderboardTab() {
           <h2 className="text-2xl font-bold font-heading text-white uppercase tracking-wider">
             {leaderboardData?.season?.name || 'PixelPalace Community Cup 2'}
           </h2>
-          <p className="text-xs text-zinc-400 mt-1">
+          <p className="text-sm text-zinc-400 mt-1">
             Ranked player performance matrix across {leaderboardData?.match_count || 27} official bracket matches. Powered by FLUX Impact Rating & HLTV 2.0.
           </p>
         </div>
@@ -168,7 +168,7 @@ export function LeaderboardTab() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search player, team or Steam ID..."
-            className="w-full bg-zinc-900 border border-white/10 text-white text-xs pl-9 pr-3 py-2 rounded-xl focus:border-amber-400 focus:outline-none transition-colors"
+            className="w-full bg-zinc-900 border border-white/10 text-white text-sm pl-9 pr-3 py-2 rounded-xl focus:border-amber-400 focus:outline-none transition-colors"
           />
         </div>
 
@@ -206,7 +206,7 @@ export function LeaderboardTab() {
           </div>
         ) : (
           <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse text-xs">
+            <table className="w-full text-left border-collapse text-sm">
               <thead>
                 <tr className="border-b border-white/10 bg-zinc-900/80 text-[10px] text-zinc-400 uppercase tracking-widest font-bold">
                   <th className="py-3 px-4 text-center">#</th>
@@ -238,7 +238,7 @@ export function LeaderboardTab() {
                         {rank === 1 ? '🥇 1' : rank === 2 ? '🥈 2' : rank === 3 ? '🥉 3' : rank}
                       </td>
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-white text-sm flex items-center gap-1.5">
+                        <div className="font-bold text-white text-base flex items-center gap-1.5">
                           <span>{p.name}</span>
                           {p.multikill_5k > 0 && (
                             <span className="text-[9px] bg-red-500/20 border border-red-500/40 text-red-400 font-mono px-1 py-0.2 rounded" title={`${p.multikill_5k} ACE (5K)`}>

@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Map, Sparkles, Trophy, ShieldCheck, ExternalLink } from 'lucide-react';
 
 export default function MapPoolSection() {
+  // Pick rates based on actual CC2 (Community Cup 2) bracket data — 40 maps played across 31 matches.
+  // Counts: Mirage 13 | Dust2 9 | Nuke 6 | Anubis 6 | Ancient 5 | Inferno 1 | Cache 0 | Train 0
   const maps = [
-    { name: "MIRAGE", type: "Active Duty", pickRate: "94%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png" },
-    { name: "INFERNO", type: "Active Duty", pickRate: "88%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png" },
-    { name: "NUKE", type: "Active Duty", pickRate: "82%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png" },
-    { name: "ANUBIS", type: "Active Duty", pickRate: "79%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png" },
-    { name: "ANCIENT", type: "Active Duty", pickRate: "75%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png" },
-    { name: "DUST2", type: "Active Duty", pickRate: "91%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png" },
-    { name: "CACHE", type: "Community Reserve", pickRate: "85%", img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_cache.png" }
+    { name: "MIRAGE",  type: "Active Duty", pickRate: "42%", picks: 13, img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png" },
+    { name: "DUST2",   type: "Active Duty", pickRate: "29%", picks: 9,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png" },
+    { name: "NUKE",    type: "Active Duty", pickRate: "19%", picks: 6,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_nuke.png" },
+    { name: "ANUBIS",  type: "Active Duty", pickRate: "19%", picks: 6,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png" },
+    { name: "ANCIENT", type: "Active Duty", pickRate: "16%", picks: 5,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png" },
+    { name: "INFERNO", type: "Active Duty", pickRate: "3%",  picks: 1,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png" },
+    { name: "CACHE",   type: "Community Reserve", pickRate: "0%",  picks: 0,  img: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_cache.png" },
   ];
 
   const [activeMap, setActiveMap] = useState(maps[0]);
@@ -29,7 +31,7 @@ export default function MapPoolSection() {
               </span>
             </h3>
             <p className="text-xs text-zinc-400">
-              Active Veto Pool for Pixel Palace 5v5 & 1v1 Tournament Circuits
+              CC2 Pick Rates — 40 maps played across 31 matches · Active Duty Pool
             </p>
           </div>
         </div>
@@ -66,7 +68,7 @@ export default function MapPoolSection() {
                   {m.name}
                 </span>
                 <span className="text-[9px] text-neon-cyan font-bold block mt-1">
-                  {m.pickRate} PICK
+                  {m.pickRate} PICK{m.picks > 0 ? ` · ${m.picks}x` : ''}
                 </span>
               </div>
             </div>

@@ -3,7 +3,7 @@ export const tournaments = [
     id: "community-cup-2",
     name: "Pixel Palace Community Cup 2 (2026)",
     slug: "community-cup-2",
-    status: "LIVE",
+    status: "ARCHIVED",
     format: "5v5",
     gameMode: "CS2 Competitive",
     tournamentStructure: "Swiss",
@@ -48,9 +48,19 @@ export const tournaments = [
     sessionManagementEnabled: true,
 
     // Results
-    tournamentComplete: false,
-    champion: { name: "", tag: "", logo: "" },
-    runnerUp: { name: "", tag: "", logo: "" },
+    tournamentComplete: true,
+    champion: {
+      name: "NoSpirit",
+      tag: "NSP",
+      logo: "",
+      score: "2-0",
+      players: ["sryy", "0SAMAS", "Vyke", "sprantos", "t1ltedninja"],
+      matchHistory: [
+        { map: "Mirage", score: "9-13", win: true },   // NoSpirit won 13-9
+        { map: "Dust2",  score: "16-13", win: true }   // NoSpirit won 16-13 OT
+      ]
+    },
+    runnerUp: { name: "JPB", tag: "JPB", logo: "" },
 
     scheduleUtc: [
       "2026-07-31T20:00:00+05:00",
@@ -78,7 +88,7 @@ export const tournaments = [
     displayYear: "2026",
     tournamentDate: "2026-04-24T21:00:00+05:00",
     registrationDeadline: "2026-04-18T23:59:00+05:00",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_overpass.png",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_inferno.png",
     antiCheat: "Akros",
     playersPerTeam: 2,
     substitutes: { min: 0, max: 1 },
@@ -168,7 +178,7 @@ export const tournaments = [
     maxTeams: 32,
     region: "PAK / IND",
     tournamentDate: "2026-02-14T18:00:00Z",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_mirage.png",
+    thumbnail: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&q=80",
     playersPerTeam: 1
   },
   {
@@ -210,7 +220,7 @@ export const tournaments = [
     maxTeams: 16,
     region: "PAK / IND",
     tournamentDate: "2026-01-23T18:00:00Z",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png",
+    thumbnail: "https://images.unsplash.com/photo-1552820728-8b83bb6b773f?w=600&q=80",
     playersPerTeam: 2
   },
   {
@@ -224,7 +234,7 @@ export const tournaments = [
     maxTeams: 32,
     region: "PAK / IND",
     tournamentDate: "2026-01-18T18:00:00Z",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_anubis.png",
+    thumbnail: "https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=600&q=80",
     playersPerTeam: 1
   },
   {
@@ -272,7 +282,7 @@ export const tournaments = [
     maxTeams: 16,
     region: "PAK / IND",
     tournamentDate: "2026-01-02T18:00:00Z",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_dust2.png",
+    thumbnail: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f2/Billiards_balls.jpg/800px-Billiards_balls.jpg",
     playersPerTeam: 1,
     scheduleUtc: [
       "2026-01-02T18:00:00Z"
@@ -317,7 +327,7 @@ export const tournaments = [
     maxTeams: 32,
     region: "PAK / IND",
     tournamentDate: "2025-12-14T18:00:00Z",
-    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_aim_map.png",
+    thumbnail: "https://raw.githubusercontent.com/rpkaul/cs-map-images/main/de_ancient.png",
     playersPerTeam: 1
   },
   {

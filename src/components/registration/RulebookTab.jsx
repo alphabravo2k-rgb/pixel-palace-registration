@@ -28,7 +28,7 @@ export const RulebookTab = ({ tournament }) => {
       badge: 'CS2 ACTIVE DUTY',
       content: (
         <div className="space-y-6">
-          <p className="text-zinc-300 text-xs leading-relaxed">
+          <p className="text-zinc-300 text-sm leading-relaxed">
             All matches are contested strictly on the official Valve CS2 Active Duty Competitive Map Pool. Captains conduct map pick/ban sequences live 30 minutes prior to match start.
           </p>
 
@@ -43,8 +43,8 @@ export const RulebookTab = ({ tournament }) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl text-left">
-              <h4 className="text-xs font-bold text-neon-cyan uppercase font-mono mb-2">Best-of-1 (BO1) Veto Sequence</h4>
-              <ol className="text-[11px] space-y-1.5 text-zinc-300 font-mono list-decimal list-inside">
+              <h4 className="text-sm font-bold text-neon-cyan uppercase font-mono mb-2">Best-of-1 (BO1) Veto Sequence</h4>
+              <ol className="text-xs space-y-1.5 text-zinc-300 font-mono list-decimal list-inside">
                 <li>Higher Seed decides Team A / Team B</li>
                 <li>Team A bans 1 map</li>
                 <li>Team B bans 1 map</li>
@@ -57,8 +57,8 @@ export const RulebookTab = ({ tournament }) => {
             </div>
 
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl text-left">
-              <h4 className="text-xs font-bold text-neon-pink uppercase font-mono mb-2">Best-of-3 (BO3) Veto Sequence</h4>
-              <ol className="text-[11px] space-y-1.5 text-zinc-300 font-mono list-decimal list-inside">
+              <h4 className="text-sm font-bold text-neon-pink uppercase font-mono mb-2">Best-of-3 (BO3) Veto Sequence</h4>
+              <ol className="text-xs space-y-1.5 text-zinc-300 font-mono list-decimal list-inside">
                 <li>Team A bans 1 map</li>
                 <li>Team B bans 1 map</li>
                 <li><strong className="text-white">Team A picks Map 1</strong> (Team B chooses side)</li>
@@ -81,7 +81,7 @@ export const RulebookTab = ({ tournament }) => {
         <div className="space-y-4">
           <div className="bg-green-950/20 border border-green-500/30 p-4 rounded-xl flex items-start gap-3">
             <ShieldCheck className="w-6 h-6 text-green-400 shrink-0 mt-0.5" />
-            <div className="text-xs text-zinc-300 leading-relaxed">
+            <div className="text-sm text-zinc-300 leading-relaxed">
               <strong className="text-white uppercase font-bold block mb-1">Akros Anti-Cheat Mandatory Protocol</strong>
               All 5 registered players on a team MUST execute and authenticate the official Akros Anti-Cheat client before joining tournament servers. Players joining without active client logging will be automatically kicked by server hooks.
             </div>
@@ -90,12 +90,12 @@ export const RulebookTab = ({ tournament }) => {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl space-y-2">
               <span className="text-yellow-400 font-bold uppercase font-mono text-[11px] block">🔒 GOTV & Local POV Demos</span>
-              <p className="text-zinc-400 text-[11px]">Server CSTV auto-records 128-tick GOTV demos. Players are also recommended to record local POV demos via <code className="text-zinc-200 bg-zinc-900 px-1.5 py-0.5 rounded">record demo_name</code> in console.</p>
+              <p className="text-zinc-400 text-xs">Server CSTV auto-records 128-tick GOTV demos. Players are also recommended to record local POV demos via <code className="text-zinc-200 bg-zinc-900 px-1.5 py-0.5 rounded">record demo_name</code> in console.</p>
             </div>
 
             <div className="bg-black/40 border border-white/10 p-4 rounded-xl space-y-2">
-              <span className="text-red-400 font-bold uppercase font-mono text-[11px] block">🚫 Unfair Advantage & Exploit Bans</span>
-              <p className="text-zinc-400 text-[11px]">Use of illegal pixel walks, script binds (excluding jumpthrow), external overlays, or smurfing will result in immediate team disqualification and 12-month platform ban.</p>
+              <span className="text-red-400 font-bold uppercase font-mono text-xs block">🚫 Unfair Advantage & Exploit Bans</span>
+              <p className="text-zinc-400 text-xs">Use of illegal pixel walks, script binds (excluding jumpthrow), external overlays, or smurfing will result in immediate team disqualification and 12-month platform ban.</p>
             </div>
           </div>
         </div>
@@ -125,7 +125,7 @@ export const RulebookTab = ({ tournament }) => {
 
           <div className="bg-black/40 border border-white/10 p-4 rounded-xl space-y-2 text-left">
             <h4 className="text-xs font-bold text-white uppercase mb-2">Tactical & Technical Pauses</h4>
-            <ul className="space-y-1.5 text-[11px] text-zinc-400 list-disc list-inside">
+            <ul className="space-y-1.5 text-xs text-zinc-400 list-disc list-inside">
               <li>Each team receives <strong className="text-white">4 tactical pauses per map</strong> (30 seconds each).</li>
               <li>Technical pauses require admin notification in official Discord match channel. Max 10 minutes total per map.</li>
             </ul>
@@ -140,7 +140,7 @@ export const RulebookTab = ({ tournament }) => {
       badge: 'MANDATORY CHECKLIST',
       content: (
         <div className="space-y-4 text-xs font-mono">
-          <p className="text-zinc-300 text-xs leading-relaxed">
+          <p className="text-zinc-300 text-sm leading-relaxed">
             Captains must verify that all 5 players fulfill these mandatory checks prior to match time:
           </p>
 
@@ -163,8 +163,8 @@ export const RulebookTab = ({ tournament }) => {
                     <Square className="w-5 h-5 text-zinc-500 shrink-0 mt-0.5" />
                   )}
                   <div>
-                    <span className="font-bold text-white text-xs block font-heading">{item.title}</span>
-                    <span className="text-[11px] text-zinc-400 block mt-0.5">{item.desc}</span>
+                    <span className="font-bold text-white text-sm block font-heading">{item.title}</span>
+                    <span className="text-xs text-zinc-400 block mt-0.5">{item.desc}</span>
                   </div>
                 </div>
               );
@@ -182,7 +182,7 @@ export const RulebookTab = ({ tournament }) => {
         <div className="space-y-4 text-xs font-mono">
           <div className="bg-red-950/20 border border-red-500/30 p-4 rounded-xl space-y-2">
             <h4 className="text-xs font-bold text-red-400 uppercase font-heading">Zero Tolerance Policy</h4>
-            <p className="text-zinc-300 text-[11px] leading-relaxed">
+            <p className="text-zinc-300 text-sm leading-relaxed">
               Verbal abuse, racism, toxicity, ghosting, smurfing, or unauthorized match server leaks will result in immediate disqualification, forfeit of prize eligibility, and a minimum 12-month ban from all Pixel Palace events.
             </p>
           </div>
@@ -241,7 +241,7 @@ export const RulebookTab = ({ tournament }) => {
               <div className="flex items-center gap-3">
                 {sec.icon}
                 <div>
-                  <span className="text-xs font-bold font-heading block">{sec.title}</span>
+                  <span className="text-sm font-bold font-heading block">{sec.title}</span>
                   <span className="text-[9px] text-zinc-500 font-bold block">{sec.badge}</span>
                 </div>
               </div>
